@@ -101,7 +101,12 @@ void DomContext::EndFrame() {
                 el.checked = c_it->second;
             }
         } else if (item.flags & ImGuiItemStatusFlags_Openable) {
-            el.type = ElementType::TreeNode;
+            bool is_header = (item.w >= target_win->w - 35.0f);
+            if (is_header) {
+                el.type = ElementType::CollapsingHeader;
+            } else {
+                el.type = ElementType::TreeNode;
+            }
             el.opened = (item.flags & ImGuiItemStatusFlags_Opened) != 0;
         } else if (item.flags & ImGuiItemStatusFlags_Inputable) {
             bool is_slider = (m_slider_items.find(id) != m_slider_items.end()) ||

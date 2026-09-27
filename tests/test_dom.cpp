@@ -635,6 +635,39 @@ int main() {
     }
     std::cout << ">>> [PASS] ColorEdit and InputTextMultiline two-way sync verified!\n";
 
+    // -----------------------------------------------------------------
+    // Step 12: CollapsingHeader and TreeNode Verification
+    // -----------------------------------------------------------------
+    std::cout << "[Step 12] Testing CollapsingHeader and TreeNode distinction...\n";
+    ImGuiDom::BeginFrame(15);
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowSize(ImVec2(400, 300));
+    ImGui::Begin("Tree Window", nullptr);
+    if (ImGui::CollapsingHeader("System Diagnostics")) {
+        ImGui::Text("All systems nominal");
+        if (ImGui::TreeNode("Subsystem Details")) {
+            ImGui::Text("Core 0: OK");
+            ImGui::TreePop();
+        }
+    }
+    ImGui::End();
+
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    std::string header_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    std::cout << "Tree/Header DOM JSON: " << header_json << "\n";
+    if (header_json.find("\"type\":\"collapsing_header\"") == std::string::npos) {
+        std::cerr << "[FAIL] CollapsingHeader not found in DOM JSON!\n";
+        return 1;
+    }
+    if (header_json.find("\"label\":\"System Diagnostics\"") == std::string::npos) {
+        std::cerr << "[FAIL] CollapsingHeader label not found in DOM JSON!\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] CollapsingHeader export verified!\n";
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 

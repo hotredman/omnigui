@@ -18,6 +18,7 @@ enum class ElementType {
     InputText,
     Combo,
     TreeNode,
+    CollapsingHeader,
     ProgressBar,
     Separator,
     Canvas,
@@ -152,6 +153,7 @@ struct Document {
                     ss << "\"opened\":" << (el.opened ? "true" : "false") << ",";
                     break;
                 case ElementType::TreeNode:
+                case ElementType::CollapsingHeader:
                     ss << "\"opened\":" << (el.opened ? "true" : "false") << ",";
                     break;
                 case ElementType::ProgressBar:
@@ -223,6 +225,7 @@ private:
         case ElementType::InputText: return "input";
         case ElementType::Combo: return "combo";
         case ElementType::TreeNode: return "treenode";
+        case ElementType::CollapsingHeader: return "collapsing_header";
         case ElementType::ProgressBar: return "progress";
         case ElementType::Separator: return "separator";
         case ElementType::Canvas: return "canvas";

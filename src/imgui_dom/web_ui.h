@@ -77,7 +77,7 @@ inline const std::string& GetWebClientHtml() {
             top: 0; left: 0; right: 0;
             height: 19px;
             background: linear-gradient(180deg, #2c3e55 0%, #1f2c3d 100%);
-            padding: 1px 8px;
+            padding: 1px 6px;
             font-weight: 600;
             font-size: 13px;
             color: #ffffff;
@@ -88,9 +88,33 @@ inline const std::string& GetWebClientHtml() {
             z-index: 10;
             display: flex;
             align-items: center;
+            gap: 6px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .imgui-collapse-btn {
+            font-size: 10px;
+            color: #9cb5d1;
+            cursor: pointer;
+            width: 14px;
+            height: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            flex-shrink: 0;
+            border-radius: 2px;
+            transition: color 0.1s, background 0.1s;
+        }
+        .imgui-collapse-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .imgui-win-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .imgui-menubar {
@@ -422,6 +446,43 @@ inline const std::string& GetWebClientHtml() {
             width: 12px;
             display: inline-block;
             text-align: center;
+        }
+
+        /* Native Collapsing Header - Authentic Dear ImGui Dark header banner */
+        .imgui-collapsing-header {
+            position: absolute;
+            background: #2b4566;
+            border: 1px solid #36465d;
+            border-radius: 2px;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+            transition: background 0.1s, border-color 0.1s;
+        }
+        .imgui-collapsing-header:hover {
+            background: #3b5c88;
+            border-color: #5585ba;
+        }
+        .imgui-collapsing-header:active {
+            background: #1e3450;
+        }
+        .imgui-collapsing-header .imgui-header-arrow {
+            font-size: 10px;
+            color: #9cb5d1;
+            width: 12px;
+            display: inline-block;
+            text-align: center;
+            flex-shrink: 0;
         }
 
         .imgui-disabled {
@@ -759,7 +820,7 @@ inline const std::string& GetWebClientHtml() {
                     winEl = document.createElement('div');
                     winEl.id = `win_${win.id}`;
                     winEl.className = 'imgui-window';
-                    winEl.innerHTML = `<div class="imgui-header">${win.title}</div><div class="imgui-menubar" style="display:none"></div><div class="imgui-body"></div>`;
+                    winEl.innerHTML = `<div class="imgui-header"><span class="imgui-collapse-btn">▼</span><span class="imgui-win-title">${win.title}</span></div><div class="imgui-menubar" style="display:none"></div><div class="imgui-body"></div>`;
                     desktop.appendChild(winEl);
                 }
 
@@ -782,6 +843,16 @@ inline const std::string& GetWebClientHtml() {
                 } else {
                     header.style.display = '';
                     if (win.title_bar_h) header.style.height = `${win.title_bar_h}px`;
+                    const collapseBtn = header.querySelector('.imgui-collapse-btn');
+                    if (collapseBtn) {
+                        collapseBtn.textContent = win.collapsed ? '▶' : '▼';
+                        collapseBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            postEvent({ type: 'click', id: win.id, x: win.x + 8, y: win.y + 8 });
+                        };
+                    }
+                    const titleSpan = header.querySelector('.imgui-win-title');
+                    if (titleSpan) titleSpan.textContent = win.title;
                 }
 
                 // Menubar strip
@@ -795,6 +866,12 @@ inline const std::string& GetWebClientHtml() {
                 }
 
                 const body = winEl.querySelector('.imgui-body');
+                if (win.collapsed) {
+                    body.style.display = 'none';
+                    winEl.style.height = `${win.title_bar_h || 19}px`;
+                } else {
+                    body.style.display = '';
+                }
 
                 // Sync elements
                 for (const el of win.elements) {
@@ -967,6 +1044,28 @@ inline const std::string& GetWebClientHtml() {
                         elem.style.top = `${localY}px`;
                         elem.style.width = `${el.w}px`;
                         elem.style.height = `${el.h || 20}px`;
+
+                    } else if (el.type === 'collapsing_header') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
+                            elem.className = 'imgui-collapsing-header';
+                            elem.innerHTML = `<span class="imgui-header-arrow">▶</span> <span class="imgui-header-label"></span>`;
+                            elem.onclick = (e) => {
+                                e.stopPropagation();
+                                postEvent({ type: 'click', id: el.id, x: el.x + 10, y: el.y + el.h/2 });
+                            };
+                            body.appendChild(elem);
+                        }
+                        const arrow = elem.querySelector('.imgui-header-arrow');
+                        if (arrow) arrow.textContent = el.opened ? '▼' : '▶';
+                        const lbl = elem.querySelector('.imgui-header-label');
+                        if (lbl) lbl.textContent = el.label;
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h || 22}px`;
 
                     } else if (el.type === 'progress') {
                         if (!elem) {
