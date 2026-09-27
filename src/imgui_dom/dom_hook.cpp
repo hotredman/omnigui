@@ -26,9 +26,16 @@ void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb
         bool is_tooltip = (window->Flags & ImGuiWindowFlags_Tooltip) != 0;
         bool collapsed = window->Collapsed;
 
+        // Clean window name: remove ## suffix
+        const char* hash_pos = strstr(window->Name, "##");
+        std::string clean_title = (hash_pos != nullptr) ? std::string(window->Name, hash_pos - window->Name) : std::string(window->Name);
+        if (clean_title.empty()) {
+            has_title_bar = false;
+        }
+
         ImGuiDom::DomContext::Instance().RecordWindowBegin(
             static_cast<uint32_t>(id),
-            window->Name,
+            clean_title.c_str(),
             window->Pos.x, window->Pos.y,
             window->Size.x, window->Size.y,
             title_bar_h, menu_bar_h,
@@ -45,12 +52,17 @@ void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb
 
     uint32_t status_flags = item_data ? item_data->StatusFlags : 0;
     uint32_t item_flags = item_data ? item_data->ItemFlags : 0;
+    bool is_menu_bar = (window->DC.MenuBarAppending != 0) || (window->DC.NavLayerCurrent == ImGuiNavLayer_Menu);
+    bool is_stepper = (ctx->GroupStack.Size > 0) && (w <= 30.0f);
+
     ImGuiDom::DomContext::Instance().OnHookItemAdd(
         static_cast<uint32_t>(window->ID),
         static_cast<uint32_t>(id),
         bb.Min.x, bb.Min.y, w, h,
         status_flags,
-        item_flags
+        item_flags,
+        is_menu_bar,
+        is_stepper
     );
 }
 

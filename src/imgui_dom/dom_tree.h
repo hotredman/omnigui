@@ -27,12 +27,14 @@ enum class ElementType {
     Table,
     ListBox,
     ColorEdit,
-    InputTextMultiline
+    InputTextMultiline,
+    MenuItem
 };
 
 struct Element {
     uint32_t id = 0;
     ElementType type = ElementType::Text;
+    bool is_menu_bar = false;
     std::string label;
     std::string value_str;
     std::string tooltip;
@@ -117,6 +119,7 @@ struct Document {
                 ss << "\"x\":" << el.x << ",\"y\":" << el.y << ",";
                 ss << "\"w\":" << el.w << ",\"h\":" << el.h << ",";
                 if (el.disabled) ss << "\"disabled\":true,";
+                if (el.is_menu_bar) ss << "\"is_menu_bar\":true,";
                 if (!el.tooltip.empty()) ss << "\"tooltip\":\"" << EscapeJson(el.tooltip) << "\",";
 
                 switch (el.type) {
@@ -125,6 +128,7 @@ struct Document {
                 case ElementType::TabBar:
                 case ElementType::Tooltip:
                     break;
+                case ElementType::MenuItem:
                 case ElementType::TabItem:
                     ss << "\"selected\":" << (el.selected ? "true" : "false") << ",";
                     break;
@@ -229,6 +233,7 @@ private:
         case ElementType::ListBox: return "listbox";
         case ElementType::ColorEdit: return "coloredit";
         case ElementType::InputTextMultiline: return "textarea";
+        case ElementType::MenuItem: return "menuitem";
         default: return "unknown";
         }
     }

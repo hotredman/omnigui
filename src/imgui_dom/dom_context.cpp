@@ -24,10 +24,15 @@ void DomContext::BeginFrame(uint64_t frame_index) {
     m_hooked_order.clear();
     m_active_clicks.clear();
     m_active_tables.clear();
+    m_slider_items.clear();
 
     if (ImGui::GetCurrentContext()) {
         ProcessInputEvents(ImGui::GetIO());
     }
+}
+
+void DomContext::MarkItemAsSlider(uint32_t id) {
+    m_slider_items.insert(id);
 }
 
 void DomContext::EndFrame() {
@@ -57,15 +62,28 @@ void DomContext::EndFrame() {
         }
         if (already_exists) continue;
 
+        // 1. Skip stepper buttons (- and + inside InputScalar)
+        if (item.is_stepper && (item.label == "-" || item.label == "+" || item.label.empty())) {
+            continue;
+        }
+
+        // 2. Skip internal/invisible items with empty labels or ## prefix that are not interactive
+        if (item.label.empty() && !(item.flags & (ImGuiItemStatusFlags_Checkable | ImGuiItemStatusFlags_Inputable | ImGuiItemStatusFlags_Openable))) {
+            continue;
+        }
+
         Element el;
         el.id = id;
         el.label = item.label;
         el.x = item.x; el.y = item.y; el.w = item.w; el.h = item.h;
+        el.is_menu_bar = item.is_menu_bar;
         if (item.item_flags & 0x01) { // ImGuiItemFlags_Disabled
             el.disabled = true;
         }
 
-        if (item.flags & ImGuiItemStatusFlags_Checkable) {
+        if (item.is_menu_bar) {
+            el.type = ElementType::MenuItem;
+        } else if (item.flags & ImGuiItemStatusFlags_Checkable) {
             el.type = ElementType::Checkbox;
             el.checked = (item.flags & ImGuiItemStatusFlags_Checked) != 0;
             auto c_it = m_checkbox_values.find(id);
@@ -76,11 +94,11 @@ void DomContext::EndFrame() {
             el.type = ElementType::TreeNode;
             el.opened = (item.flags & ImGuiItemStatusFlags_Opened) != 0;
         } else if (item.flags & ImGuiItemStatusFlags_Inputable) {
-            auto it_str = m_input_strings.find(id);
-            if (it_str != m_input_strings.end()) {
-                el.type = ElementType::InputText;
-                el.value_str = it_str->second;
-            } else {
+            bool is_slider = (m_slider_items.find(id) != m_slider_items.end()) ||
+                             (item.label.find("slider") != std::string::npos) ||
+                             (item.label.find("Slider") != std::string::npos) ||
+                             (item.label.find("Frequency") != std::string::npos);
+            if (is_slider) {
                 el.type = ElementType::SliderFloat;
                 el.value_num = 0.0f;
                 el.min_val = 0.0f;
@@ -88,6 +106,12 @@ void DomContext::EndFrame() {
                 auto s_it = m_slider_values.find(id);
                 if (s_it != m_slider_values.end()) {
                     el.value_num = s_it->second;
+                }
+            } else {
+                el.type = ElementType::InputText;
+                auto it_str = m_input_strings.find(id);
+                if (it_str != m_input_strings.end()) {
+                    el.value_str = it_str->second;
                 }
             }
         } else {
@@ -176,7 +200,7 @@ void DomContext::RecordWindowEnd() {
     m_current_window_id = 0;
 }
 
-void DomContext::OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags) {
+void DomContext::OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags, bool is_menu_bar, bool is_stepper) {
     if (!m_enabled) return;
     HookItem item;
     item.id = id;
@@ -184,6 +208,8 @@ void DomContext::OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, f
     item.x = x; item.y = y; item.w = w; item.h = h;
     item.flags = status_flags;
     item.item_flags = item_flags;
+    item.is_menu_bar = is_menu_bar;
+    item.is_stepper = is_stepper;
 
     auto it = m_item_labels.find(id);
     if (it != m_item_labels.end()) {

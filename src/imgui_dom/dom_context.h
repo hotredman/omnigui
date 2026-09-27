@@ -86,9 +86,10 @@ public:
     bool ConsumeColor4(uint32_t id, float out_col[4]);
 
     // Internal ImGui Hook callbacks
-    void OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags = 0);
+    void OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags = 0, bool is_menu_bar = false, bool is_stepper = false);
     void OnHookItemInfo(uint32_t id, const char* label, uint32_t status_flags);
     const char* GetItemLabel(uint32_t id);
+    void MarkItemAsSlider(uint32_t id);
 
     // Sync input events into ImGuiIO if needed
     void ProcessInputEvents(ImGuiIO& io);
@@ -123,6 +124,8 @@ private:
         float x = 0, y = 0, w = 0, h = 0;
         uint32_t flags = 0;
         uint32_t item_flags = 0;
+        bool is_menu_bar = false;
+        bool is_stepper = false;
         std::string label;
     };
     std::unordered_map<uint32_t, HookItem> m_hooked_items;
@@ -147,6 +150,7 @@ private:
     // Incoming browser events
     std::unordered_set<uint32_t> m_active_clicks;
     std::unordered_set<uint32_t> m_tab_selections;
+    std::unordered_set<uint32_t> m_slider_items;
     std::unordered_map<uint32_t, int> m_listbox_selections;
     std::unordered_map<uint32_t, std::array<float, 4>> m_color_values;
     std::unordered_map<uint32_t, float> m_slider_values;

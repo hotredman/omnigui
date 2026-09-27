@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dear ImGui Web DOM - Visual Diagnostic & Regression Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0f14; color: #e0e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; }
+    h1 { color: #fff; font-size: 24px; margin-bottom: 8px; }
+    .subtitle { color: #8899aa; font-size: 14px; margin-bottom: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .card { background: #1a1e28; border: 1px solid #2e384d; border-radius: 6px; padding: 16px; }
+    .card .val { font-size: 26px; font-weight: 700; color: #38bdf8; margin-top: 6px; }
+    .card .val.good { color: #4ade80; }
+    .card .lbl { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .section-title { font-size: 18px; color: #fff; margin: 24px 0 12px 0; border-bottom: 1px solid #2e384d; padding-bottom: 6px; }
+    .wipe-container { position: relative; width: 100%; max-width: 1280px; height: 720px; border: 1px solid #3d4a60; border-radius: 4px; overflow: hidden; margin-bottom: 24px; }
+    .wipe-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+    .wipe-slider { position: absolute; width: 100%; bottom: 12px; left: 0; z-index: 10; accent-color: #38bdf8; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+    .gallery-item { background: #161a22; border: 1px solid #2e384d; border-radius: 6px; overflow: hidden; }
+    .gallery-item img { width: 100%; height: auto; display: block; border-bottom: 1px solid #2e384d; }
+    .gallery-item .title { padding: 8px 12px; font-size: 13px; font-weight: 600; color: #cbd5e1; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #166534; color: #86efac; }
+  </style>
+</head>
+<body>
+  <h1>Dear ImGui Web DOM Backend - Automated Diagnostic Report</h1>
+  <div class="subtitle">Generated on 2026-09-27T11:09:30.051Z | Chromium Headless + CDP + C++ Core Invariant Engine</div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="lbl">Invariant Pairs Audited</div>
+      <div class="val good">7847</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Layout Collisions</div>
+      <div class="val good">0</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Coordinate Drifts (>3px)</div>
+      <div class="val good">0</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Visual Match Score</div>
+      <div class="val good">99.43%</div>
+    </div>
+  </div>
+
+  <div class="section-title">Visual Difference Heatmap & Baseline</div>
+  <div style="margin-bottom: 16px; font-size: 13px; color: #94a3b8;">
+    Compare the baseline Web DOM rendering against the difference heatmap. Red highlights indicate perceptible pixel differences.
+  </div>
+  <div class="wipe-container" id="wipeBox">
+    <img src="baseline.png" class="wipe-img" id="imgBase" style="z-index: 1;">
+    <img src="diff_heatmap.png" class="wipe-img" id="imgDiff" style="z-index: 2; clip-path: inset(0 50% 0 0);">
+    <input type="range" min="0" max="100" value="50" class="wipe-slider" oninput="document.getElementById('imgDiff').style.clipPath = 'inset(0 ' + (100 - this.value) + '% 0 0)'">
+  </div>
+
+  <div class="section-title">Automated Section Crawler Gallery (13 snapshots)</div>
+  <div class="gallery">
+    
+      <div class="gallery-item">
+        <img src="baseline.png" alt="Baseline State">
+        <div class="title">Baseline State <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_help.png" alt="Section: Help">
+        <div class="title">Section: Help <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_configuration.png" alt="Section: Configuration">
+        <div class="title">Section: Configuration <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_window_options.png" alt="Section: Window options">
+        <div class="title">Section: Window options <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_widgets.png" alt="Section: Widgets">
+        <div class="title">Section: Widgets <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_widgets_basic.png" alt="Widgets &rarr; Basic">
+        <div class="title">Widgets &rarr; Basic <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_widgets_combo.png" alt="Widgets &rarr; Combo">
+        <div class="title">Widgets &rarr; Combo <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_widgets_color_picker_widgets.png" alt="Widgets &rarr; Color/Picker Widgets">
+        <div class="title">Widgets &rarr; Color/Picker Widgets <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_layout_scrolling.png" alt="Section: Layout & Scrolling">
+        <div class="title">Section: Layout & Scrolling <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_popups_modal_windows.png" alt="Section: Popups & Modal windows">
+        <div class="title">Section: Popups & Modal windows <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_tables_columns.png" alt="Section: Tables & Columns">
+        <div class="title">Section: Tables & Columns <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="tree_expand_inputs_focus.png" alt="Section: Inputs & Focus">
+        <div class="title">Section: Inputs & Focus <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="after_fuzzing.png" alt="After Interactive Stress Fuzzing">
+        <div class="title">After Interactive Stress Fuzzing <span class="badge">PASSED</span></div>
+      </div>
+    
+  </div>
+</body>
+</html>
