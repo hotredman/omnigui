@@ -195,11 +195,16 @@ void DomContext::EndFrame() {
 
     std::string json = m_doc.ToJson();
     SnapshotCallback cb;
+    std::shared_ptr<IDomTransport> transport;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_latest_json = std::move(json);
         m_latest_ready_frame = m_current_frame;
         cb = m_snapshot_callback;
+        transport = m_transport;
+    }
+    if (transport && transport->IsRunning()) {
+        transport->SendSnapshot(m_latest_json);
     }
     if (cb) {
         cb(m_latest_json);
@@ -681,6 +686,27 @@ void DomContext::SetEventCallback(EventCallback cb) {
 void DomContext::SetSnapshotCallback(SnapshotCallback cb) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_snapshot_callback = std::move(cb);
+}
+
+void DomContext::SetTransport(std::shared_ptr<IDomTransport> transport) {
+    std::shared_ptr<IDomTransport> old_transport;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        old_transport = m_transport;
+        m_transport = transport;
+        if (m_transport) {
+            m_transport->SetEventReceiver([this](const BrowserEvent& evt) {
+                this->PushBrowserEvent(evt);
+            });
+            m_enabled = true;
+        }
+    }
+    if (old_transport && old_transport->IsRunning()) {
+        old_transport->Stop();
+    }
+    if (transport && !transport->IsRunning()) {
+        transport->Start();
+    }
 }
 
 void DomContext::PushBrowserEvent(const BrowserEvent& evt) {

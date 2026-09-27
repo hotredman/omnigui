@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dom_tree.h"
+#include "dom_transport.h"
 #include <mutex>
 #include <queue>
 #include <unordered_map>
@@ -108,6 +109,10 @@ public:
     using SnapshotCallback = std::function<void(const std::string&)>;
     void SetSnapshotCallback(SnapshotCallback cb);
 
+    // Transport management (WebSocket, WasmDirect, Loopback)
+    void SetTransport(std::shared_ptr<IDomTransport> transport);
+    std::shared_ptr<IDomTransport> GetTransport() const { return m_transport; }
+
 private:
     DomContext() = default;
 
@@ -168,6 +173,7 @@ private:
     std::queue<BrowserEvent> m_pending_events;
     EventCallback m_event_callback;
     SnapshotCallback m_snapshot_callback;
+    std::shared_ptr<IDomTransport> m_transport;
 };
 
 } // namespace ImGuiDom

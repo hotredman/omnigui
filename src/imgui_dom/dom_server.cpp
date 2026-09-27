@@ -16,106 +16,6 @@
 
 namespace ImGuiDom {
 
-static std::string ExtractJsonString(const std::string& json, const std::string& key) {
-    size_t pos = json.find("\"" + key + "\"");
-    if (pos == std::string::npos) return "";
-    pos = json.find(":", pos);
-    if (pos == std::string::npos) return "";
-    pos = json.find("\"", pos);
-    if (pos == std::string::npos) return "";
-    size_t end = json.find("\"", pos + 1);
-    if (end == std::string::npos) return "";
-    return json.substr(pos + 1, end - (pos + 1));
-}
-
-static float ExtractJsonFloat(const std::string& json, const std::string& key, float default_val = 0.0f) {
-    size_t pos = json.find("\"" + key + "\"");
-    if (pos == std::string::npos) return default_val;
-    pos = json.find(":", pos);
-    if (pos == std::string::npos) return default_val;
-    pos = json.find_first_not_of(" \t", pos + 1);
-    if (pos == std::string::npos) return default_val;
-    size_t end = json.find_first_of(",}\" \t\r\n", pos);
-    try {
-        return std::stof(json.substr(pos, end - pos));
-    } catch (...) {
-        return default_val;
-    }
-}
-
-static uint64_t ExtractJsonUint64(const std::string& json, const std::string& key, uint64_t default_val = 0) {
-    size_t pos = json.find("\"" + key + "\"");
-    if (pos == std::string::npos) return default_val;
-    pos = json.find(":", pos);
-    if (pos == std::string::npos) return default_val;
-    pos = json.find_first_not_of(" \t", pos + 1);
-    if (pos == std::string::npos) return default_val;
-    size_t end = json.find_first_of(",}\" \t\r\n", pos);
-    try {
-        return std::stoull(json.substr(pos, end - pos));
-    } catch (...) {
-        return default_val;
-    }
-}
-
-static uint32_t ExtractJsonUint(const std::string& json, const std::string& key) {
-    return static_cast<uint32_t>(ExtractJsonUint64(json, key, 0));
-}
-
-static bool ExtractJsonBool(const std::string& json, const std::string& key) {
-    size_t pos = json.find("\"" + key + "\"");
-    if (pos == std::string::npos) return false;
-    pos = json.find(":", pos);
-    if (pos == std::string::npos) return false;
-    size_t val_pos = json.find("true", pos);
-    size_t comma_pos = json.find_first_of(",}", pos);
-    return (val_pos != std::string::npos && val_pos < comma_pos);
-}
-
-static int ExtractJsonInt(const std::string& json, const std::string& key, int default_val = 0) {
-    size_t pos = json.find("\"" + key + "\"");
-    if (pos == std::string::npos) return default_val;
-    pos = json.find(":", pos);
-    if (pos == std::string::npos) return default_val;
-    pos = json.find_first_not_of(" \t", pos + 1);
-    if (pos == std::string::npos) return default_val;
-    size_t end = json.find_first_of(",}\" \t\r\n", pos);
-    try {
-        return std::stoi(json.substr(pos, end - pos));
-    } catch (...) {
-        return default_val;
-    }
-}
-
-static BrowserEvent ParseBrowserEvent(const std::string& json) {
-    BrowserEvent evt;
-    evt.type = ExtractJsonString(json, "type");
-    evt.id = ExtractJsonUint(json, "id");
-    evt.x = ExtractJsonFloat(json, "x");
-    evt.y = ExtractJsonFloat(json, "y");
-    evt.dx = ExtractJsonFloat(json, "dx");
-    evt.dy = ExtractJsonFloat(json, "dy");
-    evt.button = ExtractJsonInt(json, "button", 0);
-    evt.key = ExtractJsonInt(json, "key", 0);
-    evt.value_num = ExtractJsonFloat(json, "val");
-    if (evt.value_num == 0.0f) {
-        evt.value_num = ExtractJsonFloat(json, "value_num");
-    }
-    evt.checked = ExtractJsonBool(json, "checked");
-    evt.value_str = ExtractJsonString(json, "text");
-    if (evt.value_str.empty()) {
-        evt.value_str = ExtractJsonString(json, "color");
-    }
-    if (evt.value_str.empty()) {
-        evt.value_str = ExtractJsonString(json, "title");
-    }
-    evt.label = ExtractJsonString(json, "label");
-    if (evt.value_str.empty()) {
-        evt.value_str = evt.label;
-    }
-    return evt;
-}
-
 DomServer::DomServer() = default;
 
 DomServer::~DomServer() {
@@ -170,8 +70,13 @@ bool DomServer::Start(const std::string& host, int port) {
     });
 
     // 3. Browser interaction event receiver (HTTP POST fallback)
-    m_server->Post("/api/event", [](const httplib::Request& req, httplib::Response& res) {
-        DomContext::Instance().PushBrowserEvent(ParseBrowserEvent(req.body));
+    m_server->Post("/api/event", [this](const httplib::Request& req, httplib::Response& res) {
+        BrowserEvent evt = ParseBrowserEvent(req.body);
+        if (m_event_receiver) {
+            m_event_receiver(evt);
+        } else {
+            DomContext::Instance().PushBrowserEvent(evt);
+        }
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_content("{\"status\":\"ok\"}", "application/json");
     });
@@ -195,7 +100,12 @@ bool DomServer::Start(const std::string& host, int port) {
         while (m_running && ws.is_open()) {
             auto res = ws.read(msg);
             if (res == httplib::ws::ReadResult::Text) {
-                DomContext::Instance().PushBrowserEvent(ParseBrowserEvent(msg));
+                BrowserEvent evt = ParseBrowserEvent(msg);
+                if (m_event_receiver) {
+                    m_event_receiver(evt);
+                } else {
+                    DomContext::Instance().PushBrowserEvent(evt);
+                }
             } else if (res == httplib::ws::ReadResult::Timeout) {
                 continue;
             } else {
@@ -268,6 +178,22 @@ void DomServer::Stop() {
 
     m_server.reset();
     std::cout << "[DomServer] Server stopped.\n";
+}
+
+std::shared_ptr<IDomTransport> CreateWebSocketTransport(const std::string& host, int port) {
+    struct DomServerSharedWrapper : public IDomTransport {
+        std::string m_h;
+        int m_p;
+        DomServerSharedWrapper(std::string h, int p) : m_h(std::move(h)), m_p(p) {}
+        TransportType GetType() const override { return TransportType::WebSocket; }
+        const char* GetName() const override { return "WebSocketServer"; }
+        bool Start() override { return DomServer::Instance().Start(m_h, m_p); }
+        void Stop() override { DomServer::Instance().Stop(); }
+        bool IsRunning() const override { return DomServer::Instance().IsRunning(); }
+        void SendSnapshot(const std::string& json) override { DomServer::Instance().SendSnapshot(json); }
+        void SetEventReceiver(EventReceiver receiver) override { DomServer::Instance().SetEventReceiver(std::move(receiver)); }
+    };
+    return std::make_shared<DomServerSharedWrapper>(host, port);
 }
 
 } // namespace ImGuiDom

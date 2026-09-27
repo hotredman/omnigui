@@ -731,6 +731,10 @@ inline const std::string& GetWebClientHtml() {
         let useWs = false;
 
         function postEvent(data) {
+            if (typeof window !== 'undefined' && typeof window.__omniWasmSendEvent === 'function') {
+                window.__omniWasmSendEvent(JSON.stringify(data));
+                return;
+            }
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify(data));
             } else {
@@ -1886,7 +1890,20 @@ inline const std::string& GetWebClientHtml() {
             };
         }
 
-        connectWS();
+        window.__omniDomApplySnapshot = function(jsonOrDoc) {
+            try {
+                const doc = (typeof jsonOrDoc === 'string') ? JSON.parse(jsonOrDoc) : jsonOrDoc;
+                updateDom(doc);
+                statusDot.className = 'dot';
+                statusText.textContent = 'Active (WebAssembly Direct DOM)';
+            } catch(err) {
+                console.error("DOM Parse error", err);
+            }
+        };
+
+        if (!window.__omniWasmDirectMode) {
+            connectWS();
+        }
     </script>
 </body>
 </html>

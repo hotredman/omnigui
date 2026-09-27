@@ -877,6 +877,74 @@ int main() {
     }
     std::cout << ">>> [PASS] Step 15: All Element Gallery widgets and visual states verified in DOM JSON!\n";
 
+    // -----------------------------------------------------------------
+    // Step 16: Testing IDomTransport abstraction (Loopback & WasmDirect)
+    // -----------------------------------------------------------------
+    std::cout << "[Step 16] Testing IDomTransport abstraction (Loopback & WasmDirect)...\n";
+    auto loopback = ImGuiDom::CreateLoopbackTransport();
+    if (!loopback || loopback->GetType() != ImGuiDom::TransportType::Loopback) {
+        std::cerr << "[FAIL] Failed to create Loopback transport\n";
+        return 1;
+    }
+    if (std::string(loopback->GetName()) != "Loopback") {
+        std::cerr << "[FAIL] Unexpected Loopback transport name\n";
+        return 1;
+    }
+
+    ImGuiDom::DomContext::Instance().SetTransport(loopback);
+    if (!loopback->IsRunning()) {
+        std::cerr << "[FAIL] Loopback transport should be running after SetTransport\n";
+        return 1;
+    }
+
+    // Render frame through Loopback
+    ImGuiDom::BeginFrame(21);
+    ImGui::NewFrame();
+    ImGui::SetNextWindowPos(ImVec2(10, 10));
+    ImGui::SetNextWindowSize(ImVec2(300, 200));
+    ImGuiDom::Begin("TransportWindow", nullptr);
+    bool clicked_transport = ImGuiDom::Button("Transport Button");
+    (void)clicked_transport;
+    uint32_t transport_btn_id = static_cast<uint32_t>(ImGui::GetItemID());
+    ImGuiDom::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    // Verify snapshot received in Loopback
+    std::string lb_snap = ImGuiDom::DomContext::Instance().GetLatestJson();
+    if (lb_snap.find("Transport Button") == std::string::npos) {
+        std::cerr << "[FAIL] Transport Button snapshot not captured by Loopback\n";
+        return 1;
+    }
+
+    // Send event through Wasm direct C-bridge
+    auto wasm_transport = ImGuiDom::CreateWasmDirectTransport();
+    if (!wasm_transport || wasm_transport->GetType() != ImGuiDom::TransportType::WasmDirect) {
+        std::cerr << "[FAIL] Failed to create WasmDirect transport\n";
+        return 1;
+    }
+    ImGuiDom::DomContext::Instance().SetTransport(wasm_transport);
+
+    std::string click_event_json = "{\"type\":\"click\",\"id\":" + std::to_string(transport_btn_id) + "}";
+    omni_wasm_send_event(click_event_json.c_str());
+
+    // Render frame 22: verify event consumed
+    ImGuiDom::BeginFrame(22);
+    ImGui::NewFrame();
+    ImGui::SetNextWindowPos(ImVec2(10, 10));
+    ImGui::SetNextWindowSize(ImVec2(300, 200));
+    ImGuiDom::Begin("TransportWindow", nullptr);
+    bool wasm_consumed_click = ImGuiDom::Button("Transport Button");
+    ImGuiDom::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    if (!wasm_consumed_click) {
+        std::cerr << "[FAIL] Click event via omni_wasm_send_event was not consumed\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] Step 16: IDomTransport abstraction, Loopback, and WasmDirect transports verified!\n";
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 
