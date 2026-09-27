@@ -294,21 +294,43 @@ int main(int argc, char* argv[]) {
     int dom_port = 8080;
     bool open_browser = false;
     bool headless = false;
+    bool use_vector_backend = true;
     for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "--benchmark") {
+        std::string arg = argv[i];
+        if (arg == "--benchmark") {
             auto_benchmark = true;
-        } else if ((std::string(argv[i]) == "--profile" || std::string(argv[i]) == "--auto-exit") && i + 1 < argc) {
+        } else if ((arg == "--profile" || arg == "--auto-exit") && i + 1 < argc) {
             auto_exit_seconds = std::atof(argv[++i]);
-        } else if (std::string(argv[i]) == "--software") {
+        } else if (arg == "--software") {
             SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
-        } else if (std::string(argv[i]) == "--no-web") {
-            use_dom_server = false;
-        } else if (std::string(argv[i]) == "--port" && i + 1 < argc) {
-            dom_port = std::atoi(argv[++i]);
-        } else if (std::string(argv[i]) == "--open-browser" || std::string(argv[i]) == "--browser" || std::string(argv[i]) == "-b") {
-            open_browser = true;
-        } else if (std::string(argv[i]) == "--headless" || std::string(argv[i]) == "--web-only") {
+        } else if (arg == "--backend=thorvg" || arg == "--thorvg" || arg == "--vector") {
+            use_vector_backend = true;
+        } else if (arg == "--backend=sdl" || arg == "--sdl" || arg == "--raster") {
+            use_vector_backend = false;
+        } else if (arg == "--backend=dom" || arg == "--dom" || arg == "--web" || arg == "--headless" || arg == "--web-only") {
             headless = true;
+            use_dom_server = true;
+        } else if (arg == "--no-web") {
+            use_dom_server = false;
+        } else if (arg == "--port" && i + 1 < argc) {
+            dom_port = std::atoi(argv[++i]);
+        } else if (arg == "--open-browser" || arg == "--browser" || arg == "-b") {
+            open_browser = true;
+        } else if (arg == "--help" || arg == "-h") {
+            std::cout << "OmniGUI Demo - Multi-Backend Runner\n\n"
+                      << "Backends:\n"
+                      << "  --backend=thorvg, --thorvg   Launch Desktop with ThorVG Vector Renderer (default)\n"
+                      << "  --backend=sdl,    --sdl      Launch Desktop with standard SDL3 Renderer (raster triangles)\n"
+                      << "  --backend=dom,    --dom      Launch Headless Web DOM Server\n\n"
+                      << "Options:\n"
+                      << "  --open-browser,   -b         Open web browser automatically\n"
+                      << "  --port <port>                Web DOM server port (default: 8080)\n"
+                      << "  --no-web                     Disable Web DOM server in desktop mode\n"
+                      << "  --software                   Force SDL software rendering driver\n"
+                      << "  --benchmark                  Run automated performance benchmark\n"
+                      << "  --auto-exit <sec>            Exit after N seconds\n"
+                      << "  --help,           -h         Show this help message\n";
+            return 0;
         }
     }
 
@@ -488,7 +510,10 @@ int main(int argc, char* argv[]) {
 
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
-    if (!SDL_CreateWindowAndRenderer("ImGui Vector Backend - ThorVG + SDL3 Demo",
+    const char* win_title = use_vector_backend
+        ? "OmniGUI - ImGui + ThorVG Vector Backend (SDL3)"
+        : "OmniGUI - ImGui + Standard SDL3 Renderer";
+    if (!SDL_CreateWindowAndRenderer(win_title,
                                      base_w, base_h,
                                      SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY,
                                      &window, &renderer)) {
@@ -504,8 +529,8 @@ int main(int argc, char* argv[]) {
     if (window_scale > 0.0f) main_scale = window_scale;
 
     std::cout << "[Demo] Content Scale: " << main_scale << ", Window Size: " << base_w << "x" << base_h
-              << " | SDL Presentation Driver: " << (renderer ? SDL_GetRendererName(renderer) : "None")
-              << " | Vector Rasterizer: ThorVG CPU SwCanvas\n";
+              << " | Presentation Driver: " << (renderer ? SDL_GetRendererName(renderer) : "None")
+              << " | Active Renderer: " << (use_vector_backend ? "ThorVG Vector Rasterizer" : "Standard SDL3 Triangles") << "\n";
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -557,7 +582,6 @@ int main(int argc, char* argv[]) {
     if (font) {
         vector_renderer->LoadFontFile(font_path);
     }
-    bool use_vector_backend = true;
     ImGuiExt::SetVectorInterception(use_vector_backend);
 
     SDL_Texture* vector_texture = nullptr;

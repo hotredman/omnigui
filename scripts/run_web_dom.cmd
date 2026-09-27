@@ -6,16 +6,15 @@ if not exist "build\Release\demo.exe" (
     echo [WARN] demo.exe not found. Building project first...
     call "%~dp0build.cmd"
     if errorlevel 1 (
-        echo [ERROR] Build failed, cannot launch demo.
+        echo [ERROR] Build failed, cannot launch web demo.
         pause
         exit /b 1
     )
 )
 
 echo ========================================================
-echo  Launching OmniGUI Demo (Default: ThorVG Vector Backend)
-echo  Tip: Use scripts\run_desktop_sdl.cmd for standard SDL3
-echo       Use scripts\run_web_dom.cmd for Web DOM Server
+echo  Launching OmniGUI: ImGui + Web DOM Server
+echo  Opening browser at http://localhost:8080 ...
 echo ========================================================
-start "" "build\Release\demo.exe" %*
+start "" "build\Release\demo.exe" --backend=dom --open-browser %*
 endlocal

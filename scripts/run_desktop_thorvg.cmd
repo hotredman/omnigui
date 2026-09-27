@@ -13,9 +13,8 @@ if not exist "build\Release\demo.exe" (
 )
 
 echo ========================================================
-echo  Launching OmniGUI Demo (Default: ThorVG Vector Backend)
-echo  Tip: Use scripts\run_desktop_sdl.cmd for standard SDL3
-echo       Use scripts\run_web_dom.cmd for Web DOM Server
+echo  Launching OmniGUI: ImGui + ThorVG Vector (Desktop)
+echo  Infinite DPI, crisp vector curves and shapes
 echo ========================================================
-start "" "build\Release\demo.exe" %*
+start "" "build\Release\demo.exe" --backend=thorvg %*
 endlocal
