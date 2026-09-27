@@ -1729,7 +1729,98 @@ inline const std::string& GetWebClientHtml() {
             }
             return report;
         };
+)HTML";
+        s += R"HTML(
+        window.__auditStyleParity = function() {
+            const report = {
+                ok: true,
+                checkedRules: 0,
+                passedRules: 0,
+                violations: [],
+                metrics: {}
+            };
 
+            function check(name, elementSelector, prop, expectedValues, description) {
+                report.checkedRules++;
+                const el = (typeof elementSelector === 'string') ? document.querySelector(elementSelector) : elementSelector;
+                if (!el) {
+                    report.violations.push({ rule: name, error: 'Element not found', selector: String(elementSelector) });
+                    report.ok = false;
+                    return;
+                }
+                const cs = window.getComputedStyle(el);
+                const actual = cs.getPropertyValue(prop).trim();
+                const allowed = Array.isArray(expectedValues) ? expectedValues : [expectedValues];
+                const match = allowed.some(exp => {
+                    if (typeof exp === 'string') return actual.toLowerCase() === exp.toLowerCase();
+                    if (exp instanceof RegExp) return exp.test(actual);
+                    return false;
+                });
+                if (!match) {
+                    report.violations.push({
+                        rule: name,
+                        selector: (typeof elementSelector === 'string') ? elementSelector : (el.className || el.tagName),
+                        prop,
+                        expected: allowed.map(e => String(e)),
+                        actual,
+                        description
+                    });
+                    report.ok = false;
+                } else {
+                    report.passedRules++;
+                }
+            }
+
+            // 1. Window geometry & style: 0px rounding, Dark theme background
+            check('WindowRounding', '.imgui-window', 'border-radius', ['0px'], 'Dear ImGui StyleColorsDark specifies WindowRounding = 0.0f');
+            check('WindowBackground', '.imgui-window', 'background-color', ['rgba(15, 15, 15, 0.94)', 'rgb(15, 15, 15)'], 'WindowBg canonical dark color');
+
+            // 2. Buttons: canonical button color, 0px frame rounding, white text
+            check('ButtonRounding', '.imgui-btn', 'border-radius', ['0px'], 'Dear ImGui StyleColorsDark specifies FrameRounding = 0.0f');
+            check('ButtonBackground', '.imgui-btn', 'background-color', ['rgba(66, 150, 250, 0.4)', 'rgba(66, 150, 250, 0.40)'], 'Button canonical color ImVec4(0.26f, 0.59f, 0.98f, 0.40f)');
+            check('ButtonColor', '.imgui-btn', 'color', ['rgb(255, 255, 255)', '#ffffff'], 'Button text color');
+
+            // 3. Disabled element parity: opacity: 0.60, pointer-events: none
+            const disabledEl = document.querySelector('.imgui-disabled');
+            if (disabledEl) {
+                check('DisabledAlpha', disabledEl, 'opacity', ['0.6', '0.60'], 'ImGuiStyle.DisabledAlpha = 0.60f');
+                check('DisabledPointerEvents', disabledEl, 'pointer-events', ['none'], 'Disabled widgets must reject pointer interactions');
+            } else {
+                report.violations.push({ rule: 'DisabledElementCheck', error: 'No element with .imgui-disabled found in DOM' });
+                report.ok = false;
+            }
+
+            // 4. Inputs / Sliders / FrameBg: canonical frame background and 0px frame rounding
+            const frameInput = document.querySelector('.imgui-input');
+            if (frameInput) {
+                check('InputRounding', frameInput, 'border-radius', ['0px'], 'FrameRounding = 0.0f for inputs');
+                check('InputFrameBg', frameInput, 'background-color', ['rgba(41, 74, 122, 0.54)'], 'FrameBg canonical color');
+            }
+            const sliderInput = document.querySelector('.imgui-slider-box input[type="range"]');
+            if (sliderInput) {
+                check('SliderRounding', sliderInput, 'border-radius', ['0px'], 'FrameRounding = 0.0f for sliders');
+                check('SliderFrameBg', sliderInput, 'background-color', ['rgba(41, 74, 122, 0.54)'], 'FrameBg canonical color');
+            }
+
+            // 5. Collapsing Header: canonical header color & 0px rounding
+            const headerEl = document.querySelector('.imgui-collapsing-header');
+            if (headerEl) {
+                check('HeaderRounding', headerEl, 'border-radius', ['0px'], 'Header rounding = 0.0f');
+                check('HeaderBg', headerEl, 'background-color', ['rgba(66, 150, 250, 0.31)'], 'Header canonical color ImVec4(0.26f, 0.59f, 0.98f, 0.31f)');
+            }
+
+            // 6. Typography & Global Text color
+            check('TextGlobalColor', 'body', 'color', ['rgb(255, 255, 255)', '#ffffff'], 'Global text color white');
+
+            report.metrics = {
+                checkedRules: report.checkedRules,
+                passedRules: report.passedRules,
+                parityScore: report.checkedRules > 0 ? ((report.passedRules / report.checkedRules) * 100).toFixed(1) : 0
+            };
+            return report;
+        };
+)HTML";
+        s += R"HTML(
         function connectWS() {
             if (!window.WebSocket) {
                 connectSSE();

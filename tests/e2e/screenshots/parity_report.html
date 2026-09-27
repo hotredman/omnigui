@@ -8,7 +8,7 @@
     body { background: #0f0f14; color: #e0e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; }
     h1 { color: #fff; font-size: 24px; margin-bottom: 8px; }
     .subtitle { color: #8899aa; font-size: 14px; margin-bottom: 24px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
     .card { background: #1a1e28; border: 1px solid #2e384d; border-radius: 6px; padding: 16px; }
     .card .val { font-size: 26px; font-weight: 700; color: #38bdf8; margin-top: 6px; }
     .card .val.good { color: #4ade80; }
@@ -26,17 +26,21 @@
   </style>
 </head>
 <body>
-  <h1>Dear ImGui Web DOM Backend - Exact Coordinate & Semantic Parity Report</h1>
-  <div class="subtitle">Generated on 2026-09-27T12:57:42.185Z | Pure Coordinate & Semantic Parity Verification (No Screenshots)</div>
+  <h1>Dear ImGui Web DOM Backend - Exact Coordinate, Semantic & Style Parity Report</h1>
+  <div class="subtitle">Generated on 2026-09-27T13:15:17.996Z | Pure Coordinate & Semantic Parity Verification (No Screenshots)</div>
 
   <div class="grid">
     <div class="card">
       <div class="lbl">Invariant Pairs Audited</div>
-      <div class="val good">7847</div>
+      <div class="val good">7868</div>
     </div>
     <div class="card">
       <div class="lbl">Coordinate & Semantic Score</div>
       <div class="val good">100.00%</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Style Parity Score</div>
+      <div class="val good">100.0%</div>
     </div>
     <div class="card">
       <div class="lbl">Max Position Drift (X, Y)</div>
@@ -102,11 +106,17 @@
           <td>0 collisions</td>
           <td><span class="badge">PASSED</span></td>
         </tr>
+        <tr>
+          <td>Canonical Visual Style Invariants (Colors, Geometry, Roundedness)</td>
+          <td>100% exact</td>
+          <td>14/14 rules passed</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
       </tbody>
     </table>
   </div>
 
-  <div class="section-title">Automated Section Crawler Gallery (14 snapshots)</div>
+  <div class="section-title">Automated Section Crawler Gallery (15 snapshots)</div>
   <div class="gallery">
     
       <div class="gallery-item">
@@ -177,6 +187,11 @@
       <div class="gallery-item">
         <img src="window_activation_front.png" alt="Window Activation - Permanent Overlap">
         <div class="title">Window Activation - Permanent Overlap <span class="badge">PASSED</span></div>
+      </div>
+    
+      <div class="gallery-item">
+        <img src="element_gallery_styles.png" alt="Canonical Element Gallery & Visual States">
+        <div class="title">Canonical Element Gallery & Visual States <span class="badge">PASSED</span></div>
       </div>
     
   </div>

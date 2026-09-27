@@ -31,6 +31,7 @@ struct BrowserEvent {
     float value_num = 0.0f;
     bool checked = false;
     std::string value_str;
+    std::string label;
 };
 
 class DomContext {
@@ -85,7 +86,7 @@ public:
     bool ConsumeSlider(uint32_t id, float& out_val);
     bool ConsumeCheckbox(uint32_t id, bool& out_checked);
     bool ConsumeInputText(uint32_t id, std::string& out_str);
-    bool ConsumeTabSelect(uint32_t id);
+    bool ConsumeTabSelect(uint32_t id, const char* label = nullptr);
     bool ConsumeListBox(uint32_t id, int& out_index);
     bool ConsumeColor3(uint32_t id, float out_col[3]);
     bool ConsumeColor4(uint32_t id, float out_col[4]);
@@ -157,6 +158,7 @@ private:
     // Incoming browser events
     std::unordered_set<uint32_t> m_active_clicks;
     std::unordered_set<uint32_t> m_tab_selections;
+    std::unordered_set<std::string> m_tab_names;
     std::unordered_set<uint32_t> m_slider_items;
     std::unordered_map<uint32_t, int> m_listbox_selections;
     std::unordered_map<uint32_t, std::array<float, 4>> m_color_values;

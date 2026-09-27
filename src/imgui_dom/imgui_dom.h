@@ -201,7 +201,7 @@ inline void EndTabBar() {
 inline bool BeginTabItem(const char* label, bool* p_open = nullptr, ImGuiTabItemFlags flags = 0) {
     if (DomContext::Instance().IsEnabled()) {
         uint32_t id = static_cast<uint32_t>(ImGui::GetID(label));
-        if (DomContext::Instance().ConsumeTabSelect(id)) {
+        if (DomContext::Instance().ConsumeTabSelect(id, label)) {
             flags |= ImGuiTabItemFlags_SetSelected;
         }
     }

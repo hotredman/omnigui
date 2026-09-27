@@ -156,7 +156,7 @@ async function waitForCdpTarget(cdpPort, timeoutMs = 12000) {
 // ============================================================================
 // Pure Coordinate & Semantic Parity Report Utilities
 // ============================================================================
-function generateHtmlReport(reportPath, parityReport, screenshots, totalPairs, totalCollisions) {
+function generateHtmlReport(reportPath, parityReport, screenshots, totalPairs, totalCollisions, styleAudit = null) {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -167,7 +167,7 @@ function generateHtmlReport(reportPath, parityReport, screenshots, totalPairs, t
     body { background: #0f0f14; color: #e0e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; }
     h1 { color: #fff; font-size: 24px; margin-bottom: 8px; }
     .subtitle { color: #8899aa; font-size: 14px; margin-bottom: 24px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
     .card { background: #1a1e28; border: 1px solid #2e384d; border-radius: 6px; padding: 16px; }
     .card .val { font-size: 26px; font-weight: 700; color: #38bdf8; margin-top: 6px; }
     .card .val.good { color: #4ade80; }
@@ -185,7 +185,7 @@ function generateHtmlReport(reportPath, parityReport, screenshots, totalPairs, t
   </style>
 </head>
 <body>
-  <h1>Dear ImGui Web DOM Backend - Exact Coordinate & Semantic Parity Report</h1>
+  <h1>Dear ImGui Web DOM Backend - Exact Coordinate, Semantic & Style Parity Report</h1>
   <div class="subtitle">Generated on ${new Date().toISOString()} | Pure Coordinate & Semantic Parity Verification (No Screenshots)</div>
 
   <div class="grid">
@@ -196,6 +196,10 @@ function generateHtmlReport(reportPath, parityReport, screenshots, totalPairs, t
     <div class="card">
       <div class="lbl">Coordinate & Semantic Score</div>
       <div class="val good">${parityReport.passRate.toFixed(2)}%</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Style Parity Score</div>
+      <div class="val good">${styleAudit?.metrics?.parityScore || 100}%</div>
     </div>
     <div class="card">
       <div class="lbl">Max Position Drift (X, Y)</div>
@@ -259,6 +263,12 @@ function generateHtmlReport(reportPath, parityReport, screenshots, totalPairs, t
           <td>Layout Collisions Detected</td>
           <td>0 allowed</td>
           <td>${totalCollisions || 0} collisions</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
+        <tr>
+          <td>Canonical Visual Style Invariants (Colors, Geometry, Roundedness)</td>
+          <td>100% exact</td>
+          <td>${styleAudit ? styleAudit.passedRules + '/' + styleAudit.checkedRules + ' rules passed' : '100%'}</td>
           <td><span class="badge">PASSED</span></td>
         </tr>
       </tbody>
@@ -728,9 +738,43 @@ async function runE2ETests() {
     }
     console.log('>>> [PASS] Exact Element Coordinate & Semantic Parity Verified (100.00% Score)!');
 
+    // 9.5. Automated Visual Style Parity Audit
+    console.log('\n[Step 9.5] Running Automated Style Parity Auditor across canonical widget matrix...');
+    // Switch to Element Gallery tab first to ensure all widgets and states are mounted in DOM
+    await cdp.evaluate(`
+      (() => {
+        const tabs = Array.from(document.querySelectorAll('.imgui-tab-item'));
+        const galleryTab = tabs.find(t => t.textContent.trim() === 'Element Gallery');
+        if (galleryTab) galleryTab.click();
+      })()
+    `);
+    // Wait for Element Gallery tab to be active and mounted in DOM
+    for (let i = 0; i < 20; i++) {
+      const hasDisabled = await cdp.evaluate("Boolean(document.querySelector('.imgui-disabled'))");
+      if (hasDisabled) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    const styleAudit = await cdp.evaluate('window.__auditStyleParity()');
+    console.log(`  Checked Style Invariants:           ${styleAudit.checkedRules}`);
+    console.log(`  Passed Style Invariants:            ${styleAudit.passedRules}`);
+    console.log(`  Style Defects / Violations:         ${styleAudit.violations.length}`);
+    console.log(`  Style Parity Score:                 ${styleAudit.metrics.parityScore}%`);
+
+    if (!styleAudit.ok || styleAudit.violations.length > 0) {
+      console.error('\n>>> [FAIL] Style Parity Violations Detected!');
+      console.error(JSON.stringify(styleAudit.violations, null, 2));
+      process.exit(1);
+    }
+    console.log('>>> [PASS] All canonical widget styles & metrics verified (100.0% Style Parity)!');
+
+    const galleryScreenshot = await cdp.captureScreenshot();
+    fs.writeFileSync(path.join(screenshotsDir, 'element_gallery_styles.png'), galleryScreenshot);
+    savedScreenshots.push({ file: 'element_gallery_styles.png', title: 'Canonical Element Gallery & Visual States' });
+
     // Generate comprehensive HTML report
     const reportHtmlPath = path.join(screenshotsDir, 'parity_report.html');
-    generateHtmlReport(reportHtmlPath, parityReport, savedScreenshots, totalPairsChecked, totalCollisions);
+    generateHtmlReport(reportHtmlPath, parityReport, savedScreenshots, totalPairsChecked, totalCollisions, styleAudit);
     console.log(`  Parity Report saved:   ${reportHtmlPath}`);
 
     console.log(`\n========================================================`);
@@ -743,6 +787,7 @@ async function runE2ETests() {
     console.log(`  Max Coordinate Drift:                  ${parityReport.maxDeltaX.toFixed(2)}px X, ${parityReport.maxDeltaY.toFixed(2)}px Y`);
     console.log(`  Max Dimension Drift:                   ${parityReport.maxDeltaW.toFixed(2)}px W`);
     console.log(`  Exact Coordinate & Semantic Parity:    100.00% PASSED`);
+    console.log(`  Visual Style Parity:                   ${styleAudit.metrics.parityScore}% PASSED`);
     console.log(`  Dead Element Pruning:                  VERIFIED`);
     console.log(`  Full-Duplex Responsiveness:            VERIFIED`);
     console.log(`========================================================\n`);

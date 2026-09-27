@@ -377,8 +377,81 @@ int main(int argc, char* argv[]) {
             ImGuiDom::Begin("ImGui Web DOM Backend - Server Controls", nullptr);
             ImGuiDom::Text("Dear ImGui %s (Headless Web Server)", IMGUI_VERSION);
             ImGuiDom::Separator();
-            ImGuiDom::TextColored(ImVec4(0.2f, 0.9f, 1.0f, 1.0f), "Web Client URL: http://localhost:%d", dom_port);
-            ImGuiDom::Text("Status: Streaming DOM & Canvas @ 60 FPS");
+            if (ImGuiDom::BeginTabBar("HudTabs")) {
+                if (ImGuiDom::BeginTabItem("Status")) {
+                    ImGuiDom::TextColored(ImVec4(0.2f, 0.9f, 1.0f, 1.0f), "Web Client URL: http://localhost:%d", dom_port);
+                    ImGuiDom::Text("Status: Streaming DOM & Canvas @ 60 FPS");
+                    ImGuiDom::EndTabItem();
+                }
+
+                if (ImGuiDom::BeginTabItem("Element Gallery")) {
+                    ImGuiDom::Text("Canonical Widget Gallery & State Matrix:");
+                    ImGuiDom::Separator();
+
+                    // Buttons
+                    if (ImGuiDom::Button("Gallery Button")) {}
+                    ImGuiDom::SameLine();
+                    ImGui::BeginDisabled(true);
+                    ImGuiDom::Button("Disabled Button");
+                    ImGui::EndDisabled();
+
+                    // Checkboxes
+                    static bool gal_c1 = false;
+                    static bool gal_c2 = true;
+                    ImGuiDom::Checkbox("Unchecked", &gal_c1);
+                    ImGuiDom::SameLine();
+                    ImGuiDom::Checkbox("Checked", &gal_c2);
+                    ImGuiDom::SameLine();
+                    ImGui::BeginDisabled(true);
+                    ImGuiDom::Checkbox("Disabled Check", &gal_c2);
+                    ImGui::EndDisabled();
+
+                    // Radio
+                    static int gal_r = 1;
+                    ImGuiDom::RadioButton("Radio 0", &gal_r, 0);
+                    ImGuiDom::SameLine();
+                    ImGuiDom::RadioButton("Radio 1", &gal_r, 1);
+                    ImGuiDom::SameLine();
+                    ImGui::BeginDisabled(true);
+                    ImGuiDom::RadioButton("Radio Dis", &gal_r, 1);
+                    ImGui::EndDisabled();
+
+                    // Slider
+                    static float gal_slider = 50.0f;
+                    ImGuiDom::SliderFloat("Slider 50%", &gal_slider, 0.0f, 100.0f);
+                    ImGui::BeginDisabled(true);
+                    ImGuiDom::SliderFloat("Disabled Slider", &gal_slider, 0.0f, 100.0f);
+                    ImGui::EndDisabled();
+
+                    // Input
+                    static char gal_text[64] = "Editable text";
+                    ImGuiDom::InputText("Input Text", gal_text, sizeof(gal_text));
+                    ImGui::BeginDisabled(true);
+                    ImGuiDom::InputText("Disabled Input", gal_text, sizeof(gal_text));
+                    ImGui::EndDisabled();
+
+                    // Combo
+                    static int gal_combo = 0;
+                    static const char* gal_items[] = { "Option Alpha", "Option Beta", "Option Gamma" };
+                    ImGuiDom::Combo("Select Combo", &gal_combo, gal_items, 3);
+
+                    // ProgressBar
+                    ImGuiDom::ProgressBar(0.70f, ImVec2(-1, 0), "70%");
+
+                    // CollapsingHeader
+                    if (ImGui::CollapsingHeader("Gallery Collapsing Header")) {
+                        ImGuiDom::Text("Inside Collapsing Header");
+                        if (ImGui::TreeNode("Gallery Tree Node")) {
+                            ImGuiDom::Text("Tree node content");
+                            ImGui::TreePop();
+                        }
+                    }
+
+                    ImGuiDom::EndTabItem();
+                }
+
+                ImGuiDom::EndTabBar();
+            }
             ImGuiDom::End();
 
             ImGui::Render();

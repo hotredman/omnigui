@@ -698,6 +698,11 @@ void DomContext::PushBrowserEvent(const BrowserEvent& evt) {
             m_active_clicks.insert(evt.id);
         } else if (evt.type == "tab") {
             m_tab_selections.insert(evt.id);
+            if (!evt.label.empty()) {
+                m_tab_names.insert(evt.label);
+            } else if (!evt.value_str.empty()) {
+                m_tab_names.insert(evt.value_str);
+            }
             m_active_clicks.insert(evt.id);
         } else if (evt.type == "listbox") {
             m_listbox_selections[evt.id] = static_cast<int>(evt.value_num);
@@ -729,13 +734,10 @@ bool DomContext::ConsumeClick(uint32_t id) {
     return false;
 }
 
-bool DomContext::ConsumeTabSelect(uint32_t id) {
+bool DomContext::ConsumeTabSelect(uint32_t id, const char* label) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    auto it = m_tab_selections.find(id);
-    if (it != m_tab_selections.end()) {
-        m_tab_selections.erase(it);
-        return true;
-    }
+    if (m_tab_selections.erase(id) > 0) return true;
+    if (label && m_tab_names.erase(label) > 0) return true;
     return false;
 }
 
