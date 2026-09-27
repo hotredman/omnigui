@@ -555,6 +555,63 @@ async function runE2ETests() {
 
     console.log(`>>> [PASS] Widget fuzzer completed (${fuzzActions} rapid events, event loop responsive)!`);
 
+    // 8.5. Window Grabbing and Dragging Verification
+    console.log('\n[Step 8.5] Testing Window Dragging with Pointer Capture & Bi-directional Position Sync...');
+    const dragTestResult = await cdp.evaluate(`
+      (async () => {
+        const demoWin = Array.from(document.querySelectorAll('.imgui-window')).find(w => {
+          const h = w.querySelector('.imgui-header');
+          return h && h.textContent.includes('Dear ImGui Demo');
+        });
+        if (!demoWin) return { ok: false, error: 'Demo window not found' };
+        const header = demoWin.querySelector('.imgui-header');
+        if (!header) return { ok: false, error: 'Header not found' };
+
+        const startRect = demoWin.getBoundingClientRect();
+        const headerRect = header.getBoundingClientRect();
+
+        // 1. Grab header
+        header.dispatchEvent(new PointerEvent('pointerdown', {
+          bubbles: true, cancelable: true,
+          clientX: headerRect.left + 50, clientY: headerRect.top + 10,
+          button: 0, pointerId: 1
+        }));
+
+        // 2. Drag by (+40px X, +30px Y)
+        header.dispatchEvent(new PointerEvent('pointermove', {
+          bubbles: true, cancelable: true,
+          clientX: headerRect.left + 50 + 40, clientY: headerRect.top + 10 + 30,
+          button: 0, pointerId: 1
+        }));
+
+        // 3. Release header
+        header.dispatchEvent(new PointerEvent('pointerup', {
+          bubbles: true, cancelable: true,
+          clientX: headerRect.left + 50 + 40, clientY: headerRect.top + 10 + 30,
+          button: 0, pointerId: 1
+        }));
+
+        await new Promise(r => setTimeout(r, 100));
+
+        const endRect = demoWin.getBoundingClientRect();
+        return {
+          ok: true,
+          dx: Math.round(endRect.left - startRect.left),
+          dy: Math.round(endRect.top - startRect.top)
+        };
+      })()
+    `);
+
+    if (!dragTestResult.ok || dragTestResult.dx !== 40 || dragTestResult.dy !== 30) {
+      console.error('\n>>> [FAIL] Window Dragging Test Failed!', dragTestResult);
+      process.exit(1);
+    }
+    console.log(`  Moved Window: Dear ImGui Demo by +${dragTestResult.dx}px X, +${dragTestResult.dy}px Y`);
+    console.log('>>> [PASS] Window Dragging with Pointer Capture Verified!');
+
+    // Wait 200ms for C++ ImGui to process window_move and broadcast updated snapshot
+    await new Promise(r => setTimeout(r, 200));
+
     // 9. Pure Element Coordinate & Semantic Parity Verification (No Screenshots)
     console.log('\n[Step 9] Running Pure Element Coordinate & Semantic Parity Validator (No Screenshots)...');
     const parityReport = await cdp.evaluate('window.__auditCoordinateParity()');

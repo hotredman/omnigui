@@ -797,6 +797,33 @@ void DomContext::ProcessInputEvents(ImGuiIO& io) {
         } else if (evt.type == "radio") {
             m_checkbox_values[evt.id] = true;
             m_active_clicks.insert(evt.id);
+        } else if (evt.type == "window_move") {
+            if (ImGui::GetCurrentContext()) {
+                ImGuiWindow* win = nullptr;
+                if (evt.id != 0) {
+                    win = ImGui::FindWindowByID(evt.id);
+                }
+                if (!win && !evt.value_str.empty()) {
+                    win = ImGui::FindWindowByName(evt.value_str.c_str());
+                }
+                if (win) {
+                    ImGui::SetWindowPos(win, ImVec2(evt.x, evt.y), ImGuiCond_Always);
+                    ImGui::FocusWindow(win);
+                }
+            }
+        } else if (evt.type == "window_focus") {
+            if (ImGui::GetCurrentContext()) {
+                ImGuiWindow* win = nullptr;
+                if (evt.id != 0) {
+                    win = ImGui::FindWindowByID(evt.id);
+                }
+                if (!win && !evt.value_str.empty()) {
+                    win = ImGui::FindWindowByName(evt.value_str.c_str());
+                }
+                if (win) {
+                    ImGui::FocusWindow(win);
+                }
+            }
         }
     }
 }

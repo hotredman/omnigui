@@ -668,6 +668,36 @@ int main() {
     }
     std::cout << ">>> [PASS] CollapsingHeader export verified!\n";
 
+    // -----------------------------------------------------------------
+    std::cout << "[Step 13] Testing window_move and window_focus event synchronization...\n";
+    httplib::ws::WebSocketClient ws_cli3("ws://127.0.0.1:" + std::to_string(test_port) + "/ws");
+    ws_cli3.set_read_timeout(std::chrono::seconds(2));
+    if (ws_cli3.connect()) {
+        // Send window_move to relocate "Tree Window" to (140, 220)
+        ws_cli3.send("{\"type\":\"window_move\",\"title\":\"Tree Window\",\"x\":140.0,\"y\":220.0}");
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+        ImGuiDom::BeginFrame(16);
+        ImGui::NewFrame();
+
+        ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Tree Window", nullptr);
+        ImGui::Text("Relocated content");
+        ImGui::End();
+
+        ImGui::Render();
+        ImGuiDom::EndFrame();
+
+        std::string move_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+        std::cout << "Moved Window DOM JSON: " << move_json << "\n";
+        if (move_json.find("\"x\":140") == std::string::npos || move_json.find("\"y\":220") == std::string::npos) {
+            std::cerr << "[FAIL] window_move position (140, 220) not reflected in ImGui window!\n";
+            return 1;
+        }
+        ws_cli3.close();
+        std::cout << ">>> [PASS] window_move synchronization verified!\n";
+    }
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 

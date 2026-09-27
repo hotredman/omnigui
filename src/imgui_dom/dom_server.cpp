@@ -106,6 +106,9 @@ static BrowserEvent ParseBrowserEvent(const std::string& json) {
     if (evt.value_str.empty()) {
         evt.value_str = ExtractJsonString(json, "color");
     }
+    if (evt.value_str.empty()) {
+        evt.value_str = ExtractJsonString(json, "title");
+    }
     return evt;
 }
 

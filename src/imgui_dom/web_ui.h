@@ -82,7 +82,7 @@ inline const std::string& GetWebClientHtml() {
             font-size: 13px;
             color: #ffffff;
             border-bottom: 1px solid #3d4a60;
-            cursor: default;
+            cursor: grab;
             user-select: none;
             box-sizing: border-box;
             z-index: 10;
@@ -92,6 +92,11 @@ inline const std::string& GetWebClientHtml() {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            touch-action: none;
+        }
+        .imgui-header.dragging,
+        .imgui-header:active {
+            cursor: grabbing;
         }
         .imgui-collapse-btn {
             font-size: 10px;
@@ -106,12 +111,14 @@ inline const std::string& GetWebClientHtml() {
             flex-shrink: 0;
             border-radius: 2px;
             transition: color 0.1s, background 0.1s;
+            pointer-events: auto;
         }
         .imgui-collapse-btn:hover {
             color: #ffffff;
             background: rgba(255, 255, 255, 0.15);
         }
         .imgui-win-title {
+            pointer-events: none;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -383,7 +390,8 @@ inline const std::string& GetWebClientHtml() {
         .imgui-select:focus {
             border-color: #4d7eb8;
         }
-
+)HTML";
+        s += R"HTML(
         /* Native ProgressBar */
         .imgui-progress-box {
             position: absolute;
@@ -734,7 +742,124 @@ inline const std::string& GetWebClientHtml() {
         }
 
         let lastMouseMoveTime = 0;
+        let draggingWin = null;
+        let draggingWinId = null;
+        let topZIndex = 50;
+
+        function setupWindowDragging(winEl) {
+            const header = winEl.querySelector('.imgui-header');
+            if (!header) return;
+
+            winEl.addEventListener('pointerdown', () => {
+                topZIndex++;
+                winEl.style.zIndex = topZIndex;
+                winEl.dataset.topZ = "1";
+            }, { passive: true });
+
+            header.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('.imgui-collapse-btn')) return;
+                if (e.button !== 0) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                try {
+                    header.setPointerCapture(e.pointerId);
+                } catch {}
+
+                const currentLeft = parseFloat(winEl.style.left) || winEl.offsetLeft || 0;
+                const currentTop = parseFloat(winEl.style.top) || winEl.offsetTop || 0;
+                const winId = parseInt(winEl.dataset.winId, 10);
+                const winTitle = winEl.dataset.winTitle || '';
+
+                draggingWin = {
+                    id: winId,
+                    title: winTitle,
+                    elem: winEl,
+                    header: header,
+                    pointerId: e.pointerId,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    startLeft: currentLeft,
+                    startTop: currentTop,
+                    lastX: currentLeft,
+                    lastY: currentTop,
+                    lastSentTime: 0
+                };
+                draggingWinId = winId;
+
+                topZIndex++;
+                winEl.style.zIndex = topZIndex;
+                winEl.dataset.topZ = "1";
+                header.classList.add('dragging');
+
+                postEvent({ type: 'window_focus', id: winId, title: winTitle });
+            });
+
+            header.addEventListener('pointermove', (e) => {
+                if (!draggingWin || draggingWin.elem !== winEl || draggingWin.pointerId !== e.pointerId) return;
+
+                e.preventDefault();
+                const dx = e.clientX - draggingWin.startX;
+                const dy = e.clientY - draggingWin.startY;
+
+                const newX = Math.round(draggingWin.startLeft + dx);
+                const newY = Math.round(draggingWin.startTop + dy);
+
+                winEl.style.left = `${newX}px`;
+                winEl.style.top = `${newY}px`;
+                draggingWin.lastX = newX;
+                draggingWin.lastY = newY;
+
+                const now = performance.now();
+                if (now - draggingWin.lastSentTime >= 16) {
+                    draggingWin.lastSentTime = now;
+                    postEvent({
+                        type: 'window_move',
+                        id: draggingWin.id,
+                        title: draggingWin.title,
+                        x: newX,
+                        y: newY
+                    });
+                }
+            });
+
+            const onPointerUp = (e) => {
+                if (!draggingWin || draggingWin.elem !== winEl || draggingWin.pointerId !== e.pointerId) return;
+
+                try {
+                    header.releasePointerCapture(e.pointerId);
+                } catch {}
+
+                header.classList.remove('dragging');
+
+                const finalX = draggingWin.lastX;
+                const finalY = draggingWin.lastY;
+                const winId = draggingWin.id;
+                const winTitle = draggingWin.title;
+
+                postEvent({
+                    type: 'window_move',
+                    id: winId,
+                    title: winTitle,
+                    x: finalX,
+                    y: finalY
+                });
+
+                setTimeout(() => {
+                    if (draggingWinId === winId) {
+                        draggingWin = null;
+                        draggingWinId = null;
+                    }
+                }, 80);
+            };
+
+            header.addEventListener('pointerup', onPointerUp);
+            header.addEventListener('pointercancel', onPointerUp);
+        }
+
         window.addEventListener('mousemove', (e) => {
+            if (draggingWinId) return;
             const now = performance.now();
             if (now - lastMouseMoveTime >= 16) {
                 lastMouseMoveTime = now;
@@ -749,6 +874,9 @@ inline const std::string& GetWebClientHtml() {
             if (e.target.closest('.imgui-btn, .imgui-menu-item, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box, .imgui-color-box, .imgui-textarea-box')) {
                 return;
             }
+            if (e.target.closest('.imgui-header')) {
+                return;
+            }
             const dRect = desktop.getBoundingClientRect();
             const mx = e.clientX - dRect.left + desktop.scrollLeft;
             const my = e.clientY - dRect.top + desktop.scrollTop;
@@ -758,6 +886,9 @@ inline const std::string& GetWebClientHtml() {
         window.addEventListener('mouseup', (e) => {
             activeSliders.clear();
             if (e.target.closest('.imgui-btn, .imgui-menu-item, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box, .imgui-color-box, .imgui-textarea-box')) {
+                return;
+            }
+            if (e.target.closest('.imgui-header')) {
                 return;
             }
             const dRect = desktop.getBoundingClientRect();
@@ -783,7 +914,8 @@ inline const std::string& GetWebClientHtml() {
                 postEvent({ type: 'char', text: e.key });
             }
         });
-
+)HTML";
+        s += R"HTML(
         function updateDom(doc) {
             window.__latestDoc = doc;
             const now = performance.now();
@@ -830,14 +962,22 @@ inline const std::string& GetWebClientHtml() {
                     winEl.className = 'imgui-window';
                     winEl.innerHTML = `<div class="imgui-header"><span class="imgui-collapse-btn">▼</span><span class="imgui-win-title">${win.title}</span></div><div class="imgui-menubar" style="display:none"></div><div class="imgui-body"></div>`;
                     desktop.appendChild(winEl);
+                    setupWindowDragging(winEl);
                 }
 
+                winEl.dataset.winId = win.id;
+                winEl.dataset.winTitle = win.title;
+
                 // Window dimensions & stacking z-index
-                winEl.style.left = `${win.x}px`;
-                winEl.style.top = `${win.y}px`;
+                if (draggingWinId !== win.id) {
+                    winEl.style.left = `${win.x}px`;
+                    winEl.style.top = `${win.y}px`;
+                }
                 winEl.style.width = `${win.w}px`;
                 winEl.style.height = `${win.h}px`;
-                winEl.style.zIndex = 10 + winIdx;
+                if (!winEl.dataset.topZ || draggingWinId !== win.id) {
+                    winEl.style.zIndex = 10 + winIdx;
+                }
                 if (win.is_tooltip) {
                     winEl.classList.add('tooltip');
                 } else {
@@ -854,6 +994,8 @@ inline const std::string& GetWebClientHtml() {
                     const collapseBtn = header.querySelector('.imgui-collapse-btn');
                     if (collapseBtn) {
                         collapseBtn.textContent = win.collapsed ? '▶' : '▼';
+                        collapseBtn.onpointerdown = (e) => e.stopPropagation();
+                        collapseBtn.onmousedown = (e) => e.stopPropagation();
                         collapseBtn.onclick = (e) => {
                             e.stopPropagation();
                             postEvent({ type: 'click', id: win.id, x: win.x + 8, y: win.y + 8 });
@@ -939,7 +1081,10 @@ inline const std::string& GetWebClientHtml() {
                         elem.style.width = `${el.w}px`;
                         elem.style.height = `${el.h}px`;
 
-                    } else if (el.type === 'checkbox') {
+                    }
+)HTML";
+        s += R"HTML(
+                    else if (el.type === 'checkbox') {
                         if (!elem) {
                             elem = document.createElement('label');
                             elem.id = `el_${el.id}`;
@@ -1264,7 +1409,10 @@ inline const std::string& GetWebClientHtml() {
                         elem.style.width = `${el.w}px`;
                         elem.style.height = `${el.h}px`;
 
-                    } else if (el.type === 'textarea') {
+                    }
+)HTML";
+        s += R"HTML(
+                    else if (el.type === 'textarea') {
                         if (!elem) {
                             elem = document.createElement('div');
                             elem.id = `el_${el.id}`;
