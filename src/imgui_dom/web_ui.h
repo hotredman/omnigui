@@ -199,7 +199,8 @@ inline const char* GetWebClientHtml() {
 
             ctx.fillStyle = "#111116";
             ctx.fillRect(0, 0, w, h);
-
+)HTML"
+R"HTML(
             // Grid lines
             ctx.strokeStyle = "#252533";
             ctx.lineWidth = 1;
@@ -229,8 +230,37 @@ inline const char* GetWebClientHtml() {
             ctx.shadowBlur = 0;
         }
 
-        window.addEventListener('mouseup', () => activeSliders.clear());
+        let lastMouseMoveTime = 0;
+        window.addEventListener('mousemove', (e) => {
+            const now = performance.now();
+            if (now - lastMouseMoveTime >= 16) {
+                lastMouseMoveTime = now;
+                postEvent({ type: 'mouse_move', x: e.clientX, y: Math.max(0, e.clientY - 32) });
+            }
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            postEvent({ type: 'mouse_down', button: e.button, x: e.clientX, y: Math.max(0, e.clientY - 32) });
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            activeSliders.clear();
+            postEvent({ type: 'mouse_up', button: e.button, x: e.clientX, y: Math.max(0, e.clientY - 32) });
+        });
         window.addEventListener('touchend', () => activeSliders.clear());
+
+        window.addEventListener('wheel', (e) => {
+            const dx = -e.deltaX / 100.0;
+            const dy = -e.deltaY / 100.0;
+            postEvent({ type: 'mouse_wheel', dx: dx, dy: dy });
+        }, { passive: true });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                postEvent({ type: 'char', text: e.key });
+            }
+        });
 
         function updateDom(doc) {
             const now = performance.now();

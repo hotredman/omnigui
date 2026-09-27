@@ -22,25 +22,8 @@ void DomContext::BeginFrame(uint64_t frame_index) {
     m_hooked_items.clear();
     m_hooked_order.clear();
 
-    // Pop any processed clicks from previous frame
-    std::lock_guard<std::mutex> lock(m_mutex);
-    while (!m_pending_events.empty()) {
-        BrowserEvent evt = m_pending_events.front();
-        m_pending_events.pop();
-
-        if (evt.type == "click") {
-            m_active_clicks.insert(evt.id);
-            // Programmatically activate in Dear ImGui!
-            if (ImGui::GetCurrentContext()) {
-                ImGuiContext& g = *ImGui::GetCurrentContext();
-                g.NavNextActivateId = evt.id;
-                g.NavNextActivateFlags = ImGuiActivateFlags_PreferInput;
-            }
-        } else if (evt.type == "slider") {
-            m_slider_values[evt.id] = evt.value_num;
-        } else if (evt.type == "checkbox") {
-            m_checkbox_values[evt.id] = evt.checked;
-        }
+    if (ImGui::GetCurrentContext()) {
+        ProcessInputEvents(ImGui::GetIO());
     }
 }
 
@@ -281,8 +264,52 @@ bool DomContext::ConsumeCheckbox(uint32_t id, bool& out_checked) {
 }
 
 void DomContext::ProcessInputEvents(ImGuiIO& io) {
-    (void)io;
-    // Clicks and state changes are dispatched directly via ConsumeClick/ConsumeSlider
+    std::vector<BrowserEvent> events_to_process;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        while (!m_pending_events.empty()) {
+            events_to_process.push_back(m_pending_events.front());
+            m_pending_events.pop();
+        }
+    }
+
+    for (const auto& evt : events_to_process) {
+        if (evt.type == "mouse_move") {
+            io.AddMousePosEvent(evt.x, evt.y);
+        } else if (evt.type == "mouse_down") {
+            io.AddMousePosEvent(evt.x, evt.y);
+            io.AddMouseButtonEvent(evt.button, true);
+        } else if (evt.type == "mouse_up") {
+            io.AddMousePosEvent(evt.x, evt.y);
+            io.AddMouseButtonEvent(evt.button, false);
+        } else if (evt.type == "mouse_wheel") {
+            io.AddMouseWheelEvent(evt.dx, evt.dy);
+        } else if (evt.type == "key_down") {
+            io.AddKeyEvent(static_cast<ImGuiKey>(evt.key), true);
+        } else if (evt.type == "key_up") {
+            io.AddKeyEvent(static_cast<ImGuiKey>(evt.key), false);
+        } else if (evt.type == "char") {
+            if (!evt.value_str.empty()) {
+                io.AddInputCharactersUTF8(evt.value_str.c_str());
+            }
+        } else if (evt.type == "click") {
+            m_active_clicks.insert(evt.id);
+            if (ImGui::GetCurrentContext()) {
+                ImGuiContext& g = *ImGui::GetCurrentContext();
+                g.NavNextActivateId = evt.id;
+                g.NavNextActivateFlags = ImGuiActivateFlags_PreferInput;
+            }
+            if (evt.x > 0.0f || evt.y > 0.0f) {
+                io.AddMousePosEvent(evt.x, evt.y);
+                io.AddMouseButtonEvent(0, true);
+                io.AddMouseButtonEvent(0, false);
+            }
+        } else if (evt.type == "slider") {
+            m_slider_values[evt.id] = evt.value_num;
+        } else if (evt.type == "checkbox") {
+            m_checkbox_values[evt.id] = evt.checked;
+        }
+    }
 }
 
 std::string DomContext::GetLatestJson() {

@@ -72,6 +72,37 @@ static bool ExtractJsonBool(const std::string& json, const std::string& key) {
     return (val_pos != std::string::npos && val_pos < comma_pos);
 }
 
+static int ExtractJsonInt(const std::string& json, const std::string& key, int default_val = 0) {
+    size_t pos = json.find("\"" + key + "\"");
+    if (pos == std::string::npos) return default_val;
+    pos = json.find(":", pos);
+    if (pos == std::string::npos) return default_val;
+    pos = json.find_first_not_of(" \t", pos + 1);
+    if (pos == std::string::npos) return default_val;
+    size_t end = json.find_first_of(",}\" \t\r\n", pos);
+    try {
+        return std::stoi(json.substr(pos, end - pos));
+    } catch (...) {
+        return default_val;
+    }
+}
+
+static BrowserEvent ParseBrowserEvent(const std::string& json) {
+    BrowserEvent evt;
+    evt.type = ExtractJsonString(json, "type");
+    evt.id = ExtractJsonUint(json, "id");
+    evt.x = ExtractJsonFloat(json, "x");
+    evt.y = ExtractJsonFloat(json, "y");
+    evt.dx = ExtractJsonFloat(json, "dx");
+    evt.dy = ExtractJsonFloat(json, "dy");
+    evt.button = ExtractJsonInt(json, "button", 0);
+    evt.key = ExtractJsonInt(json, "key", 0);
+    evt.value_num = ExtractJsonFloat(json, "val");
+    evt.checked = ExtractJsonBool(json, "checked");
+    evt.value_str = ExtractJsonString(json, "text");
+    return evt;
+}
+
 DomServer::DomServer() = default;
 
 DomServer::~DomServer() {
@@ -123,17 +154,7 @@ bool DomServer::Start(const std::string& host, int port) {
 
     // 3. Browser interaction event receiver (HTTP POST fallback)
     m_server->Post("/api/event", [](const httplib::Request& req, httplib::Response& res) {
-        BrowserEvent evt;
-        evt.type = ExtractJsonString(req.body, "type");
-        evt.id = ExtractJsonUint(req.body, "id");
-        evt.x = ExtractJsonFloat(req.body, "x");
-        evt.y = ExtractJsonFloat(req.body, "y");
-        evt.value_num = ExtractJsonFloat(req.body, "val");
-        evt.checked = ExtractJsonBool(req.body, "checked");
-        evt.value_str = ExtractJsonString(req.body, "text");
-
-        DomContext::Instance().PushBrowserEvent(evt);
-
+        DomContext::Instance().PushBrowserEvent(ParseBrowserEvent(req.body));
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_content("{\"status\":\"ok\"}", "application/json");
     });
@@ -157,15 +178,7 @@ bool DomServer::Start(const std::string& host, int port) {
         while (m_running && ws.is_open()) {
             auto res = ws.read(msg);
             if (res == httplib::ws::ReadResult::Text) {
-                BrowserEvent evt;
-                evt.type = ExtractJsonString(msg, "type");
-                evt.id = ExtractJsonUint(msg, "id");
-                evt.x = ExtractJsonFloat(msg, "x");
-                evt.y = ExtractJsonFloat(msg, "y");
-                evt.value_num = ExtractJsonFloat(msg, "val");
-                evt.checked = ExtractJsonBool(msg, "checked");
-                evt.value_str = ExtractJsonString(msg, "text");
-                DomContext::Instance().PushBrowserEvent(evt);
+                DomContext::Instance().PushBrowserEvent(ParseBrowserEvent(msg));
             } else if (res == httplib::ws::ReadResult::Timeout) {
                 continue;
             } else {

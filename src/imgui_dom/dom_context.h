@@ -14,10 +14,14 @@ struct ImGuiIO;
 namespace ImGuiDom {
 
 struct BrowserEvent {
-    std::string type; // "click", "slider", "checkbox", "input"
+    std::string type; // "click", "slider", "checkbox", "input", "mouse_move", "mouse_down", "mouse_up", "mouse_wheel", "key_down", "key_up", "char"
     uint32_t id = 0;
     float x = 0.0f;
     float y = 0.0f;
+    float dx = 0.0f;
+    float dy = 0.0f;
+    int button = 0;
+    int key = 0;
     float value_num = 0.0f;
     bool checked = false;
     std::string value_str;

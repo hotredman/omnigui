@@ -191,6 +191,70 @@ int main() {
 
     std::cout << "\n>>> [PASS] Full-Duplex WebSocket verified between Browser client and C++ ImGui!\n";
 
+    // -----------------------------------------------------------------
+    // Step 7: Pointer / Keyboard Event Forwarding directly to ImGuiIO
+    // -----------------------------------------------------------------
+    std::cout << "[Step 7] Testing Pointer and Keyboard event forwarding to ImGuiIO...\n";
+    httplib::ws::WebSocketClient ws_cli2("ws://127.0.0.1:" + std::to_string(test_port) + "/ws");
+    ws_cli2.set_read_timeout(std::chrono::seconds(2));
+    if (ws_cli2.connect()) {
+        // Frame 3: Mouse move and Mouse down
+        ws_cli2.send("{\"type\":\"mouse_move\",\"x\":120.0,\"y\":110.0}");
+        ws_cli2.send("{\"type\":\"mouse_down\",\"button\":0,\"x\":120.0,\"y\":110.0}");
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+        ImGuiDom::BeginFrame(3);
+        ImGui::NewFrame();
+
+        ImGuiIO& io_check = ImGui::GetIO();
+        std::cout << "ImGuiIO MousePos: (" << io_check.MousePos.x << ", " << io_check.MousePos.y << ")\n";
+        std::cout << "ImGuiIO MouseDown[0]: " << (io_check.MouseDown[0] ? "true" : "false") << "\n";
+
+        if (std::abs(io_check.MousePos.x - 120.0f) > 0.1f || std::abs(io_check.MousePos.y - 110.0f) > 0.1f) {
+            std::cerr << "[FAIL] MousePos was not forwarded to ImGuiIO!\n";
+            return 1;
+        }
+        if (!io_check.MouseDown[0]) {
+            std::cerr << "[FAIL] MouseDown[0] was not forwarded to ImGuiIO!\n";
+            return 1;
+        }
+
+        ImGui::Render();
+        ImGuiDom::EndFrame();
+
+        // Frame 4: Mouse wheel and character input
+        ws_cli2.send("{\"type\":\"mouse_wheel\",\"dx\":1.0,\"dy\":-3.5}");
+        ws_cli2.send("{\"type\":\"char\",\"text\":\"W\"}");
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+        ImGuiDom::BeginFrame(4);
+        ImGui::NewFrame();
+
+        std::cout << "ImGuiIO MouseWheel: " << io_check.MouseWheel << "\n";
+        if (std::abs(io_check.MouseWheel - (-3.5f)) > 0.1f) {
+            std::cerr << "[FAIL] MouseWheel was not forwarded to ImGuiIO!\n";
+            return 1;
+        }
+
+        ImGui::Render();
+        ImGuiDom::EndFrame();
+
+        // Frame 5: Mouse up release
+        ws_cli2.send("{\"type\":\"mouse_up\",\"button\":0,\"x\":120.0,\"y\":110.0}");
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+        ImGuiDom::BeginFrame(5);
+        ImGui::NewFrame();
+        if (io_check.MouseDown[0]) {
+            std::cerr << "[FAIL] MouseUp[0] was not released in ImGuiIO!\n";
+            return 1;
+        }
+        ImGui::Render();
+        ImGuiDom::EndFrame();
+        ws_cli2.close();
+        std::cout << ">>> [PASS] Native ImGuiIO pointer and keyboard events verified!\n";
+    }
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 
