@@ -14,10 +14,45 @@ inline const std::string& GetWebClientHtml() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ImGui Web DOM Backend</title>
     <style>
+        :root {
+            --imgui-text: #ffffff;
+            --imgui-text-disabled: rgba(128, 128, 128, 1.0);
+            --imgui-window-bg: rgba(15, 15, 15, 0.94);
+            --imgui-popup-bg: rgba(20, 20, 20, 0.94);
+            --imgui-border: rgba(110, 110, 128, 0.50);
+            --imgui-frame-bg: rgba(41, 74, 122, 0.54);
+            --imgui-frame-bg-hovered: rgba(66, 150, 250, 0.40);
+            --imgui-frame-bg-active: rgba(66, 150, 250, 0.67);
+            --imgui-title-bg: #0a0a0a;
+            --imgui-title-bg-active: #294a7a;
+            --imgui-menubar-bg: #242424;
+            --imgui-scrollbar-bg: rgba(5, 5, 5, 0.53);
+            --imgui-scrollbar-grab: rgba(79, 79, 79, 1.0);
+            --imgui-scrollbar-grab-hovered: rgba(105, 105, 105, 1.0);
+            --imgui-scrollbar-grab-active: rgba(130, 130, 130, 1.0);
+            --imgui-check-mark: #4296fa;
+            --imgui-slider-grab: #3d85e0;
+            --imgui-slider-grab-active: #4296fa;
+            --imgui-btn: rgba(66, 150, 250, 0.40);
+            --imgui-btn-hovered: #4296fa;
+            --imgui-btn-active: #0f87fa;
+            --imgui-header: rgba(66, 150, 250, 0.31);
+            --imgui-header-hovered: rgba(66, 150, 250, 0.80);
+            --imgui-header-active: #4296fa;
+            --imgui-separator: rgba(110, 110, 128, 0.50);
+            --imgui-tab: rgba(46, 89, 148, 0.86);
+            --imgui-tab-hovered: rgba(66, 150, 250, 0.80);
+            --imgui-tab-selected: rgba(51, 105, 173, 1.0);
+            --imgui-tab-selected-overline: #4296fa;
+            --imgui-table-header-bg: #303033;
+            --imgui-table-border: #4f4f59;
+            --imgui-table-row-bg-alt: rgba(255, 255, 255, 0.06);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: #14141a;
-            color: #efefef;
+            background-color: #0f0f14;
+            color: var(--imgui-text);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             font-size: 13px;
             overflow: hidden;
@@ -30,8 +65,8 @@ inline const std::string& GetWebClientHtml() {
             position: fixed;
             top: 0; left: 0; right: 0;
             height: 30px;
-            background: #1e1e28;
-            border-bottom: 1px solid #323242;
+            background: #14141e;
+            border-bottom: 1px solid var(--imgui-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -62,12 +97,12 @@ inline const std::string& GetWebClientHtml() {
             overflow: auto;
         }
 
-        /* ImGui Window Styling - Authentic Dear ImGui Dark */
+        /* ImGui Window Styling - Authentic Dear ImGui Dark (0px rounding, 1px border) */
         .imgui-window {
             position: absolute;
-            background-color: #0f0f14;
-            border: 1px solid #3d4a60;
-            border-radius: 3px;
+            background-color: var(--imgui-window-bg);
+            border: 1px solid var(--imgui-border);
+            border-radius: 0px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.6);
             overflow: hidden;
         }
@@ -76,12 +111,12 @@ inline const std::string& GetWebClientHtml() {
             position: absolute;
             top: 0; left: 0; right: 0;
             height: 19px;
-            background: linear-gradient(180deg, #2c3e55 0%, #1f2c3d 100%);
+            background: var(--imgui-title-bg-active);
             padding: 1px 6px;
             font-weight: 600;
             font-size: 13px;
-            color: #ffffff;
-            border-bottom: 1px solid #3d4a60;
+            color: var(--imgui-text);
+            border-bottom: 1px solid var(--imgui-border);
             cursor: grab;
             user-select: none;
             box-sizing: border-box;
@@ -100,7 +135,7 @@ inline const std::string& GetWebClientHtml() {
         }
         .imgui-collapse-btn {
             font-size: 10px;
-            color: #9cb5d1;
+            color: var(--imgui-text-disabled);
             cursor: pointer;
             width: 14px;
             height: 14px;
@@ -109,7 +144,7 @@ inline const std::string& GetWebClientHtml() {
             justify-content: center;
             user-select: none;
             flex-shrink: 0;
-            border-radius: 2px;
+            border-radius: 0px;
             transition: color 0.1s, background 0.1s;
             pointer-events: auto;
         }
@@ -128,8 +163,8 @@ inline const std::string& GetWebClientHtml() {
             position: absolute;
             left: 0; right: 0;
             height: 19px;
-            background: #1a1a24;
-            border-bottom: 1px solid #333344;
+            background: var(--imgui-menubar-bg);
+            border-bottom: 1px solid var(--imgui-border);
             box-sizing: border-box;
             z-index: 8;
             display: flex;
@@ -140,9 +175,9 @@ inline const std::string& GetWebClientHtml() {
         .imgui-menu-item {
             position: absolute;
             background: transparent;
-            color: #d0d8e8;
+            color: var(--imgui-text);
             border: none;
-            border-radius: 2px;
+            border-radius: 0px;
             padding: 2px 6px;
             font-size: 13px;
             font-family: inherit;
@@ -154,7 +189,7 @@ inline const std::string& GetWebClientHtml() {
             align-items: center;
         }
         .imgui-menu-item:hover {
-            background: #2b4566;
+            background: var(--imgui-header-hovered);
             color: #ffffff;
         }
 
@@ -165,13 +200,13 @@ inline const std::string& GetWebClientHtml() {
             z-index: 1;
         }
 
-        /* Native HTML Button styled as ImGui */
+        /* Native HTML Button - Authentic Dear ImGui Dark (FrameRounding = 0.0f) */
         .imgui-btn {
             position: absolute;
-            background: #2b4566;
-            color: #f0f0f0;
-            border: 1px solid #3d608f;
-            border-radius: 2px;
+            background: var(--imgui-btn);
+            color: var(--imgui-text);
+            border: none;
+            border-radius: 0px;
             padding: 2px 8px;
             font-size: 13px;
             font-family: inherit;
@@ -187,13 +222,12 @@ inline const std::string& GetWebClientHtml() {
             user-select: none;
         }
         .imgui-btn:hover {
-            background: #3a608c;
-            border-color: #5585ba;
+            background: var(--imgui-btn-hovered);
             color: #ffffff;
         }
         .imgui-btn:active {
-            background: #203550;
-            border-color: #304e75;
+            background: var(--imgui-btn-active);
+            color: #ffffff;
         }
 
         /* Native Slider - Authentic rectangular grabber */
@@ -202,7 +236,7 @@ inline const std::string& GetWebClientHtml() {
             display: flex;
             align-items: center;
             gap: 6px;
-            color: #ddd;
+            color: var(--imgui-text);
             font-size: 13px;
             white-space: nowrap;
             user-select: none;
@@ -212,38 +246,40 @@ inline const std::string& GetWebClientHtml() {
             -webkit-appearance: none;
             appearance: none;
             flex: 1;
-            height: 18px;
-            background: #1e2634;
-            border: 1px solid #36465d;
-            border-radius: 2px;
+            height: 19px;
+            background: var(--imgui-frame-bg);
+            border: none;
+            border-radius: 0px;
             outline: none;
             cursor: pointer;
             margin: 0;
             padding: 0;
         }
+        .imgui-slider-box input[type="range"]:hover {
+            background: var(--imgui-frame-bg-hovered);
+        }
         .imgui-slider-box input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 10px;
-            height: 16px;
-            background: #3a608c;
-            border: 1px solid #5585ba;
-            border-radius: 2px;
+            width: 12px;
+            height: 19px;
+            background: var(--imgui-slider-grab);
+            border: none;
+            border-radius: 0px;
             cursor: pointer;
         }
         .imgui-slider-box input[type="range"]::-webkit-slider-thumb:hover {
-            background: #487ab5;
-            border-color: #6da3db;
+            background: var(--imgui-slider-grab-active);
         }
         .imgui-slider-box input[type="range"]::-webkit-slider-thumb:active {
-            background: #5c9ae0;
+            background: var(--imgui-slider-grab-active);
         }
         .imgui-slider-box input[type="range"]::-moz-range-thumb {
-            width: 10px;
-            height: 16px;
-            background: #3a608c;
-            border: 1px solid #5585ba;
-            border-radius: 2px;
+            width: 12px;
+            height: 19px;
+            background: var(--imgui-slider-grab);
+            border: none;
+            border-radius: 0px;
             cursor: pointer;
         }
         .val-badge {
@@ -263,16 +299,16 @@ inline const std::string& GetWebClientHtml() {
             font-size: 13px;
             white-space: nowrap;
             user-select: none;
-            color: #efefef;
+            color: var(--imgui-text);
         }
         .imgui-check-box input[type="checkbox"] {
             -webkit-appearance: none;
             appearance: none;
             width: 15px;
             height: 15px;
-            background: #1e2634;
-            border: 1px solid #3d608f;
-            border-radius: 2px;
+            background: var(--imgui-frame-bg);
+            border: none;
+            border-radius: 0px;
             cursor: pointer;
             outline: none;
             position: relative;
@@ -280,20 +316,19 @@ inline const std::string& GetWebClientHtml() {
             flex-shrink: 0;
         }
         .imgui-check-box input[type="checkbox"]:hover {
-            border-color: #5585ba;
+            background: var(--imgui-frame-bg-hovered);
         }
         .imgui-check-box input[type="checkbox"]:checked {
-            background: #2b4566;
-            border-color: #5585ba;
+            background: var(--imgui-frame-bg-active);
         }
         .imgui-check-box input[type="checkbox"]:checked::after {
             content: '';
             position: absolute;
-            left: 4px;
-            top: 1px;
+            left: 5px;
+            top: 2px;
             width: 4px;
             height: 8px;
-            border: solid #ffffff;
+            border: solid var(--imgui-check-mark);
             border-width: 0 2px 2px 0;
             transform: rotate(45deg);
         }
@@ -304,8 +339,8 @@ inline const std::string& GetWebClientHtml() {
             appearance: none;
             width: 15px;
             height: 15px;
-            background: #1e2634;
-            border: 1px solid #3d608f;
+            background: var(--imgui-frame-bg);
+            border: none;
             border-radius: 50%;
             cursor: pointer;
             outline: none;
@@ -314,27 +349,26 @@ inline const std::string& GetWebClientHtml() {
             flex-shrink: 0;
         }
         .imgui-check-box input[type="radio"]:hover {
-            border-color: #5585ba;
+            background: var(--imgui-frame-bg-hovered);
         }
         .imgui-check-box input[type="radio"]:checked {
-            background: #2b4566;
-            border-color: #5585ba;
+            background: var(--imgui-frame-bg-active);
         }
         .imgui-check-box input[type="radio"]:checked::after {
             content: '';
             position: absolute;
-            left: 3.5px;
-            top: 3.5px;
+            left: 4.5px;
+            top: 4.5px;
             width: 6px;
             height: 6px;
-            background: #ffffff;
+            background: var(--imgui-check-mark);
             border-radius: 50%;
         }
 
         /* Native Text */
         .imgui-text {
             position: absolute;
-            color: #eaeaea;
+            color: var(--imgui-text);
             font-size: 13px;
             white-space: nowrap;
         }
@@ -347,12 +381,13 @@ inline const std::string& GetWebClientHtml() {
             gap: 6px;
             font-size: 13px;
             white-space: nowrap;
+            color: var(--imgui-text);
         }
         .imgui-input {
-            background: #161b24;
-            color: #ffffff;
-            border: 1px solid #36465d;
-            border-radius: 2px;
+            background: var(--imgui-frame-bg);
+            color: var(--imgui-text);
+            border: none;
+            border-radius: 0px;
             padding: 2px 6px;
             font-size: 13px;
             font-family: inherit;
@@ -360,9 +395,11 @@ inline const std::string& GetWebClientHtml() {
             flex: 1;
             box-sizing: border-box;
         }
+        .imgui-input:hover {
+            background: var(--imgui-frame-bg-hovered);
+        }
         .imgui-input:focus {
-            border-color: #4d7eb8;
-            background: #1c232f;
+            background: var(--imgui-frame-bg-active);
         }
 
         /* Native Combo / Select */
@@ -373,12 +410,13 @@ inline const std::string& GetWebClientHtml() {
             gap: 6px;
             font-size: 13px;
             white-space: nowrap;
+            color: var(--imgui-text);
         }
         .imgui-select {
-            background: #1e2634;
-            color: #ffffff;
-            border: 1px solid #36465d;
-            border-radius: 2px;
+            background: var(--imgui-frame-bg);
+            color: var(--imgui-text);
+            border: none;
+            border-radius: 0px;
             padding: 2px 6px;
             font-size: 13px;
             font-family: inherit;
@@ -387,17 +425,20 @@ inline const std::string& GetWebClientHtml() {
             flex: 1;
             box-sizing: border-box;
         }
+        .imgui-select:hover {
+            background: var(--imgui-frame-bg-hovered);
+        }
         .imgui-select:focus {
-            border-color: #4d7eb8;
+            background: var(--imgui-frame-bg-active);
         }
 )HTML";
         s += R"HTML(
         /* Native ProgressBar */
         .imgui-progress-box {
             position: absolute;
-            background: #161b24;
-            border: 1px solid #36465d;
-            border-radius: 2px;
+            background: var(--imgui-frame-bg);
+            border: none;
+            border-radius: 0px;
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -407,7 +448,7 @@ inline const std::string& GetWebClientHtml() {
         .imgui-progress-bar {
             position: absolute;
             left: 0; top: 0; bottom: 0;
-            background: linear-gradient(90deg, #2b4566, #3a608c);
+            background: var(--imgui-header-active);
             transition: width 0.1s ease;
         }
         .imgui-progress-text {
@@ -423,14 +464,14 @@ inline const std::string& GetWebClientHtml() {
         .imgui-separator {
             position: absolute;
             border: none;
-            border-top: 1px solid #36465d;
+            border-top: 1px solid var(--imgui-separator);
             margin: 0;
         }
 
         /* Native Tree Node */
         .imgui-tree {
             position: absolute;
-            color: #d0d8e8;
+            color: var(--imgui-text);
             font-size: 13px;
             font-weight: 500;
             cursor: pointer;
@@ -439,18 +480,18 @@ inline const std::string& GetWebClientHtml() {
             align-items: center;
             gap: 6px;
             padding: 1px 4px;
-            border-radius: 2px;
+            border-radius: 0px;
             white-space: nowrap;
             box-sizing: border-box;
-            transition: background 0.1s, color 0.1s;
+            transition: background 0.05s ease;
         }
         .imgui-tree:hover {
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--imgui-header-hovered);
             color: #ffffff;
         }
         .imgui-tree-arrow {
             font-size: 10px;
-            color: #8888a0;
+            color: var(--imgui-text-disabled);
             width: 12px;
             display: inline-block;
             text-align: center;
@@ -459,10 +500,10 @@ inline const std::string& GetWebClientHtml() {
         /* Native Collapsing Header - Authentic Dear ImGui Dark header banner */
         .imgui-collapsing-header {
             position: absolute;
-            background: #2b4566;
-            border: 1px solid #36465d;
-            border-radius: 2px;
-            color: #ffffff;
+            background: var(--imgui-header);
+            border: none;
+            border-radius: 0px;
+            color: var(--imgui-text);
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -475,18 +516,17 @@ inline const std::string& GetWebClientHtml() {
             overflow: hidden;
             text-overflow: ellipsis;
             box-sizing: border-box;
-            transition: background 0.1s, border-color 0.1s;
+            transition: background 0.05s ease;
         }
         .imgui-collapsing-header:hover {
-            background: #3b5c88;
-            border-color: #5585ba;
+            background: var(--imgui-header-hovered);
         }
         .imgui-collapsing-header:active {
-            background: #1e3450;
+            background: var(--imgui-header-active);
         }
         .imgui-collapsing-header .imgui-header-arrow {
             font-size: 10px;
-            color: #9cb5d1;
+            color: var(--imgui-text-disabled);
             width: 12px;
             display: inline-block;
             text-align: center;
@@ -494,7 +534,7 @@ inline const std::string& GetWebClientHtml() {
         }
 
         .imgui-disabled {
-            opacity: 0.45 !important;
+            opacity: 0.60 !important;
             pointer-events: none !important;
         }
 
@@ -502,24 +542,23 @@ inline const std::string& GetWebClientHtml() {
         .imgui-canvas {
             position: absolute;
             box-sizing: border-box;
-            border-radius: 4px;
+            border-radius: 0px;
         }
 
         /* Native TabBar & TabItems */
         .imgui-tab-bar {
             position: absolute;
             display: flex;
-            border-bottom: 1px solid #36465d;
+            border-bottom: 1px solid var(--imgui-border);
             box-sizing: border-box;
         }
         .imgui-tab-item {
             position: absolute;
-            background: #1e2634;
-            color: #a0b0c0;
-            border: 1px solid #36465d;
+            background: var(--imgui-tab);
+            color: var(--imgui-text);
+            border: 1px solid var(--imgui-border);
             border-bottom: none;
-            border-top-left-radius: 3px;
-            border-top-right-radius: 3px;
+            border-radius: 0px;
             padding: 2px 8px;
             font-size: 12px;
             cursor: pointer;
@@ -528,27 +567,27 @@ inline const std::string& GetWebClientHtml() {
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.1s, color 0.1s;
+            transition: background 0.05s ease;
         }
         .imgui-tab-item:hover {
-            background: #2b3a50;
+            background: var(--imgui-tab-hovered);
             color: #ffffff;
         }
         .imgui-tab-item.active {
-            background: #2b4566;
+            background: var(--imgui-tab-selected);
+            border-top: 2px solid var(--imgui-tab-selected-overline);
             color: #ffffff;
             font-weight: 600;
-            border-color: #4d7eb8;
         }
 
         /* Tooltip Window */
         .imgui-window.tooltip {
             pointer-events: none !important;
             z-index: 99999 !important;
-            background-color: #14141c !important;
-            border: 1px solid #484860 !important;
+            background-color: var(--imgui-popup-bg) !important;
+            border: 1px solid var(--imgui-border) !important;
             box-shadow: 0 4px 14px rgba(0,0,0,0.8) !important;
-            border-radius: 3px !important;
+            border-radius: 0px !important;
         }
         .imgui-window.tooltip .imgui-header {
             display: none !important;
@@ -557,25 +596,25 @@ inline const std::string& GetWebClientHtml() {
         /* Native Table Styling */
         .imgui-table-container {
             position: absolute;
-            background: rgba(22, 27, 36, 0.8);
-            border: 1px solid #36465d;
-            border-radius: 2px;
+            background: var(--imgui-window-bg);
+            border: 1px solid var(--imgui-table-border);
+            border-radius: 0px;
             overflow: hidden;
             box-sizing: border-box;
             pointer-events: none;
         }
         .imgui-table-header-row {
             display: flex;
-            background: #232d3d;
-            border-bottom: 1px solid #36465d;
+            background: var(--imgui-table-header-bg);
+            border-bottom: 1px solid var(--imgui-table-border);
             font-size: 12px;
             font-weight: 600;
-            color: #d0d8e8;
+            color: var(--imgui-text);
         }
         .imgui-table-th {
             flex: 1;
             padding: 3px 8px;
-            border-right: 1px solid #36465d;
+            border-right: 1px solid var(--imgui-table-border);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
