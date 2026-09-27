@@ -13,8 +13,12 @@ enum class ElementType {
     Text,
     Button,
     Checkbox,
+    RadioButton,
     SliderFloat,
     InputText,
+    Combo,
+    TreeNode,
+    ProgressBar,
     Separator,
     Canvas
 };
@@ -28,6 +32,7 @@ struct Element {
     float min_val = 0.0f;
     float max_val = 1.0f;
     bool checked = false;
+    bool opened = false;
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
 
     // For canvas elements (e.g., real-time oscilloscope)
@@ -79,11 +84,13 @@ struct Document {
 
                 switch (el.type) {
                 case ElementType::Button:
+                case ElementType::Separator:
                     break;
                 case ElementType::Text:
                     ss << "\"val\":\"" << EscapeJson(el.value_str) << "\",";
                     break;
                 case ElementType::Checkbox:
+                case ElementType::RadioButton:
                     ss << "\"checked\":" << (el.checked ? "true" : "false") << ",";
                     break;
                 case ElementType::SliderFloat:
@@ -93,6 +100,17 @@ struct Document {
                     break;
                 case ElementType::InputText:
                     ss << "\"val\":\"" << EscapeJson(el.value_str) << "\",";
+                    break;
+                case ElementType::Combo:
+                    ss << "\"val\":\"" << EscapeJson(el.value_str) << "\",";
+                    ss << "\"opened\":" << (el.opened ? "true" : "false") << ",";
+                    break;
+                case ElementType::TreeNode:
+                    ss << "\"opened\":" << (el.opened ? "true" : "false") << ",";
+                    break;
+                case ElementType::ProgressBar:
+                    ss << "\"val\":" << el.value_num << ",";
+                    ss << "\"overlay\":\"" << EscapeJson(el.value_str) << "\",";
                     break;
                 case ElementType::Canvas:
                     ss << "\"stream\":\"" << EscapeJson(el.stream_name) << "\",";
@@ -128,8 +146,12 @@ private:
         case ElementType::Text: return "text";
         case ElementType::Button: return "button";
         case ElementType::Checkbox: return "checkbox";
+        case ElementType::RadioButton: return "radio";
         case ElementType::SliderFloat: return "slider";
         case ElementType::InputText: return "input";
+        case ElementType::Combo: return "combo";
+        case ElementType::TreeNode: return "treenode";
+        case ElementType::ProgressBar: return "progress";
         case ElementType::Separator: return "separator";
         case ElementType::Canvas: return "canvas";
         default: return "unknown";

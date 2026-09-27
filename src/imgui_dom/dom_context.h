@@ -48,6 +48,11 @@ public:
     void RecordText(uint32_t id, const char* text, float x, float y);
     void RecordSliderFloat(uint32_t id, const char* label, float val, float min_v, float max_v, float x, float y, float w, float h);
     void RecordCheckbox(uint32_t id, const char* label, bool checked, float x, float y, float w, float h);
+    void RecordRadioButton(uint32_t id, const char* label, bool active, float x, float y, float w, float h);
+    void RecordInputText(uint32_t id, const char* label, const char* text, float x, float y, float w, float h);
+    void RecordCombo(uint32_t id, const char* label, const char* preview, bool opened, float x, float y, float w, float h);
+    void RecordProgressBar(uint32_t id, float fraction, const char* overlay, float x, float y, float w, float h);
+    void RecordSeparator(uint32_t id, float x, float y, float w, float h);
     void RecordCanvas(uint32_t id, const char* stream_name, const float* points, size_t count, float x, float y, float w, float h);
 
     // Browser event handling (called by HTTP server)
@@ -59,6 +64,7 @@ public:
     bool ConsumeClick(uint32_t id);
     bool ConsumeSlider(uint32_t id, float& out_val);
     bool ConsumeCheckbox(uint32_t id, bool& out_checked);
+    bool ConsumeInputText(uint32_t id, std::string& out_str);
 
     // Internal ImGui Hook callbacks
     void OnHookItemAdd(uint32_t id, float x, float y, float w, float h, uint32_t status_flags);
@@ -104,6 +110,7 @@ private:
     std::unordered_set<uint32_t> m_active_clicks;
     std::unordered_map<uint32_t, float> m_slider_values;
     std::unordered_map<uint32_t, bool> m_checkbox_values;
+    std::unordered_map<uint32_t, std::string> m_input_strings;
     std::queue<BrowserEvent> m_pending_events;
     EventCallback m_event_callback;
     SnapshotCallback m_snapshot_callback;

@@ -255,6 +255,77 @@ int main() {
         std::cout << ">>> [PASS] Native ImGuiIO pointer and keyboard events verified!\n";
     }
 
+    // -----------------------------------------------------------------
+    // Step 8: Full Widget Palette Test (Radio, InputText, Combo, Progress, Separator)
+    // -----------------------------------------------------------------
+    std::cout << "[Step 8] Testing Full Widget Palette in DOM tree...\n";
+    ImGuiDom::BeginFrame(6);
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowSize(ImVec2(400, 400));
+    ImGui::Begin("Full Palette", nullptr);
+
+    uint32_t radio_id = static_cast<uint32_t>(ImGui::GetID("Channel A"));
+    uint32_t input_id = static_cast<uint32_t>(ImGui::GetID("Config Path"));
+    uint32_t combo_id = static_cast<uint32_t>(ImGui::GetID("Trigger Mode"));
+    uint32_t prog_id  = static_cast<uint32_t>(ImGui::GetID("Download Progress"));
+
+    ImGuiDom::DomContext::Instance().RecordRadioButton(radio_id, "Channel A", true, 60, 80, 100, 20);
+    ImGuiDom::DomContext::Instance().RecordInputText(input_id, "Config Path", "/etc/signal.conf", 60, 110, 250, 24);
+    ImGuiDom::DomContext::Instance().RecordCombo(combo_id, "Trigger Mode", "Rising Edge", false, 60, 140, 200, 24);
+    ImGuiDom::DomContext::Instance().RecordProgressBar(prog_id, 0.75f, "75%", 60, 170, 250, 20);
+    ImGuiDom::DomContext::Instance().RecordSeparator(9999, 60, 200, 280, 2);
+
+    ImGui::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    std::string palette_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    std::cout << "Palette DOM JSON: " << palette_json << "\n";
+
+    if (palette_json.find("\"type\":\"radio\"") == std::string::npos) {
+        std::cerr << "[FAIL] Radio button not found in DOM JSON\n";
+        return 1;
+    }
+    if (palette_json.find("\"type\":\"input\"") == std::string::npos) {
+        std::cerr << "[FAIL] Input text not found in DOM JSON\n";
+        return 1;
+    }
+    if (palette_json.find("\"type\":\"combo\"") == std::string::npos) {
+        std::cerr << "[FAIL] Combo select not found in DOM JSON\n";
+        return 1;
+    }
+    if (palette_json.find("\"type\":\"progress\"") == std::string::npos) {
+        std::cerr << "[FAIL] Progress bar not found in DOM JSON\n";
+        return 1;
+    }
+    if (palette_json.find("\"type\":\"separator\"") == std::string::npos) {
+        std::cerr << "[FAIL] Separator not found in DOM JSON\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] Full widget palette verified in Web DOM tree!\n";
+
+    // Test text input change from browser event
+    ImGuiDom::BrowserEvent input_evt;
+    input_evt.type = "input";
+    input_evt.id = input_id;
+    input_evt.value_str = "/opt/custom.conf";
+    ImGuiDom::DomContext::Instance().PushBrowserEvent(input_evt);
+
+    ImGuiDom::BeginFrame(7);
+    ImGui::NewFrame();
+
+    std::string consumed_text;
+    bool input_consumed = ImGuiDom::DomContext::Instance().ConsumeInputText(input_id, consumed_text);
+    if (!input_consumed || consumed_text != "/opt/custom.conf") {
+        std::cerr << "[FAIL] ConsumeInputText did not receive updated text!\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] InputText two-way sync verified!\n";
+
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 

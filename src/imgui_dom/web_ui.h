@@ -146,15 +146,97 @@ inline const char* GetWebClientHtml() {
             white-space: nowrap;
         }
 
-        /* Real-Time HTML5 Canvas for Oscilloscope */
-        .imgui-canvas {
+        /* Native InputText */
+        .imgui-input-box {
             position: absolute;
-            background: #111116;
-            border: 1px solid #333342;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+        .imgui-input {
+            background: #1e1e28;
+            color: #fff;
+            border: 1px solid #444458;
             border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 13px;
+            outline: none;
+            flex: 1;
+        }
+        .imgui-input:focus {
+            border-color: #3a7ca5;
+            box-shadow: 0 0 4px rgba(58,124,165,0.5);
+        }
+
+        /* Native Combo / Select */
+        .imgui-combo-box {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+        .imgui-select {
+            background: #2a2a38;
+            color: #fff;
+            border: 1px solid #444458;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Native ProgressBar */
+        .imgui-progress-box {
+            position: absolute;
+            background: #1e1e28;
+            border: 1px solid #444458;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .imgui-progress-bar {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            background: linear-gradient(90deg, #2f6690, #3a7ca5);
+            transition: width 0.1s ease;
+        }
+        .imgui-progress-text {
+            position: relative;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            z-index: 1;
+        }
+
+        /* Native Separator */
+        .imgui-separator {
+            position: absolute;
+            border: none;
+            border-top: 1px solid #444458;
+            margin: 0;
+        }
+
+        /* Native Tree Node */
+        .imgui-tree {
+            position: absolute;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .imgui-tree summary {
+            outline: none;
+            user-select: none;
         }
     </style>
 </head>
+)HTML"
+R"HTML(
 <body>
     <div id="topbar">
         <div style="font-weight: 700; color: #fff;">Dear ImGui + ThorVG &rarr; True HTML5 Web DOM Backend</div>
@@ -355,6 +437,107 @@ R"HTML(
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
                         elem.style.height = `${el.h}px`;
+
+                    }
+)HTML"
+R"HTML(
+                    else if (el.type === 'radio') {
+                        if (!elem) {
+                            elem = document.createElement('label');
+                            elem.id = `el_${el.id}`;
+                            elem.className = 'imgui-check-box';
+                            elem.innerHTML = `<input type="radio" name="rad_${win.id}"> <span>${el.label}</span>`;
+                            const rb = elem.querySelector('input');
+                            rb.onchange = () => {
+                                postEvent({ type: 'click', id: el.id, checked: true });
+                            };
+                            body.appendChild(elem);
+                        }
+                        elem.querySelector('input').checked = el.checked;
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'input') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.className = 'imgui-input-box';
+                            elem.innerHTML = `<span>${el.label}:</span> <input type="text" class="imgui-input">`;
+                            const inp = elem.querySelector('input');
+                            inp.oninput = (e) => {
+                                postEvent({ type: 'input', id: el.id, text: e.target.value });
+                            };
+                            body.appendChild(elem);
+                        }
+                        const inp = elem.querySelector('input');
+                        if (document.activeElement !== inp) {
+                            inp.value = el.val || '';
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'combo') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.className = 'imgui-combo-box';
+                            elem.innerHTML = `<span>${el.label}:</span> <select class="imgui-select"><option selected>${el.val || 'Select...'}</option></select>`;
+                            const sel = elem.querySelector('select');
+                            sel.onchange = (e) => {
+                                postEvent({ type: 'input', id: el.id, text: e.target.value });
+                            };
+                            body.appendChild(elem);
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'treenode') {
+                        if (!elem) {
+                            elem = document.createElement('details');
+                            elem.id = `el_${el.id}`;
+                            elem.className = 'imgui-tree';
+                            elem.innerHTML = `<summary>${el.label}</summary>`;
+                            elem.ontoggle = () => {
+                                postEvent({ type: 'click', id: el.id });
+                            };
+                            body.appendChild(elem);
+                        }
+                        elem.open = el.opened;
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+
+                    } else if (el.type === 'progress') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.className = 'imgui-progress-box';
+                            elem.innerHTML = `<div class="imgui-progress-bar"></div><span class="imgui-progress-text"></span>`;
+                            body.appendChild(elem);
+                        }
+                        const pct = Math.max(0, Math.min(100, Math.round(el.val * 100)));
+                        elem.querySelector('.imgui-progress-bar').style.width = `${pct}%`;
+                        elem.querySelector('.imgui-progress-text').textContent = el.overlay || `${pct}%`;
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'separator') {
+                        if (!elem) {
+                            elem = document.createElement('hr');
+                            elem.id = `el_${el.id}`;
+                            elem.className = 'imgui-separator';
+                            body.appendChild(elem);
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w || 200}px`;
 
                     } else if (el.type === 'text') {
                         if (!elem) {

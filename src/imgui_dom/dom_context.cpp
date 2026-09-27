@@ -87,14 +87,27 @@ void DomContext::RecordWindowEnd() {
         if (item.flags & ImGuiItemStatusFlags_Checkable) {
             el.type = ElementType::Checkbox;
             el.checked = (item.flags & ImGuiItemStatusFlags_Checked) != 0;
+            auto c_it = m_checkbox_values.find(id);
+            if (c_it != m_checkbox_values.end()) {
+                el.checked = c_it->second;
+            }
+        } else if (item.flags & ImGuiItemStatusFlags_Openable) {
+            el.type = ElementType::TreeNode;
+            el.opened = (item.flags & ImGuiItemStatusFlags_Opened) != 0;
         } else if (item.flags & ImGuiItemStatusFlags_Inputable) {
-            el.type = ElementType::SliderFloat;
-            el.value_num = 0.0f;
-            el.min_val = 0.0f;
-            el.max_val = 100.0f;
-            auto s_it = m_slider_values.find(id);
-            if (s_it != m_slider_values.end()) {
-                el.value_num = s_it->second;
+            auto it_str = m_input_strings.find(id);
+            if (it_str != m_input_strings.end()) {
+                el.type = ElementType::InputText;
+                el.value_str = it_str->second;
+            } else {
+                el.type = ElementType::SliderFloat;
+                el.value_num = 0.0f;
+                el.min_val = 0.0f;
+                el.max_val = 100.0f;
+                auto s_it = m_slider_values.find(id);
+                if (s_it != m_slider_values.end()) {
+                    el.value_num = s_it->second;
+                }
             }
         } else {
             el.type = ElementType::Button;
@@ -209,6 +222,60 @@ void DomContext::RecordCanvas(uint32_t id, const char* stream_name, const float*
     m_current_window.elements.push_back(std::move(el));
 }
 
+void DomContext::RecordRadioButton(uint32_t id, const char* label, bool active, float x, float y, float w, float h) {
+    if (!m_enabled || !m_has_active_window) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::RadioButton;
+    el.label = label ? label : "";
+    el.checked = active;
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    m_current_window.elements.push_back(std::move(el));
+}
+
+void DomContext::RecordInputText(uint32_t id, const char* label, const char* text, float x, float y, float w, float h) {
+    if (!m_enabled || !m_has_active_window) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::InputText;
+    el.label = label ? label : "";
+    el.value_str = text ? text : "";
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    m_current_window.elements.push_back(std::move(el));
+}
+
+void DomContext::RecordCombo(uint32_t id, const char* label, const char* preview, bool opened, float x, float y, float w, float h) {
+    if (!m_enabled || !m_has_active_window) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::Combo;
+    el.label = label ? label : "";
+    el.value_str = preview ? preview : "";
+    el.opened = opened;
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    m_current_window.elements.push_back(std::move(el));
+}
+
+void DomContext::RecordProgressBar(uint32_t id, float fraction, const char* overlay, float x, float y, float w, float h) {
+    if (!m_enabled || !m_has_active_window) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::ProgressBar;
+    el.value_num = fraction;
+    el.value_str = overlay ? overlay : "";
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    m_current_window.elements.push_back(std::move(el));
+}
+
+void DomContext::RecordSeparator(uint32_t id, float x, float y, float w, float h) {
+    if (!m_enabled || !m_has_active_window) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::Separator;
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    m_current_window.elements.push_back(std::move(el));
+}
+
 void DomContext::SetEventCallback(EventCallback cb) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_event_callback = std::move(cb);
@@ -224,6 +291,15 @@ void DomContext::PushBrowserEvent(const BrowserEvent& evt) {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_pending_events.push(evt);
+        if (evt.type == "input") {
+            m_input_strings[evt.id] = evt.value_str;
+        } else if (evt.type == "slider") {
+            m_slider_values[evt.id] = evt.value_num;
+        } else if (evt.type == "checkbox") {
+            m_checkbox_values[evt.id] = evt.checked;
+        } else if (evt.type == "click") {
+            m_active_clicks.insert(evt.id);
+        }
         cb = m_event_callback;
     }
     if (cb) {
@@ -258,6 +334,17 @@ bool DomContext::ConsumeCheckbox(uint32_t id, bool& out_checked) {
     if (it != m_checkbox_values.end()) {
         out_checked = it->second;
         m_checkbox_values.erase(it);
+        return true;
+    }
+    return false;
+}
+
+bool DomContext::ConsumeInputText(uint32_t id, std::string& out_str) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_input_strings.find(id);
+    if (it != m_input_strings.end()) {
+        out_str = it->second;
+        m_input_strings.erase(it);
         return true;
     }
     return false;
@@ -308,6 +395,11 @@ void DomContext::ProcessInputEvents(ImGuiIO& io) {
             m_slider_values[evt.id] = evt.value_num;
         } else if (evt.type == "checkbox") {
             m_checkbox_values[evt.id] = evt.checked;
+        } else if (evt.type == "input") {
+            m_input_strings[evt.id] = evt.value_str;
+        } else if (evt.type == "radio") {
+            m_checkbox_values[evt.id] = true;
+            m_active_clicks.insert(evt.id);
         }
     }
 }
