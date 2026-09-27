@@ -326,6 +326,122 @@ int main() {
     ImGui::Render();
     ImGuiDom::EndFrame();
 
+    // -----------------------------------------------------------------
+    // Step 9: TabBar, TabItem, and Tooltip Support
+    // -----------------------------------------------------------------
+    std::cout << "[Step 9] Testing TabBar, TabItem, and Tooltip support...\n";
+    ImGuiDom::BeginFrame(8);
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowSize(ImVec2(400, 300));
+    ImGui::Begin("TabWindow", nullptr);
+
+    if (ImGuiDom::BeginTabBar("MyTabBar")) {
+        if (ImGuiDom::BeginTabItem("General")) {
+            ImGuiDom::Text("General Settings Content");
+            ImGuiDom::SetItemTooltip("Helpful info about General Settings");
+            ImGuiDom::EndTabItem();
+        }
+        if (ImGuiDom::BeginTabItem("Advanced")) {
+            ImGuiDom::Text("Advanced Settings Content");
+            ImGuiDom::EndTabItem();
+        }
+        ImGuiDom::EndTabBar();
+    }
+    ImGui::End();
+
+    // Native floating tooltip
+    ImGui::BeginTooltip();
+    ImGui::Text("Floating Tooltip Notice");
+    ImGui::EndTooltip();
+
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    std::string tab_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    std::cout << "Tab/Tooltip DOM JSON: " << tab_json << "\n";
+
+    if (tab_json.find("\"type\":\"tabbar\"") == std::string::npos) {
+        std::cerr << "[FAIL] TabBar not found in DOM JSON!\n";
+        return 1;
+    }
+    if (tab_json.find("\"type\":\"tabitem\"") == std::string::npos) {
+        std::cerr << "[FAIL] TabItem not found in DOM JSON!\n";
+        return 1;
+    }
+    if (tab_json.find("\"tooltip\":\"Helpful info about General Settings\"") == std::string::npos) {
+        std::cerr << "[FAIL] Item tooltip not found in DOM JSON element!\n";
+        return 1;
+    }
+    if (tab_json.find("\"is_tooltip\":true") == std::string::npos) {
+        std::cerr << "[FAIL] Tooltip window flag not set in DOM JSON!\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] TabBar, TabItem, and Tooltip export verified!\n";
+
+    // Test tab switching via browser event using the element ID from the DOM snapshot
+    size_t adv_pos = tab_json.find("\"label\":\"Advanced\"");
+    size_t id_pos = tab_json.rfind("\"id\":", adv_pos);
+    uint32_t adv_tab_id = static_cast<uint32_t>(std::stoul(tab_json.substr(id_pos + 5)));
+    std::cout << "Target Advanced Tab ID: " << adv_tab_id << "\n";
+
+    ImGuiDom::BrowserEvent tab_evt;
+    tab_evt.type = "tab";
+    tab_evt.id = adv_tab_id;
+    ImGuiDom::DomContext::Instance().PushBrowserEvent(tab_evt);
+
+    // Frame 9: Consume tab event and queue activation
+    ImGuiDom::BeginFrame(9);
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(400, 300));
+    ImGui::Begin("TabWindow", nullptr);
+
+    if (ImGuiDom::BeginTabBar("MyTabBar")) {
+        if (ImGuiDom::BeginTabItem("General")) {
+            ImGuiDom::EndTabItem();
+        }
+        if (ImGuiDom::BeginTabItem("Advanced")) {
+            ImGuiDom::EndTabItem();
+        }
+        ImGuiDom::EndTabBar();
+    }
+    ImGui::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    // Frame 10: TabBar has applied layout and selected tab is now active!
+    ImGuiDom::BeginFrame(10);
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(400, 300));
+    ImGui::Begin("TabWindow", nullptr);
+
+    bool adv_selected = false;
+    if (ImGuiDom::BeginTabBar("MyTabBar")) {
+        if (ImGuiDom::BeginTabItem("General")) {
+            ImGuiDom::EndTabItem();
+        }
+        if (ImGuiDom::BeginTabItem("Advanced")) {
+            adv_selected = true;
+            ImGuiDom::Text("Inside Advanced Tab!");
+            ImGuiDom::EndTabItem();
+        }
+        ImGuiDom::EndTabBar();
+    }
+    ImGui::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    if (!adv_selected) {
+        std::cerr << "[FAIL] Advanced tab was not selected after browser tab event!\n";
+        return 1;
+    }
+    std::string tab_switch_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    if (tab_switch_json.find("Inside Advanced Tab!") == std::string::npos) {
+        std::cerr << "[FAIL] Tab content did not switch to Advanced tab!\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] Full-duplex Tab switching verified!\n";
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 

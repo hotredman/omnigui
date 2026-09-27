@@ -44,7 +44,7 @@ public:
     void RecordWindowBegin(uint32_t id, const char* title, float x, float y, float w, float h,
                            float title_bar_h = 24.0f, float menu_bar_h = 0.0f,
                            bool has_title_bar = true, bool has_menu_bar = false,
-                           bool is_popup = false, bool is_modal = false, bool collapsed = false,
+                           bool is_popup = false, bool is_modal = false, bool is_tooltip = false, bool collapsed = false,
                            float scroll_x = 0.0f, float scroll_y = 0.0f);
     void RecordWindowEnd();
 
@@ -58,6 +58,9 @@ public:
     void RecordProgressBar(uint32_t id, float fraction, const char* overlay, float x, float y, float w, float h);
     void RecordSeparator(uint32_t id, float x, float y, float w, float h);
     void RecordCanvas(uint32_t id, const char* stream_name, const float* points, size_t count, float x, float y, float w, float h);
+    void RecordTabBar(uint32_t id, const char* str_id, float x, float y, float w, float h);
+    void RecordTabItem(uint32_t id, const char* label, bool selected, float x, float y, float w, float h);
+    void SetItemTooltip(const char* text);
 
     // Browser event handling (called by HTTP server)
     void PushBrowserEvent(const BrowserEvent& evt);
@@ -69,6 +72,7 @@ public:
     bool ConsumeSlider(uint32_t id, float& out_val);
     bool ConsumeCheckbox(uint32_t id, bool& out_checked);
     bool ConsumeInputText(uint32_t id, std::string& out_str);
+    bool ConsumeTabSelect(uint32_t id);
 
     // Internal ImGui Hook callbacks
     void OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags = 0);
@@ -92,7 +96,7 @@ private:
     Window* FindOrCreateWindow(uint32_t id, const char* title, float x, float y, float w, float h,
                                float title_bar_h, float menu_bar_h,
                                bool has_title_bar, bool has_menu_bar,
-                               bool is_popup, bool is_modal, bool collapsed,
+                               bool is_popup, bool is_modal, bool is_tooltip, bool collapsed,
                                float scroll_x, float scroll_y);
 
     bool m_enabled = false;
@@ -120,6 +124,7 @@ private:
 
     // Incoming browser events
     std::unordered_set<uint32_t> m_active_clicks;
+    std::unordered_set<uint32_t> m_tab_selections;
     std::unordered_map<uint32_t, float> m_slider_values;
     std::unordered_map<uint32_t, bool> m_checkbox_values;
     std::unordered_map<uint32_t, std::string> m_input_strings;

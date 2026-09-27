@@ -23,6 +23,7 @@ void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb
         bool has_menu_bar = (window->Flags & ImGuiWindowFlags_MenuBar) != 0;
         bool is_popup = (window->Flags & ImGuiWindowFlags_Popup) != 0;
         bool is_modal = (window->Flags & ImGuiWindowFlags_Modal) != 0;
+        bool is_tooltip = (window->Flags & ImGuiWindowFlags_Tooltip) != 0;
         bool collapsed = window->Collapsed;
 
         ImGuiDom::DomContext::Instance().RecordWindowBegin(
@@ -32,7 +33,7 @@ void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb
             window->Size.x, window->Size.y,
             title_bar_h, menu_bar_h,
             has_title_bar, has_menu_bar,
-            is_popup, is_modal, collapsed,
+            is_popup, is_modal, is_tooltip, collapsed,
             window->Scroll.x, window->Scroll.y
         );
         return;

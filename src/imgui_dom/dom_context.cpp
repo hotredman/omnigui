@@ -121,7 +121,7 @@ Window* DomContext::GetCurrentWindow() {
 Window* DomContext::FindOrCreateWindow(uint32_t id, const char* title, float x, float y, float w, float h,
                                        float title_bar_h, float menu_bar_h,
                                        bool has_title_bar, bool has_menu_bar,
-                                       bool is_popup, bool is_modal, bool collapsed,
+                                       bool is_popup, bool is_modal, bool is_tooltip, bool collapsed,
                                        float scroll_x, float scroll_y) {
     for (auto& win : m_doc.windows) {
         if (win.id == id) {
@@ -132,6 +132,7 @@ Window* DomContext::FindOrCreateWindow(uint32_t id, const char* title, float x, 
             win.has_menu_bar = has_menu_bar;
             win.is_popup = is_popup;
             win.is_modal = is_modal;
+            win.is_tooltip = is_tooltip;
             win.collapsed = collapsed;
             win.scroll_x = scroll_x;
             win.scroll_y = scroll_y;
@@ -150,6 +151,7 @@ Window* DomContext::FindOrCreateWindow(uint32_t id, const char* title, float x, 
     win.has_menu_bar = has_menu_bar;
     win.is_popup = is_popup;
     win.is_modal = is_modal;
+    win.is_tooltip = is_tooltip;
     win.collapsed = collapsed;
     win.scroll_x = scroll_x;
     win.scroll_y = scroll_y;
@@ -162,10 +164,10 @@ Window* DomContext::FindOrCreateWindow(uint32_t id, const char* title, float x, 
 void DomContext::RecordWindowBegin(uint32_t id, const char* title, float x, float y, float w, float h,
                                    float title_bar_h, float menu_bar_h,
                                    bool has_title_bar, bool has_menu_bar,
-                                   bool is_popup, bool is_modal, bool collapsed,
+                                   bool is_popup, bool is_modal, bool is_tooltip, bool collapsed,
                                    float scroll_x, float scroll_y) {
     if (!m_enabled) return;
-    FindOrCreateWindow(id, title, x, y, w, h, title_bar_h, menu_bar_h, has_title_bar, has_menu_bar, is_popup, is_modal, collapsed, scroll_x, scroll_y);
+    FindOrCreateWindow(id, title, x, y, w, h, title_bar_h, menu_bar_h, has_title_bar, has_menu_bar, is_popup, is_modal, is_tooltip, collapsed, scroll_x, scroll_y);
 }
 
 void DomContext::RecordWindowEnd() {
@@ -347,6 +349,38 @@ void DomContext::RecordSeparator(uint32_t id, float x, float y, float w, float h
     win->elements.push_back(std::move(el));
 }
 
+void DomContext::RecordTabBar(uint32_t id, const char* str_id, float x, float y, float w, float h) {
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::TabBar;
+    el.label = str_id ? str_id : "";
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    win->elements.push_back(std::move(el));
+}
+
+void DomContext::RecordTabItem(uint32_t id, const char* label, bool selected, float x, float y, float w, float h) {
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::TabItem;
+    el.label = label ? label : "";
+    el.selected = selected;
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    win->elements.push_back(std::move(el));
+}
+
+void DomContext::SetItemTooltip(const char* text) {
+    if (!m_enabled || text == nullptr) return;
+    Window* win = GetCurrentWindow();
+    if (!win || win->elements.empty()) return;
+    win->elements.back().tooltip = text;
+}
+
 void DomContext::SetEventCallback(EventCallback cb) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_event_callback = std::move(cb);
@@ -370,6 +404,9 @@ void DomContext::PushBrowserEvent(const BrowserEvent& evt) {
             m_checkbox_values[evt.id] = evt.checked;
         } else if (evt.type == "click") {
             m_active_clicks.insert(evt.id);
+        } else if (evt.type == "tab") {
+            m_tab_selections.insert(evt.id);
+            m_active_clicks.insert(evt.id);
         }
         cb = m_event_callback;
     }
@@ -383,6 +420,16 @@ bool DomContext::ConsumeClick(uint32_t id) {
     auto it = m_active_clicks.find(id);
     if (it != m_active_clicks.end()) {
         m_active_clicks.erase(it);
+        return true;
+    }
+    return false;
+}
+
+bool DomContext::ConsumeTabSelect(uint32_t id) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_tab_selections.find(id);
+    if (it != m_tab_selections.end()) {
+        m_tab_selections.erase(it);
         return true;
     }
     return false;

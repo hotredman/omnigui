@@ -269,6 +269,51 @@ inline const char* GetWebClientHtml() {
             opacity: 0.45 !important;
             pointer-events: none !important;
         }
+
+        /* Native TabBar & TabItems */
+        .imgui-tab-bar {
+            position: absolute;
+            display: flex;
+            border-bottom: 1px solid #444458;
+            box-sizing: border-box;
+        }
+        .imgui-tab-item {
+            position: absolute;
+            background: #252530;
+            color: #aaaab8;
+            border: 1px solid #363646;
+            border-bottom: none;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            padding: 3px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s, color 0.1s;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .imgui-tab-item:hover {
+            background: #323240;
+            color: #fff;
+        }
+        .imgui-tab-item.active {
+            background: #2f6690;
+            color: #fff;
+            font-weight: 600;
+            border-color: #4480aa;
+        }
+
+        /* Tooltip Window */
+        .imgui-window.tooltip {
+            pointer-events: none;
+            z-index: 9999 !important;
+            background-color: #1a1a24;
+            border-color: #55556a;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.7);
+        }
     </style>
 </head>
 )HTML"
@@ -452,6 +497,11 @@ R"HTML(
                 winEl.style.width = `${win.w}px`;
                 winEl.style.height = `${win.h}px`;
                 winEl.style.zIndex = 10 + winIdx;
+                if (win.is_tooltip) {
+                    winEl.classList.add('tooltip');
+                } else {
+                    winEl.classList.remove('tooltip');
+                }
 
                 // Header visibility and height
                 const header = winEl.querySelector('.imgui-header');
@@ -706,10 +756,48 @@ R"HTML(
                         if (el.points && el.points.length > 0) {
                             renderCanvasWave(elem, el.points);
                         }
+                    } else if (el.type === 'tabbar') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
+                            elem.className = 'imgui-tab-bar';
+                            body.appendChild(elem);
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'tabitem') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
+                            elem.className = 'imgui-tab-item';
+                            elem.onclick = (e) => {
+                                e.stopPropagation();
+                                postEvent({ type: 'tab', id: el.id, label: el.label });
+                                postEvent({ type: 'click', id: el.id, x: el.x + el.w/2, y: el.y + el.h/2 });
+                            };
+                            body.appendChild(elem);
+                        }
+                        elem.textContent = el.label;
+                        if (el.selected) {
+                            elem.classList.add('active');
+                        } else {
+                            elem.classList.remove('active');
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
                     }
                     if (elem) {
                         if (el.disabled) elem.classList.add('imgui-disabled');
                         else elem.classList.remove('imgui-disabled');
+                        if (el.tooltip) elem.title = el.tooltip;
+                        else elem.removeAttribute('title');
                     }
                 }
             }
@@ -728,7 +816,7 @@ R"HTML(
                 const header = win.querySelector('.imgui-header');
                 const winTitle = header ? header.textContent : win.id;
                 const interactive = Array.from(win.querySelectorAll(
-                    '.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box'
+                    '.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item'
                 ));
 
                 for (let i = 0; i < interactive.length; i++) {

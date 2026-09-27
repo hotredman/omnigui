@@ -20,7 +20,10 @@ enum class ElementType {
     TreeNode,
     ProgressBar,
     Separator,
-    Canvas
+    Canvas,
+    TabBar,
+    TabItem,
+    Tooltip
 };
 
 struct Element {
@@ -28,11 +31,13 @@ struct Element {
     ElementType type = ElementType::Text;
     std::string label;
     std::string value_str;
+    std::string tooltip;
     float value_num = 0.0f;
     float min_val = 0.0f;
     float max_val = 1.0f;
     bool checked = false;
     bool opened = false;
+    bool selected = false;
     bool disabled = false;
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
 
@@ -53,6 +58,7 @@ struct Window {
     bool has_menu_bar = false;
     bool is_popup = false;
     bool is_modal = false;
+    bool is_tooltip = false;
     bool collapsed = false;
     std::vector<Element> elements;
 };
@@ -86,6 +92,7 @@ struct Document {
             ss << "\"has_menu_bar\":" << (win.has_menu_bar ? "true" : "false") << ",";
             ss << "\"is_popup\":" << (win.is_popup ? "true" : "false") << ",";
             ss << "\"is_modal\":" << (win.is_modal ? "true" : "false") << ",";
+            ss << "\"is_tooltip\":" << (win.is_tooltip ? "true" : "false") << ",";
             ss << "\"collapsed\":" << (win.collapsed ? "true" : "false") << ",";
             ss << "\"elements\":[";
 
@@ -99,10 +106,16 @@ struct Document {
                 ss << "\"x\":" << el.x << ",\"y\":" << el.y << ",";
                 ss << "\"w\":" << el.w << ",\"h\":" << el.h << ",";
                 if (el.disabled) ss << "\"disabled\":true,";
+                if (!el.tooltip.empty()) ss << "\"tooltip\":\"" << EscapeJson(el.tooltip) << "\",";
 
                 switch (el.type) {
                 case ElementType::Button:
                 case ElementType::Separator:
+                case ElementType::TabBar:
+                case ElementType::Tooltip:
+                    break;
+                case ElementType::TabItem:
+                    ss << "\"selected\":" << (el.selected ? "true" : "false") << ",";
                     break;
                 case ElementType::Text:
                     ss << "\"val\":\"" << EscapeJson(el.value_str) << "\",";
@@ -172,6 +185,9 @@ private:
         case ElementType::ProgressBar: return "progress";
         case ElementType::Separator: return "separator";
         case ElementType::Canvas: return "canvas";
+        case ElementType::TabBar: return "tabbar";
+        case ElementType::TabItem: return "tabitem";
+        case ElementType::Tooltip: return "tooltip";
         default: return "unknown";
         }
     }

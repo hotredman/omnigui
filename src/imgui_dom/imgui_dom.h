@@ -150,4 +150,53 @@ inline void SameLine(float offset_from_start_x = 0.0f, float spacing = -1.0f) {
     ImGui::SameLine(offset_from_start_x, spacing);
 }
 
+inline bool BeginTabBar(const char* str_id, ImGuiTabBarFlags flags = 0) {
+    bool res = ImGui::BeginTabBar(str_id, flags);
+    if (DomContext::Instance().IsEnabled() && res) {
+        ImVec2 p_min = ImGui::GetItemRectMin();
+        ImVec2 p_max = ImGui::GetItemRectMax();
+        uint32_t id = static_cast<uint32_t>(ImGui::GetItemID());
+        DomContext::Instance().RecordTabBar(id, str_id, p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
+    }
+    return res;
+}
+
+inline void EndTabBar() {
+    ImGui::EndTabBar();
+}
+
+inline bool BeginTabItem(const char* label, bool* p_open = nullptr, ImGuiTabItemFlags flags = 0) {
+    if (DomContext::Instance().IsEnabled()) {
+        uint32_t id = static_cast<uint32_t>(ImGui::GetID(label));
+        if (DomContext::Instance().ConsumeTabSelect(id)) {
+            flags |= ImGuiTabItemFlags_SetSelected;
+        }
+    }
+    bool selected = ImGui::BeginTabItem(label, p_open, flags);
+    if (DomContext::Instance().IsEnabled()) {
+        ImVec2 p_min = ImGui::GetItemRectMin();
+        ImVec2 p_max = ImGui::GetItemRectMax();
+        uint32_t id = static_cast<uint32_t>(ImGui::GetItemID());
+        DomContext::Instance().RecordTabItem(id, label, selected, p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
+    }
+    return selected;
+}
+
+inline void EndTabItem() {
+    ImGui::EndTabItem();
+}
+
+inline void SetItemTooltip(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    char buf[1024];
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+
+    ImGui::SetItemTooltip("%s", buf);
+    if (DomContext::Instance().IsEnabled()) {
+        DomContext::Instance().SetItemTooltip(buf);
+    }
+}
+
 } // namespace ImGuiDom
