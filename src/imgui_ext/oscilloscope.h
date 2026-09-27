@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "imgui.h"
+#include "imgui_dom/imgui_dom.h"
 #include "imgui_ext/event_loop.h"
 #include "imgui_ext/lttb.h"
 
@@ -290,23 +291,23 @@ public:
     SignalSource& GetSignal() { return m_signal; }
 
     void RenderUI() {
-        ImGui::Begin("Real-Time Oscilloscope & Signal Monitor", nullptr);
+        ImGuiDom::Begin("Real-Time Oscilloscope & Signal Monitor", nullptr);
 
         // Header metrics & status
         bool paused = m_signal.IsPaused();
         if (paused) {
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "[PAUSED: UI in 0% CPU Sleep Mode]");
+            ImGuiDom::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "[PAUSED: UI in 0% CPU Sleep Mode]");
         } else {
-            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.4f, 1.0f), "[STREAMING: %d kS/s @ %d FPS]",
-                               (int)(m_signal.GetBufferCapacity() / 1000), m_signal.GetTargetFPS());
+            ImGuiDom::TextColored(ImVec4(0.2f, 1.0f, 0.4f, 1.0f), "[STREAMING: %d kS/s @ %d FPS]",
+                                  (int)(m_signal.GetBufferCapacity() / 1000), m_signal.GetTargetFPS());
         }
 
-        ImGui::SameLine();
-        if (ImGui::Button(paused ? "  Resume Stream  " : "  Pause Stream  ")) {
+        ImGuiDom::SameLine();
+        if (ImGuiDom::Button(paused ? "  Resume Stream  " : "  Pause Stream  ")) {
             m_signal.SetPaused(!paused);
         }
 
-        ImGui::Separator();
+        ImGuiDom::Separator();
 
         // 1. Oscilloscope Screen Area
         ImVec2 avail_size = ImGui::GetContentRegionAvail();
@@ -350,6 +351,20 @@ public:
         // Fetch waveform snapshot
         float vpp = 0.0f, rms = 0.0f;
         size_t raw_count = m_signal.GetSnapshot(m_snapshot_cache, vpp, rms);
+
+        // Stream downsampled waveform points to Web DOM canvas
+        if (ImGuiDom::DomContext::Instance().IsEnabled() && raw_count > 0) {
+            static std::vector<float> web_pts;
+            const size_t web_sample_count = 160;
+            if (web_pts.size() != web_sample_count) web_pts.resize(web_sample_count);
+            double step = (double)raw_count / (double)web_sample_count;
+            for (size_t i = 0; i < web_sample_count; ++i) {
+                size_t idx = (std::min)((size_t)(i * step), raw_count - 1);
+                web_pts[i] = m_snapshot_cache[idx];
+            }
+            ImGuiDom::RecordCanvas("OscilloscopeCanvas", web_pts.data(), web_sample_count,
+                                   screen_pos.x, screen_pos.y, screen_size.x, screen_size.y);
+        }
 
         // Allocate screen points for downsampled signal
         size_t target_pixels = (size_t)(std::max)(100.0f, screen_size.x);
@@ -405,7 +420,7 @@ public:
         ImGui::Dummy(screen_size);
 
         // 2. Oscilloscope Control Panel
-        ImGui::Separator();
+        ImGuiDom::Separator();
         ImGui::Columns(2, "ScopeControls", false);
 
         // Left Column: Signal parameters
@@ -416,39 +431,39 @@ public:
         }
 
         float freq = m_signal.GetFrequency();
-        if (ImGui::SliderFloat("Signal Frequency (Hz)", &freq, 0.5f, 50.0f, "%.1f Hz")) {
+        if (ImGuiDom::SliderFloat("Signal Frequency (Hz)", &freq, 0.5f, 50.0f, "%.1f Hz")) {
             m_signal.SetFrequency(freq);
         }
 
         float noise = m_signal.GetNoiseLevel();
-        if (ImGui::SliderFloat("Noise Floor", &noise, 0.0f, 0.20f, "%.2f")) {
+        if (ImGuiDom::SliderFloat("Noise Floor", &noise, 0.0f, 0.20f, "%.2f")) {
             m_signal.SetNoiseLevel(noise);
         }
 
         ImGui::NextColumn();
 
         // Right Column: Downsampling & Display parameters
-        ImGui::Checkbox("Enable LTTB Downsampling", &m_use_lttb);
-        ImGui::SameLine();
+        ImGuiDom::Checkbox("Enable LTTB Downsampling", &m_use_lttb);
+        ImGuiDom::SameLine();
         ImGui::TextDisabled("(?)");
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Largest-Triangle-Three-Buckets:\nPreserves visual peaks and valleys when reducing\n100,000+ points to screen resolution without lag.");
         }
 
-        ImGui::SameLine();
-        ImGui::Checkbox("Cyan Phosphor", &m_cyan_trace);
-        ImGui::SameLine();
-        ImGui::Checkbox("Phosphor Glow", &m_glow_effect);
+        ImGuiDom::SameLine();
+        ImGuiDom::Checkbox("Cyan Phosphor", &m_cyan_trace);
+        ImGuiDom::SameLine();
+        ImGuiDom::Checkbox("Phosphor Glow", &m_glow_effect);
 
         int cap = (int)(m_signal.GetBufferCapacity() / 1000);
-        if (ImGui::SliderInt("Buffer Size (kSamples)", &cap, 10, 250, "%d kPts")) {
+        if (ImGuiDom::SliderInt("Buffer Size (kSamples)", &cap, 10, 250, "%d kPts")) {
             m_signal.SetBufferCapacity((size_t)cap * 1000);
         }
 
-        ImGui::SliderFloat("Trace Thickness", &m_line_thickness, 1.0f, 4.0f, "%.1f px");
+        ImGuiDom::SliderFloat("Trace Thickness", &m_line_thickness, 1.0f, 4.0f, "%.1f px");
 
         ImGui::Columns(1);
-        ImGui::End();
+        ImGuiDom::End();
     }
 
 private:

@@ -41,13 +41,24 @@ if (WIN32)
     target_link_libraries(imgui PUBLIC psapi)
 endif()
 
-# --- imthorgui Library (Recorder + Renderer) ---
+# --- Threads (Cross-Platform) ---
+find_package(Threads REQUIRED)
+
+# --- imthorgui Library (Recorder + Renderer + DOM Backend) ---
 add_library(imthorgui STATIC
     src/imgui_ext/recorder.cpp
     src/imgui_ext/renderer_thorvg.cpp
+    src/imgui_dom/dom_context.cpp
+    src/imgui_dom/dom_server.cpp
 )
-target_include_directories(imthorgui PUBLIC src)
-target_link_libraries(imthorgui PUBLIC imgui thorvg)
+target_include_directories(imthorgui PUBLIC
+    src
+    third_party/httplib
+)
+target_link_libraries(imthorgui PUBLIC imgui thorvg Threads::Threads)
+if (WIN32)
+    target_link_libraries(imthorgui PUBLIC ws2_32 crypt32)
+endif()
 
 # --- Demo Executable ---
 add_executable(demo
@@ -85,4 +96,15 @@ add_executable(test_modal
     tests/test_modal.cpp
 )
 target_link_libraries(test_modal PRIVATE imthorgui)
+
+add_executable(test_httplib
+    tests/test_httplib.cpp
+)
+target_link_libraries(test_httplib PRIVATE imthorgui)
+
+add_executable(test_dom
+    tests/test_dom.cpp
+)
+target_link_libraries(test_dom PRIVATE imthorgui)
+
 

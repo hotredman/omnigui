@@ -23,6 +23,7 @@
 #include "imgui_ext/recorder.h"
 #include "imgui_ext/renderer.h"
 #include "imgui_ext/oscilloscope.h"
+#include "imgui_dom/imgui_dom.h"
 
 struct PerformanceMetrics {
     double cpu_usage_percent = 0.0;
@@ -289,6 +290,8 @@ int main(int argc, char* argv[]) {
     std::cout.setf(std::ios::unitbuf);
     bool auto_benchmark = false;
     double auto_exit_seconds = 0.0;
+    bool use_dom_server = true;
+    int dom_port = 8080;
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "--benchmark") {
             auto_benchmark = true;
@@ -296,6 +299,10 @@ int main(int argc, char* argv[]) {
             auto_exit_seconds = std::atof(argv[++i]);
         } else if (std::string(argv[i]) == "--software") {
             SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+        } else if (std::string(argv[i]) == "--no-web") {
+            use_dom_server = false;
+        } else if (std::string(argv[i]) == "--port" && i + 1 < argc) {
+            dom_port = std::atoi(argv[++i]);
         }
     }
 
@@ -370,6 +377,14 @@ int main(int argc, char* argv[]) {
 
     // Initialize Event Loop manager
     ImGuiExt::InitEventLoop(window);
+
+    // Initialize Web DOM Server if enabled
+    if (use_dom_server) {
+        ImGuiDom::DomContext::Instance().SetEventCallback([]() {
+            ImGuiExt::RequestRepaint(3);
+        });
+        ImGuiDom::StartServer(dom_port);
+    }
 
     ImGuiExt::IRenderer* vector_renderer = ImGuiExt::CreateThorVGRenderer();
     int init_fb_w = 0, init_fb_h = 0;
@@ -512,6 +527,10 @@ int main(int argc, char* argv[]) {
 
         auto cpu_work_start = std::chrono::steady_clock::now();
 
+        static uint64_t dom_frame = 0;
+        dom_frame++;
+        ImGuiDom::BeginFrame(dom_frame);
+
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
@@ -544,28 +563,54 @@ int main(int argc, char* argv[]) {
         {
             ImGui::SetNextWindowPos(ImVec2(pad, pad), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowSize(ImVec2(hud_w, hud_h), ImGuiCond_FirstUseEver);
-            ImGui::Begin("ImGui Vector Backend - Controls & Metrics", nullptr);
-            ImGui::Text("Dear ImGui %s + SDL3", IMGUI_VERSION);
-            ImGui::Separator();
+            ImGuiDom::Begin("ImGui Vector Backend - Controls & Metrics", nullptr);
+            ImGuiDom::Text("Dear ImGui %s + SDL3", IMGUI_VERSION);
+            ImGuiDom::Separator();
 
+            ImGuiDom::Text("Active Render Backends (User Choice):");
+            if (ImGuiDom::Checkbox("1. ImGui - Thor - SDL (Vector Rasterizer)", &use_vector_backend)) {
+                ImGuiExt::SetVectorInterception(use_vector_backend);
+            }
+            if (use_vector_backend) {
+                ImGuiDom::SameLine();
+                ImGuiDom::TextColored(ImVec4(0.3f, 1.0f, 0.4f, 1.0f), "[ACTIVE: Vector Primitives]");
+            } else {
+                ImGuiDom::SameLine();
+                ImGuiDom::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "[2. ImGui - SDL Triangles Active]");
+            }
+
+            if (ImGuiDom::Checkbox("3. ImGui - DOM (Native HTML5 Web Page)", &use_dom_server)) {
+                if (use_dom_server) {
+                    ImGuiDom::DomContext::Instance().SetEventCallback([]() {
+                        ImGuiExt::RequestRepaint(3);
+                    });
+                    ImGuiDom::StartServer(dom_port);
+                } else {
+                    ImGuiDom::StopServer();
+                }
+            }
+            if (use_dom_server) {
+                ImGuiDom::SameLine();
+                ImGuiDom::TextColored(ImVec4(0.2f, 0.9f, 1.0f, 1.0f), "[http://localhost:%d]", dom_port);
+                ImGuiDom::SameLine();
+                if (ImGuiDom::Button("Open Web Client")) {
+                    std::string url = "http://localhost:" + std::to_string(dom_port);
+                    SDL_OpenURL(url.c_str());
+                }
+            }
+
+            ImGuiDom::Separator();
             bool reactive = ImGuiExt::IsReactiveMode();
-            if (ImGui::Checkbox("Reactive Event-Driven Loop (Stage 1)", &reactive)) {
+            if (ImGuiDom::Checkbox("Reactive Event-Driven Loop (Stage 1)", &reactive)) {
                 ImGuiExt::SetReactiveMode(reactive);
             }
 
             bool dedup = ImGuiExt::IsFrameDeduplicationEnabled();
-            if (ImGui::Checkbox("Frame Deduplication (Stage 2)", &dedup)) {
+            if (ImGuiDom::Checkbox("Frame Deduplication (Stage 2)", &dedup)) {
                 ImGuiExt::SetFrameDeduplication(dedup);
             }
 
-            ImGui::Separator();
-            if (ImGui::Checkbox("ThorVG Vector Backend (Stage 3)", &use_vector_backend)) {
-                ImGuiExt::SetVectorInterception(use_vector_backend);
-            }
             if (use_vector_backend) {
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.4f, 1.0f), "[ACTIVE: Vector Primitives]");
-
                 size_t total_cmds = 0, vector_cmds = 0, fallback_cmds = 0;
                 for (const auto& kv : ImGuiExt::Recorder::Instance().GetStreams()) {
                     total_cmds += kv.second.commands.size();
@@ -574,48 +619,45 @@ int main(int argc, char* argv[]) {
                         else vector_cmds++;
                     }
                 }
-                ImGui::Text("Recorded: %zu commands (%zu vector, %zu fallback mesh)", total_cmds, vector_cmds, fallback_cmds);
-            } else {
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "[Stock SDL_Renderer Triangles]");
+                ImGuiDom::Text("Recorded: %zu commands (%zu vector, %zu fallback mesh)", total_cmds, vector_cmds, fallback_cmds);
             }
 
-            if (ImGui::Button("Simulate Texture Update")) {
+            if (ImGuiDom::Button("Simulate Texture Update")) {
                 ImGuiExt::NotifyTextureUpdated();
             }
 
-            ImGui::Separator();
-            ImGui::Text("FPS: %.1f (Total Frame: %.2f ms)", metrics.display_fps, metrics.display_cpu_frame_ms);
-            ImGui::Text("CPU Work Time: %.2f ms / frame", metrics.display_cpu_work_ms);
-            ImGui::Text("Render/Present: %.2f ms", metrics.display_gpu_frame_ms);
-            ImGui::Text("CPU Usage (Process): %.2f %%", metrics.cpu_usage_percent);
-            ImGui::Text("RAM Working Set: %.2f MB (Peak: %.2f MB)", metrics.ram_working_set_mb, metrics.ram_peak_working_set_mb);
+            ImGuiDom::Separator();
+            ImGuiDom::Text("FPS: %.1f (Total Frame: %.2f ms)", metrics.display_fps, metrics.display_cpu_frame_ms);
+            ImGuiDom::Text("CPU Work Time: %.2f ms / frame", metrics.display_cpu_work_ms);
+            ImGuiDom::Text("Render/Present: %.2f ms", metrics.display_gpu_frame_ms);
+            ImGuiDom::Text("CPU Usage (Process): %.2f %%", metrics.cpu_usage_percent);
+            ImGuiDom::Text("RAM Working Set: %.2f MB (Peak: %.2f MB)", metrics.ram_working_set_mb, metrics.ram_peak_working_set_mb);
             if (dedup) {
-                ImGui::Text("Deduplication: %llu frames skipped", (unsigned long long)metrics.display_skipped_frames);
+                ImGuiDom::Text("Deduplication: %llu frames skipped", (unsigned long long)metrics.display_skipped_frames);
             }
 
-            ImGui::Separator();
+            ImGuiDom::Separator();
             if (bench.running) {
-                ImGui::TextColored(ImVec4(1, 1, 0, 1), "Benchmarking '%s'... (%.1fs left)",
+                ImGuiDom::TextColored(ImVec4(1, 1, 0, 1), "Benchmarking '%s'... (%.1fs left)",
                     bench.name.c_str(),
                     bench.duration_sec - std::chrono::duration<double>(std::chrono::steady_clock::now() - bench.start_time).count());
             } else {
-                if (ImGui::Button("Run 5s Idle Benchmark")) {
+                if (ImGuiDom::Button("Run 5s Idle Benchmark")) {
                     std::string label = reactive ? (dedup ? "Stage 2: Reactive+Dedup - Idle (5s)" : "Stage 1: Reactive - Idle (5s)") : "Stage 0: Continuous - Idle (5s)";
                     bench.Start(label, 5.0);
                 }
-                ImGui::SameLine();
-                if (ImGui::Button("Run 5s Active Benchmark")) {
+                ImGuiDom::SameLine();
+                if (ImGuiDom::Button("Run 5s Active Benchmark")) {
                     std::string label = reactive ? (dedup ? "Stage 2: Reactive+Dedup - Mouse Motion (5s)" : "Stage 1: Reactive - Mouse Motion (5s)") : "Stage 0: Continuous - Mouse Motion (5s)";
                     bench.Start(label, 5.0);
                 }
-                if (ImGui::Button("Run 5s Vector Benchmark")) {
+                if (ImGuiDom::Button("Run 5s Vector Benchmark")) {
                     use_vector_backend = true;
                     ImGuiExt::SetVectorInterception(true);
                     bench.Start("Stage 3: ThorVG Vector - Mouse Motion (5s)", 5.0);
                 }
-                ImGui::Separator();
-                if (ImGui::Button("Reset Layout to Default")) {
+                ImGuiDom::Separator();
+                if (ImGuiDom::Button("Reset Layout to Default")) {
                     ImGui::SetWindowPos("ImGui Vector Backend - Controls & Metrics", ImVec2(pad, pad));
                     ImGui::SetWindowSize("ImGui Vector Backend - Controls & Metrics", ImVec2(hud_w, hud_h));
                     ImGui::SetWindowPos("Dear ImGui Demo", ImVec2(demo_x, pad));
@@ -624,10 +666,11 @@ int main(int argc, char* argv[]) {
                     ImGui::SetWindowSize("Real-Time Oscilloscope & Signal Monitor", ImVec2(demo_w, osc_h));
                 }
             }
-            ImGui::End();
+            ImGuiDom::End();
         }
 
         ImGui::Render();
+        ImGuiDom::EndFrame();
         ImDrawData* draw_data = ImGui::GetDrawData();
 
         if (use_vector_backend) {
@@ -705,6 +748,10 @@ int main(int argc, char* argv[]) {
         vector_renderer->Shutdown();
         delete vector_renderer;
         vector_renderer = nullptr;
+    }
+
+    if (use_dom_server) {
+        ImGuiDom::StopServer();
     }
 
     ImGui_ImplSDLRenderer3_Shutdown();
