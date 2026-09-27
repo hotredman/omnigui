@@ -442,6 +442,98 @@ int main() {
     }
     std::cout << ">>> [PASS] Full-duplex Tab switching verified!\n";
 
+    // -----------------------------------------------------------------
+    // Step 10: Table and ListBox Support
+    // -----------------------------------------------------------------
+    std::cout << "[Step 10] Testing Table and ListBox support...\n";
+    ImGuiDom::BeginFrame(11);
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowSize(ImVec2(500, 400));
+    ImGui::Begin("TableAndListBox", nullptr);
+
+    if (ImGuiDom::BeginTable("MetricsTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        ImGuiDom::TableSetupColumn("Channel");
+        ImGuiDom::TableSetupColumn("Signal");
+        ImGuiDom::TableSetupColumn("Status");
+        ImGuiDom::TableHeadersRow();
+
+        ImGuiDom::TableNextRow();
+        ImGuiDom::TableNextColumn(); ImGuiDom::Text("CH-1");
+        ImGuiDom::TableNextColumn(); ImGuiDom::Text("Sine 1kHz");
+        ImGuiDom::TableNextColumn(); ImGuiDom::Text("Active");
+
+        ImGuiDom::TableNextRow();
+        ImGuiDom::TableNextColumn(); ImGuiDom::Text("CH-2");
+        ImGuiDom::TableNextColumn(); ImGuiDom::Text("Square 500Hz");
+        ImGuiDom::TableNextColumn(); ImGuiDom::Text("Idle");
+
+        ImGuiDom::EndTable();
+    }
+
+    static int selected_theme = 1;
+    const char* themes[] = { "Classic Dark", "Solarized", "Monokai", "Light" };
+    ImGuiDom::ListBox("Color Theme", &selected_theme, themes, 4);
+
+    ImGui::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    std::string tbl_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    std::cout << "Table/ListBox DOM JSON: " << tbl_json << "\n";
+
+    if (tbl_json.find("\"type\":\"table\"") == std::string::npos) {
+        std::cerr << "[FAIL] Table element not found in DOM JSON!\n";
+        return 1;
+    }
+    if (tbl_json.find("\"columns\":[\"Channel\",\"Signal\",\"Status\"]") == std::string::npos) {
+        std::cerr << "[FAIL] Table columns not properly exported in DOM JSON!\n";
+        return 1;
+    }
+    if (tbl_json.find("\"type\":\"listbox\"") == std::string::npos) {
+        std::cerr << "[FAIL] ListBox element not found in DOM JSON!\n";
+        return 1;
+    }
+    if (tbl_json.find("\"selected_idx\":1") == std::string::npos) {
+        std::cerr << "[FAIL] ListBox selected_idx:1 not found in DOM JSON!\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] Table and ListBox export verified!\n";
+
+    // Test ListBox event two-way sync using element ID from DOM snapshot
+    size_t lb_pos = tbl_json.find("\"label\":\"Color Theme\"");
+    size_t lb_id_pos = tbl_json.rfind("\"id\":", lb_pos);
+    uint32_t listbox_id = static_cast<uint32_t>(std::stoul(tbl_json.substr(lb_id_pos + 5)));
+    std::cout << "Target ListBox ID: " << listbox_id << "\n";
+
+    ImGuiDom::BrowserEvent lb_evt;
+    lb_evt.type = "listbox";
+    lb_evt.id = listbox_id;
+    lb_evt.value_num = 2.0f; // Select "Monokai"
+    ImGuiDom::DomContext::Instance().PushBrowserEvent(lb_evt);
+
+    ImGuiDom::BeginFrame(12);
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(500, 400));
+    ImGui::Begin("TableAndListBox", nullptr);
+
+    ImGuiDom::ListBox("Color Theme", &selected_theme, themes, 4);
+
+    ImGui::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    if (selected_theme != 2) {
+        std::cerr << "[FAIL] ListBox selected_theme in C++: " << selected_theme << " (Expected: 2)\n";
+        return 1;
+    }
+    std::string lb_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    if (lb_json.find("\"selected_idx\":2") == std::string::npos) {
+        std::cerr << "[FAIL] ListBox updated selected_idx:2 not found in DOM JSON!\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] Table and ListBox two-way sync verified!\n";
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 

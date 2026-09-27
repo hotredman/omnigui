@@ -61,6 +61,11 @@ public:
     void RecordTabBar(uint32_t id, const char* str_id, float x, float y, float w, float h);
     void RecordTabItem(uint32_t id, const char* label, bool selected, float x, float y, float w, float h);
     void SetItemTooltip(const char* text);
+    void RecordTableBegin(uint32_t id, const char* str_id, int columns_count, uint32_t flags);
+    void RecordTableColumn(const char* label);
+    void RecordTableHeadersRow();
+    void RecordTableEnd(float x, float y, float w, float h);
+    void RecordListBox(uint32_t id, const char* label, int current_item, const std::vector<std::string>& items, float x, float y, float w, float h);
 
     // Browser event handling (called by HTTP server)
     void PushBrowserEvent(const BrowserEvent& evt);
@@ -73,6 +78,7 @@ public:
     bool ConsumeCheckbox(uint32_t id, bool& out_checked);
     bool ConsumeInputText(uint32_t id, std::string& out_str);
     bool ConsumeTabSelect(uint32_t id);
+    bool ConsumeListBox(uint32_t id, int& out_index);
 
     // Internal ImGui Hook callbacks
     void OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags = 0);
@@ -122,9 +128,21 @@ private:
     mutable std::mutex m_mutex;
     std::string m_latest_json;
 
+    // Active Table recording state
+    struct ActiveTable {
+        uint32_t id = 0;
+        std::string str_id;
+        int columns_count = 0;
+        uint32_t flags = 0;
+        bool has_headers = false;
+        std::vector<std::string> columns;
+    };
+    std::vector<ActiveTable> m_active_tables;
+
     // Incoming browser events
     std::unordered_set<uint32_t> m_active_clicks;
     std::unordered_set<uint32_t> m_tab_selections;
+    std::unordered_map<uint32_t, int> m_listbox_selections;
     std::unordered_map<uint32_t, float> m_slider_values;
     std::unordered_map<uint32_t, bool> m_checkbox_values;
     std::unordered_map<uint32_t, std::string> m_input_strings;

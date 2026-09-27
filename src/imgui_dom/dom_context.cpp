@@ -22,6 +22,7 @@ void DomContext::BeginFrame(uint64_t frame_index) {
     m_hooked_items.clear();
     m_hooked_order.clear();
     m_active_clicks.clear();
+    m_active_tables.clear();
 
     if (ImGui::GetCurrentContext()) {
         ProcessInputEvents(ImGui::GetIO());
@@ -381,6 +382,59 @@ void DomContext::SetItemTooltip(const char* text) {
     win->elements.back().tooltip = text;
 }
 
+void DomContext::RecordTableBegin(uint32_t id, const char* str_id, int columns_count, uint32_t flags) {
+    if (!m_enabled) return;
+    ActiveTable tbl;
+    tbl.id = id;
+    tbl.str_id = str_id ? str_id : "";
+    tbl.columns_count = columns_count;
+    tbl.flags = flags;
+    tbl.has_headers = false;
+    m_active_tables.push_back(std::move(tbl));
+}
+
+void DomContext::RecordTableColumn(const char* label) {
+    if (!m_enabled || m_active_tables.empty()) return;
+    m_active_tables.back().columns.push_back(label ? label : "");
+}
+
+void DomContext::RecordTableHeadersRow() {
+    if (!m_enabled || m_active_tables.empty()) return;
+    m_active_tables.back().has_headers = true;
+}
+
+void DomContext::RecordTableEnd(float x, float y, float w, float h) {
+    if (!m_enabled || m_active_tables.empty()) return;
+    ActiveTable tbl = std::move(m_active_tables.back());
+    m_active_tables.pop_back();
+
+    Window* win = GetCurrentWindow();
+    if (!win) return;
+    Element el;
+    el.id = tbl.id;
+    el.type = ElementType::Table;
+    el.label = tbl.str_id;
+    el.columns_count = tbl.columns_count;
+    el.has_headers = tbl.has_headers;
+    el.items = std::move(tbl.columns);
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    win->elements.push_back(std::move(el));
+}
+
+void DomContext::RecordListBox(uint32_t id, const char* label, int current_item, const std::vector<std::string>& items, float x, float y, float w, float h) {
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::ListBox;
+    el.label = label ? label : "";
+    el.selected_idx = current_item;
+    el.items = items;
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    win->elements.push_back(std::move(el));
+}
+
 void DomContext::SetEventCallback(EventCallback cb) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_event_callback = std::move(cb);
@@ -407,6 +461,9 @@ void DomContext::PushBrowserEvent(const BrowserEvent& evt) {
         } else if (evt.type == "tab") {
             m_tab_selections.insert(evt.id);
             m_active_clicks.insert(evt.id);
+        } else if (evt.type == "listbox") {
+            m_listbox_selections[evt.id] = static_cast<int>(evt.value_num);
+            m_active_clicks.insert(evt.id);
         }
         cb = m_event_callback;
     }
@@ -430,6 +487,17 @@ bool DomContext::ConsumeTabSelect(uint32_t id) {
     auto it = m_tab_selections.find(id);
     if (it != m_tab_selections.end()) {
         m_tab_selections.erase(it);
+        return true;
+    }
+    return false;
+}
+
+bool DomContext::ConsumeListBox(uint32_t id, int& out_index) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_listbox_selections.find(id);
+    if (it != m_listbox_selections.end()) {
+        out_index = it->second;
+        m_listbox_selections.erase(it);
         return true;
     }
     return false;

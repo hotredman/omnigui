@@ -314,6 +314,68 @@ inline const char* GetWebClientHtml() {
             border-color: #55556a;
             box-shadow: 0 4px 14px rgba(0,0,0,0.7);
         }
+
+        /* Native Table Styling */
+        .imgui-table-container {
+            position: absolute;
+            background: rgba(30, 30, 40, 0.6);
+            border: 1px solid #444458;
+            border-radius: 4px;
+            overflow: hidden;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+        .imgui-table-header-row {
+            display: flex;
+            background: #2a3448;
+            border-bottom: 1px solid #444458;
+            font-size: 12px;
+            font-weight: 600;
+            color: #d0d8e8;
+        }
+        .imgui-table-th {
+            flex: 1;
+            padding: 4px 8px;
+            border-right: 1px solid #3d4a60;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .imgui-table-th:last-child {
+            border-right: none;
+        }
+
+        /* Native ListBox Styling */
+        .imgui-listbox-box {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 13px;
+        }
+        .imgui-listbox {
+            background: #1e1e28;
+            color: #efefef;
+            border: 1px solid #444458;
+            border-radius: 4px;
+            padding: 2px;
+            font-size: 12px;
+            outline: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .imgui-listbox option {
+            padding: 3px 8px;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        .imgui-listbox option:hover {
+            background: #2c3850;
+        }
+        .imgui-listbox option:checked {
+            background: #2f6690;
+            color: #fff;
+        }
     </style>
 </head>
 )HTML"
@@ -792,6 +854,66 @@ R"HTML(
                         elem.style.top = `${localY}px`;
                         elem.style.width = `${el.w}px`;
                         elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'table') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
+                            elem.className = 'imgui-table-container';
+                            body.appendChild(elem);
+                        }
+                        if (el.has_headers && el.columns && el.columns.length > 0) {
+                            let hdr = elem.querySelector('.imgui-table-header-row');
+                            if (!hdr) {
+                                hdr = document.createElement('div');
+                                hdr.className = 'imgui-table-header-row';
+                                elem.appendChild(hdr);
+                            }
+                            hdr.innerHTML = '';
+                            for (const col of el.columns) {
+                                const th = document.createElement('div');
+                                th.className = 'imgui-table-th';
+                                th.textContent = col;
+                                hdr.appendChild(th);
+                            }
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'listbox') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
+                            elem.className = 'imgui-listbox-box';
+                            elem.innerHTML = `<span class="imgui-listbox-lbl"></span> <select class="imgui-listbox"></select>`;
+                            const sel = elem.querySelector('select');
+                            sel.onchange = (e) => {
+                                e.stopPropagation();
+                                postEvent({ type: 'listbox', id: el.id, value_num: e.target.selectedIndex });
+                            };
+                            body.appendChild(elem);
+                        }
+                        elem.querySelector('.imgui-listbox-lbl').textContent = el.label ? el.label : '';
+                        const sel = elem.querySelector('select');
+                        sel.size = Math.min(8, Math.max(2, (el.items ? el.items.length : 4)));
+                        sel.innerHTML = '';
+                        if (el.items) {
+                            for (let i = 0; i < el.items.length; i++) {
+                                const opt = document.createElement('option');
+                                opt.value = i;
+                                opt.textContent = el.items[i];
+                                if (i === el.selected_idx) opt.selected = true;
+                                sel.appendChild(opt);
+                            }
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
                     }
                     if (elem) {
                         if (el.disabled) elem.classList.add('imgui-disabled');
@@ -816,7 +938,7 @@ R"HTML(
                 const header = win.querySelector('.imgui-header');
                 const winTitle = header ? header.textContent : win.id;
                 const interactive = Array.from(win.querySelectorAll(
-                    '.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item'
+                    '.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box'
                 ));
 
                 for (let i = 0; i < interactive.length; i++) {

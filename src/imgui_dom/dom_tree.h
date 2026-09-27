@@ -23,7 +23,9 @@ enum class ElementType {
     Canvas,
     TabBar,
     TabItem,
-    Tooltip
+    Tooltip,
+    Table,
+    ListBox
 };
 
 struct Element {
@@ -44,6 +46,12 @@ struct Element {
     // For canvas elements (e.g., real-time oscilloscope)
     std::string stream_name;
     std::vector<float> points;
+
+    // For ListBox and Table elements
+    std::vector<std::string> items;
+    int selected_idx = 0;
+    int columns_count = 0;
+    bool has_headers = false;
 };
 
 struct Window {
@@ -152,6 +160,25 @@ struct Document {
                     }
                     ss << "],";
                     break;
+                case ElementType::ListBox:
+                    ss << "\"selected_idx\":" << el.selected_idx << ",";
+                    ss << "\"items\":[";
+                    for (size_t ii = 0; ii < el.items.size(); ++ii) {
+                        if (ii > 0) ss << ",";
+                        ss << "\"" << EscapeJson(el.items[ii]) << "\"";
+                    }
+                    ss << "],";
+                    break;
+                case ElementType::Table:
+                    ss << "\"columns_count\":" << el.columns_count << ",";
+                    ss << "\"has_headers\":" << (el.has_headers ? "true" : "false") << ",";
+                    ss << "\"columns\":[";
+                    for (size_t ii = 0; ii < el.items.size(); ++ii) {
+                        if (ii > 0) ss << ",";
+                        ss << "\"" << EscapeJson(el.items[ii]) << "\"";
+                    }
+                    ss << "],";
+                    break;
                 default:
                     break;
                 }
@@ -188,6 +215,8 @@ private:
         case ElementType::TabBar: return "tabbar";
         case ElementType::TabItem: return "tabitem";
         case ElementType::Tooltip: return "tooltip";
+        case ElementType::Table: return "table";
+        case ElementType::ListBox: return "listbox";
         default: return "unknown";
         }
     }

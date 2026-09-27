@@ -768,6 +768,34 @@ int main(int argc, char* argv[]) {
                     ImGuiDom::EndTabItem();
                 }
 
+                if (ImGuiDom::BeginTabItem("Channels & Status")) {
+                    ImGuiDom::Text("Real-Time Signal Channels:");
+                    if (ImGuiDom::BeginTable("SignalChannels", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+                        ImGuiDom::TableSetupColumn("Channel");
+                        ImGuiDom::TableSetupColumn("Type");
+                        ImGuiDom::TableSetupColumn("Rate");
+                        ImGuiDom::TableHeadersRow();
+
+                        ImGuiDom::TableNextRow();
+                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("CH-1 (Sine)");
+                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("Hardware ADC");
+                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("100 kS/s");
+
+                        ImGuiDom::TableNextRow();
+                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("CH-2 (Pulse)");
+                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("Synthetic");
+                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("50 kS/s");
+
+                        ImGuiDom::EndTable();
+                    }
+                    ImGuiDom::Separator();
+                    static int selected_preset = 0;
+                    static const char* presets[] = { "Default (Laboratory)", "High Speed Transients", "Audio Band (20Hz-20kHz)", "Low Power Telemetry" };
+                    ImGuiDom::Text("Oscilloscope Preset Profile:");
+                    ImGuiDom::ListBox("Presets", &selected_preset, presets, 4);
+                    ImGuiDom::EndTabItem();
+                }
+
                 if (ImGuiDom::BeginTabItem("Layout")) {
                     if (ImGuiDom::Button("Reset Layout to Default")) {
                         ImGui::SetWindowPos("ImGui Vector Backend - Controls & Metrics", ImVec2(pad, pad));

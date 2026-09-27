@@ -4,6 +4,7 @@
 #include "dom_context.h"
 #include "dom_server.h"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include <cstdarg>
 #include <cstdio>
 
@@ -197,6 +198,85 @@ inline void SetItemTooltip(const char* fmt, ...) {
     if (DomContext::Instance().IsEnabled()) {
         DomContext::Instance().SetItemTooltip(buf);
     }
+}
+
+inline bool BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0.0f, 0.0f), float inner_width = 0.0f) {
+    bool res = ImGui::BeginTable(str_id, columns_count, flags, outer_size, inner_width);
+    if (DomContext::Instance().IsEnabled() && res) {
+        uint32_t id = static_cast<uint32_t>(ImGui::GetID(str_id));
+        DomContext::Instance().RecordTableBegin(id, str_id, columns_count, static_cast<uint32_t>(flags));
+    }
+    return res;
+}
+
+inline void TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0, float init_width_or_weight = 0.0f, ImGuiID user_id = 0) {
+    ImGui::TableSetupColumn(label, flags, init_width_or_weight, user_id);
+    if (DomContext::Instance().IsEnabled()) {
+        DomContext::Instance().RecordTableColumn(label);
+    }
+}
+
+inline void TableHeadersRow() {
+    ImGui::TableHeadersRow();
+    if (DomContext::Instance().IsEnabled()) {
+        DomContext::Instance().RecordTableHeadersRow();
+    }
+}
+
+inline void TableNextRow(ImGuiTableRowFlags row_flags = 0, float min_row_height = 0.0f) {
+    ImGui::TableNextRow(row_flags, min_row_height);
+}
+
+inline bool TableNextColumn() {
+    return ImGui::TableNextColumn();
+}
+
+inline bool TableSetColumnIndex(int column_n) {
+    return ImGui::TableSetColumnIndex(column_n);
+}
+
+inline void EndTable() {
+    if (DomContext::Instance().IsEnabled()) {
+        ImGuiContext* g = ImGui::GetCurrentContext();
+        if (g && g->CurrentTable) {
+            ImGuiTable* table = g->CurrentTable;
+            float x = table->OuterRect.Min.x;
+            float y = table->OuterRect.Min.y;
+            float w = table->OuterRect.GetWidth();
+            float h = (table->RowPosY2 > y) ? (table->RowPosY2 - y) : table->OuterRect.GetHeight();
+            DomContext::Instance().RecordTableEnd(x, y, w, h);
+        } else {
+            ImVec2 p_min = ImGui::GetItemRectMin();
+            ImVec2 p_max = ImGui::GetItemRectMax();
+            DomContext::Instance().RecordTableEnd(p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
+        }
+    }
+    ImGui::EndTable();
+}
+
+inline bool ListBox(const char* label, int* current_item, const char* const items[], int items_count, int height_in_items = -1) {
+    uint32_t id = 0;
+    if (DomContext::Instance().IsEnabled() && current_item) {
+        id = static_cast<uint32_t>(ImGui::GetID(label));
+        int consumed_idx = -1;
+        if (DomContext::Instance().ConsumeListBox(id, consumed_idx)) {
+            if (consumed_idx >= 0 && consumed_idx < items_count) {
+                *current_item = consumed_idx;
+            }
+        }
+    }
+    bool changed = ImGui::ListBox(label, current_item, items, items_count, height_in_items);
+    if (DomContext::Instance().IsEnabled() && current_item) {
+        ImVec2 p_min = ImGui::GetItemRectMin();
+        ImVec2 p_max = ImGui::GetItemRectMax();
+        std::vector<std::string> item_list;
+        item_list.reserve(items_count);
+        for (int i = 0; i < items_count; ++i) {
+            item_list.push_back(items[i] ? items[i] : "");
+        }
+        DomContext::Instance().RecordListBox(id, label, *current_item, item_list, p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
+    }
+    return changed;
 }
 
 } // namespace ImGuiDom
