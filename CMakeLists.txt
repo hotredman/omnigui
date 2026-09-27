@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(imthorgui CXX C)
+project(omnigui CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,8 +46,8 @@ if (NOT EMSCRIPTEN)
     find_package(Threads REQUIRED)
 endif()
 
-# --- imthorgui Library (Recorder + Renderer + DOM Backend) ---
-add_library(imthorgui STATIC
+# --- OmniGUI Library (Recorder + Renderer + DOM Backend) ---
+add_library(omnigui STATIC
     src/imgui_ext/recorder.cpp
     src/imgui_ext/renderer_thorvg.cpp
     src/imgui_dom/dom_context.cpp
@@ -55,16 +55,17 @@ add_library(imthorgui STATIC
     src/imgui_dom/dom_hook.cpp
     src/imgui_dom/dom_transport.cpp
 )
-target_include_directories(imthorgui PUBLIC
+add_library(imthorgui ALIAS omnigui)
+target_include_directories(omnigui PUBLIC
     src
     third_party/httplib
 )
-target_link_libraries(imthorgui PUBLIC imgui thorvg)
+target_link_libraries(omnigui PUBLIC imgui thorvg)
 if (NOT EMSCRIPTEN)
-    target_link_libraries(imthorgui PUBLIC Threads::Threads)
+    target_link_libraries(omnigui PUBLIC Threads::Threads)
 endif()
 if (WIN32 AND NOT EMSCRIPTEN)
-    target_link_libraries(imthorgui PUBLIC ws2_32 crypt32)
+    target_link_libraries(omnigui PUBLIC ws2_32 crypt32)
 endif()
 
 # ========================================================
