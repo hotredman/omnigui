@@ -292,6 +292,8 @@ int main(int argc, char* argv[]) {
     double auto_exit_seconds = 0.0;
     bool use_dom_server = true;
     int dom_port = 8080;
+    bool open_browser = false;
+    bool headless = false;
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "--benchmark") {
             auto_benchmark = true;
@@ -303,7 +305,71 @@ int main(int argc, char* argv[]) {
             use_dom_server = false;
         } else if (std::string(argv[i]) == "--port" && i + 1 < argc) {
             dom_port = std::atoi(argv[++i]);
+        } else if (std::string(argv[i]) == "--open-browser" || std::string(argv[i]) == "--browser" || std::string(argv[i]) == "-b") {
+            open_browser = true;
+        } else if (std::string(argv[i]) == "--headless" || std::string(argv[i]) == "--web-only") {
+            headless = true;
         }
+    }
+
+    if (headless) {
+        SDL_Init(0);
+
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2(1280, 720);
+        io.DeltaTime = 1.0f / 60.0f;
+        io.IniFilename = nullptr;
+
+        unsigned char* pixels = nullptr;
+        int width = 0, height = 0;
+        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
+        ImGuiExt::OscilloscopeWidget oscilloscope;
+
+        ImGuiDom::StartServer(dom_port);
+        if (open_browser) {
+            std::string url = "http://localhost:" + std::to_string(dom_port);
+            SDL_OpenURL(url.c_str());
+        }
+
+        std::cout << "\n========================================================\n";
+        std::cout << "  Dear ImGui Web DOM Server (Headless Mode)\n";
+        std::cout << "  URL: http://localhost:" << dom_port << "\n";
+        std::cout << "========================================================\n\n";
+
+        uint64_t dom_frame = 0;
+        auto app_start = std::chrono::steady_clock::now();
+        while (true) {
+            if (auto_exit_seconds > 0.0) {
+                double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - app_start).count();
+                if (elapsed >= auto_exit_seconds) break;
+            }
+
+            dom_frame++;
+            ImGuiDom::BeginFrame(dom_frame);
+            ImGui::NewFrame();
+
+            oscilloscope.RenderUI();
+
+            ImGuiDom::Begin("ImGui Web DOM Backend - Server Controls", nullptr);
+            ImGuiDom::Text("Dear ImGui %s (Headless Web Server)", IMGUI_VERSION);
+            ImGuiDom::Separator();
+            ImGuiDom::TextColored(ImVec4(0.2f, 0.9f, 1.0f, 1.0f), "Web Client URL: http://localhost:%d", dom_port);
+            ImGuiDom::Text("Status: Streaming DOM & Canvas @ 60 FPS");
+            ImGuiDom::End();
+
+            ImGui::Render();
+            ImGuiDom::EndFrame();
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
+
+        ImGuiDom::StopServer();
+        ImGui::DestroyContext();
+        SDL_Quit();
+        return 0;
     }
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -384,6 +450,10 @@ int main(int argc, char* argv[]) {
             ImGuiExt::RequestRepaint(3);
         });
         ImGuiDom::StartServer(dom_port);
+        if (open_browser) {
+            std::string url = "http://localhost:" + std::to_string(dom_port);
+            SDL_OpenURL(url.c_str());
+        }
     }
 
     ImGuiExt::IRenderer* vector_renderer = ImGuiExt::CreateThorVGRenderer();
