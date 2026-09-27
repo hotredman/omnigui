@@ -21,6 +21,7 @@ void DomContext::BeginFrame(uint64_t frame_index) {
     m_has_active_window = false;
     m_hooked_items.clear();
     m_hooked_order.clear();
+    m_active_clicks.clear();
 
     if (ImGui::GetCurrentContext()) {
         ProcessInputEvents(ImGui::GetIO());
@@ -381,15 +382,17 @@ void DomContext::ProcessInputEvents(ImGuiIO& io) {
             }
         } else if (evt.type == "click") {
             m_active_clicks.insert(evt.id);
-            if (ImGui::GetCurrentContext()) {
+            if (evt.id != 0 && ImGui::GetCurrentContext()) {
                 ImGuiContext& g = *ImGui::GetCurrentContext();
                 g.NavNextActivateId = evt.id;
                 g.NavNextActivateFlags = ImGuiActivateFlags_PreferInput;
             }
             if (evt.x > 0.0f || evt.y > 0.0f) {
                 io.AddMousePosEvent(evt.x, evt.y);
-                io.AddMouseButtonEvent(0, true);
-                io.AddMouseButtonEvent(0, false);
+                if (evt.id == 0) {
+                    io.AddMouseButtonEvent(0, true);
+                    io.AddMouseButtonEvent(0, false);
+                }
             }
         } else if (evt.type == "slider") {
             m_slider_values[evt.id] = evt.value_num;

@@ -225,13 +225,29 @@ inline const char* GetWebClientHtml() {
         /* Native Tree Node */
         .imgui-tree {
             position: absolute;
-            color: #fff;
+            color: #d0d0e0;
             font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
-        }
-        .imgui-tree summary {
-            outline: none;
             user-select: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            white-space: nowrap;
+            transition: background 0.1s, color 0.1s;
+        }
+        .imgui-tree:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+        .imgui-tree-arrow {
+            font-size: 10px;
+            color: #8888a0;
+            width: 12px;
+            display: inline-block;
+            text-align: center;
         }
     </style>
 </head>
@@ -317,17 +333,36 @@ R"HTML(
             const now = performance.now();
             if (now - lastMouseMoveTime >= 16) {
                 lastMouseMoveTime = now;
-                postEvent({ type: 'mouse_move', x: e.clientX, y: Math.max(0, e.clientY - 32) });
+                const dRect = desktop.getBoundingClientRect();
+                const mx = e.clientX - dRect.left + desktop.scrollLeft;
+                const my = e.clientY - dRect.top + desktop.scrollTop;
+                postEvent({ type: 'mouse_move', x: mx, y: my });
             }
         });
 
         window.addEventListener('mousedown', (e) => {
-            postEvent({ type: 'mouse_down', button: e.button, x: e.clientX, y: Math.max(0, e.clientY - 32) });
+            if (e.target.closest('.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box')) {
+                return;
+            }
+            const dRect = desktop.getBoundingClientRect();
+            const mx = e.clientX - dRect.left + desktop.scrollLeft;
+            const my = e.clientY - dRect.top + desktop.scrollTop;
+            postEvent({ type: 'mouse_down', button: e.button, x: mx, y: my });
         });
 
         window.addEventListener('mouseup', (e) => {
             activeSliders.clear();
-            postEvent({ type: 'mouse_up', button: e.button, x: e.clientX, y: Math.max(0, e.clientY - 32) });
+            if (e.target.closest('.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box')) {
+                return;
+            }
+            const dRect = desktop.getBoundingClientRect();
+            const mx = e.clientX - dRect.left + desktop.scrollLeft;
+            const my = e.clientY - dRect.top + desktop.scrollTop;
+            postEvent({ type: 'mouse_up', button: e.button, x: mx, y: my });
+        });
+        window.addEventListener('blur', () => {
+            activeSliders.clear();
+            postEvent({ type: 'mouse_up', button: 0, x: 0, y: 0 });
         });
         window.addEventListener('touchend', () => activeSliders.clear());
 
@@ -353,8 +388,35 @@ R"HTML(
                 lastFrameTime = now;
             }
 
-            // Sync windows
+            // 1. Collect all active window and element IDs in current snapshot
+            const activeWinIds = new Set();
+            const activeElIds = new Set();
             for (const win of doc.windows) {
+                activeWinIds.add(`win_${win.id}`);
+                for (const el of win.elements) {
+                    activeElIds.add(`el_${el.id}`);
+                }
+            }
+
+            // 2. Remove dead windows that are no longer in snapshot
+            const currentWinEls = desktop.querySelectorAll('.imgui-window');
+            for (const winEl of currentWinEls) {
+                if (!activeWinIds.has(winEl.id)) {
+                    winEl.remove();
+                }
+            }
+
+            // 3. Remove dead elements across all windows (prevents overlapping and ghost clicks!)
+            const currentElems = desktop.querySelectorAll('[id^="el_"]');
+            for (const elemNode of currentElems) {
+                if (!activeElIds.has(elemNode.id)) {
+                    elemNode.remove();
+                }
+            }
+
+            // 4. Sync windows with stacking order
+            for (let winIdx = 0; winIdx < doc.windows.length; winIdx++) {
+                const win = doc.windows[winIdx];
                 let winEl = document.getElementById(`win_${win.id}`);
                 if (!winEl) {
                     winEl = document.createElement('div');
@@ -364,17 +426,22 @@ R"HTML(
                     desktop.appendChild(winEl);
                 }
 
-                // Window dimensions
+                // Window dimensions & stacking z-index
                 winEl.style.left = `${win.x}px`;
                 winEl.style.top = `${win.y}px`;
                 winEl.style.width = `${win.w}px`;
                 winEl.style.height = `${win.h}px`;
+                winEl.style.zIndex = 10 + winIdx;
 
                 const body = winEl.querySelector('.imgui-body');
 
                 // Sync elements
                 for (const el of win.elements) {
                     let elem = document.getElementById(`el_${el.id}`);
+                    if (elem && elem.dataset.type !== el.type) {
+                        elem.remove();
+                        elem = null;
+                    }
                     const localX = el.x - win.x;
                     const localY = el.y - win.y - 28; // Header offset
 
@@ -382,8 +449,10 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('button');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-btn';
-                            elem.onclick = () => {
+                            elem.onclick = (e) => {
+                                e.stopPropagation();
                                 postEvent({ type: 'click', id: el.id, x: el.x + el.w/2, y: el.y + el.h/2 });
                             };
                             body.appendChild(elem);
@@ -398,20 +467,23 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('div');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-slider-box';
-                            elem.innerHTML = `<span>${el.label}:</span> <input type="range" min="${el.min}" max="${el.max}" step="0.1"> <span class="val-badge">${el.val.toFixed(1)}</span>`;
+                            elem.innerHTML = `<span class="imgui-slider-lbl"></span> <input type="range" min="${el.min}" max="${el.max}" step="0.1"> <span class="val-badge">${el.val.toFixed(1)}</span>`;
                             const slider = elem.querySelector('input');
-                            slider.onmousedown = () => activeSliders.add(el.id);
-                            slider.onmouseup = () => activeSliders.delete(el.id);
-                            slider.ontouchstart = () => activeSliders.add(el.id);
-                            slider.ontouchend = () => activeSliders.delete(el.id);
+                            slider.onmousedown = (e) => { e.stopPropagation(); activeSliders.add(el.id); };
+                            slider.onmouseup = (e) => { e.stopPropagation(); activeSliders.delete(el.id); };
+                            slider.ontouchstart = (e) => { e.stopPropagation(); activeSliders.add(el.id); };
+                            slider.ontouchend = (e) => { e.stopPropagation(); activeSliders.delete(el.id); };
                             slider.oninput = (e) => {
+                                e.stopPropagation();
                                 const val = parseFloat(e.target.value);
                                 elem.querySelector('.val-badge').textContent = val.toFixed(1);
                                 postEvent({ type: 'slider', id: el.id, val: val });
                             };
                             body.appendChild(elem);
                         }
+                        elem.querySelector('.imgui-slider-lbl').textContent = el.label ? `${el.label}:` : '';
                         if (!activeSliders.has(el.id)) {
                             elem.querySelector('input').value = el.val;
                             elem.querySelector('.val-badge').textContent = el.val.toFixed(1);
@@ -425,15 +497,19 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('label');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-check-box';
-                            elem.innerHTML = `<input type="checkbox"> <span>${el.label}</span>`;
+                            elem.innerHTML = `<input type="checkbox"> <span></span>`;
                             const cb = elem.querySelector('input');
                             cb.onchange = (e) => {
+                                e.stopPropagation();
                                 postEvent({ type: 'checkbox', id: el.id, checked: e.target.checked });
+                                postEvent({ type: 'click', id: el.id, x: el.x + 10, y: el.y + el.h/2 });
                             };
                             body.appendChild(elem);
                         }
                         elem.querySelector('input').checked = el.checked;
+                        elem.querySelector('span').textContent = el.label;
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
                         elem.style.height = `${el.h}px`;
@@ -445,15 +521,19 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('label');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-check-box';
-                            elem.innerHTML = `<input type="radio" name="rad_${win.id}"> <span>${el.label}</span>`;
+                            elem.innerHTML = `<input type="radio" name="rad_${win.id}"> <span></span>`;
                             const rb = elem.querySelector('input');
-                            rb.onchange = () => {
-                                postEvent({ type: 'click', id: el.id, checked: true });
+                            rb.onchange = (e) => {
+                                e.stopPropagation();
+                                postEvent({ type: 'radio', id: el.id, checked: true });
+                                postEvent({ type: 'click', id: el.id, x: el.x + 10, y: el.y + el.h/2 });
                             };
                             body.appendChild(elem);
                         }
                         elem.querySelector('input').checked = el.checked;
+                        elem.querySelector('span').textContent = el.label;
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
                         elem.style.height = `${el.h}px`;
@@ -462,14 +542,17 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('div');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-input-box';
-                            elem.innerHTML = `<span>${el.label}:</span> <input type="text" class="imgui-input">`;
+                            elem.innerHTML = `<span class="imgui-input-lbl"></span> <input type="text" class="imgui-input">`;
                             const inp = elem.querySelector('input');
                             inp.oninput = (e) => {
+                                e.stopPropagation();
                                 postEvent({ type: 'input', id: el.id, text: e.target.value });
                             };
                             body.appendChild(elem);
                         }
+                        elem.querySelector('.imgui-input-lbl').textContent = el.label ? `${el.label}:` : '';
                         const inp = elem.querySelector('input');
                         if (document.activeElement !== inp) {
                             inp.value = el.val || '';
@@ -483,14 +566,20 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('div');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-combo-box';
-                            elem.innerHTML = `<span>${el.label}:</span> <select class="imgui-select"><option selected>${el.val || 'Select...'}</option></select>`;
+                            elem.innerHTML = `<span class="imgui-combo-lbl"></span> <select class="imgui-select"><option selected>${el.val || 'Select...'}</option></select>`;
                             const sel = elem.querySelector('select');
                             sel.onchange = (e) => {
+                                e.stopPropagation();
                                 postEvent({ type: 'input', id: el.id, text: e.target.value });
+                                postEvent({ type: 'click', id: el.id, x: el.x + 10, y: el.y + el.h/2 });
                             };
                             body.appendChild(elem);
                         }
+                        elem.querySelector('.imgui-combo-lbl').textContent = el.label ? `${el.label}:` : '';
+                        const sel = elem.querySelector('select');
+                        sel.querySelector('option').textContent = el.val || 'Select...';
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
                         elem.style.width = `${el.w}px`;
@@ -498,24 +587,31 @@ R"HTML(
 
                     } else if (el.type === 'treenode') {
                         if (!elem) {
-                            elem = document.createElement('details');
+                            elem = document.createElement('div');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-tree';
-                            elem.innerHTML = `<summary>${el.label}</summary>`;
-                            elem.ontoggle = () => {
-                                postEvent({ type: 'click', id: el.id });
+                            elem.innerHTML = `<span class="imgui-tree-arrow">▶</span> <span class="imgui-tree-label"></span>`;
+                            elem.onclick = (e) => {
+                                e.stopPropagation();
+                                postEvent({ type: 'click', id: el.id, x: el.x + 10, y: el.y + el.h/2 });
                             };
                             body.appendChild(elem);
                         }
-                        elem.open = el.opened;
+                        const arrow = elem.querySelector('.imgui-tree-arrow');
+                        if (arrow) arrow.textContent = el.opened ? '▼' : '▶';
+                        const lbl = elem.querySelector('.imgui-tree-label');
+                        if (lbl) lbl.textContent = el.label;
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
                         elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h || 20}px`;
 
                     } else if (el.type === 'progress') {
                         if (!elem) {
                             elem = document.createElement('div');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-progress-box';
                             elem.innerHTML = `<div class="imgui-progress-bar"></div><span class="imgui-progress-text"></span>`;
                             body.appendChild(elem);
@@ -532,6 +628,7 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('hr');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-separator';
                             body.appendChild(elem);
                         }
@@ -543,6 +640,7 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('div');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-text';
                             body.appendChild(elem);
                         }
@@ -554,6 +652,7 @@ R"HTML(
                         if (!elem) {
                             elem = document.createElement('canvas');
                             elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
                             elem.className = 'imgui-canvas';
                             elem.width = Math.round(el.w);
                             elem.height = Math.round(el.h);
