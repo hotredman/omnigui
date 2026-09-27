@@ -47,7 +47,11 @@ void DomContext::EndFrame() {
     }
 }
 
-void DomContext::RecordWindowBegin(uint32_t id, const char* title, float x, float y, float w, float h) {
+void DomContext::RecordWindowBegin(uint32_t id, const char* title, float x, float y, float w, float h,
+                                   float title_bar_h, float menu_bar_h,
+                                   bool has_title_bar, bool has_menu_bar,
+                                   bool is_popup, bool is_modal, bool collapsed,
+                                   float scroll_x, float scroll_y) {
     if (!m_enabled) return;
     if (m_has_active_window) {
         RecordWindowEnd();
@@ -59,6 +63,15 @@ void DomContext::RecordWindowBegin(uint32_t id, const char* title, float x, floa
     m_current_window.y = y;
     m_current_window.w = w;
     m_current_window.h = h;
+    m_current_window.title_bar_h = title_bar_h;
+    m_current_window.menu_bar_h = menu_bar_h;
+    m_current_window.has_title_bar = has_title_bar;
+    m_current_window.has_menu_bar = has_menu_bar;
+    m_current_window.is_popup = is_popup;
+    m_current_window.is_modal = is_modal;
+    m_current_window.collapsed = collapsed;
+    m_current_window.scroll_x = scroll_x;
+    m_current_window.scroll_y = scroll_y;
     m_has_active_window = true;
 }
 
@@ -84,6 +97,9 @@ void DomContext::RecordWindowEnd() {
         el.id = id;
         el.label = item.label;
         el.x = item.x; el.y = item.y; el.w = item.w; el.h = item.h;
+        if (item.item_flags & 0x01) { // ImGuiItemFlags_Disabled
+            el.disabled = true;
+        }
 
         if (item.flags & ImGuiItemStatusFlags_Checkable) {
             el.type = ElementType::Checkbox;
@@ -124,12 +140,13 @@ void DomContext::RecordWindowEnd() {
     m_has_active_window = false;
 }
 
-void DomContext::OnHookItemAdd(uint32_t id, float x, float y, float w, float h, uint32_t status_flags) {
+void DomContext::OnHookItemAdd(uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags) {
     if (!m_enabled) return;
     HookItem item;
     item.id = id;
     item.x = x; item.y = y; item.w = w; item.h = h;
     item.flags = status_flags;
+    item.item_flags = item_flags;
 
     auto it = m_item_labels.find(id);
     if (it != m_item_labels.end()) {

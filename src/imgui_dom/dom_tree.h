@@ -33,6 +33,7 @@ struct Element {
     float max_val = 1.0f;
     bool checked = false;
     bool opened = false;
+    bool disabled = false;
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
 
     // For canvas elements (e.g., real-time oscilloscope)
@@ -44,6 +45,14 @@ struct Window {
     uint32_t id = 0;
     std::string title;
     float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
+    float title_bar_h = 24.0f;
+    float menu_bar_h = 0.0f;
+    float scroll_x = 0.0f;
+    float scroll_y = 0.0f;
+    bool has_title_bar = true;
+    bool has_menu_bar = false;
+    bool is_popup = false;
+    bool is_modal = false;
     bool collapsed = false;
     std::vector<Element> elements;
 };
@@ -70,6 +79,14 @@ struct Document {
             ss << "\"title\":\"" << EscapeJson(win.title) << "\",";
             ss << "\"x\":" << win.x << ",\"y\":" << win.y << ",";
             ss << "\"w\":" << win.w << ",\"h\":" << win.h << ",";
+            ss << "\"title_bar_h\":" << win.title_bar_h << ",";
+            ss << "\"menu_bar_h\":" << win.menu_bar_h << ",";
+            ss << "\"scroll_x\":" << win.scroll_x << ",\"scroll_y\":" << win.scroll_y << ",";
+            ss << "\"has_title_bar\":" << (win.has_title_bar ? "true" : "false") << ",";
+            ss << "\"has_menu_bar\":" << (win.has_menu_bar ? "true" : "false") << ",";
+            ss << "\"is_popup\":" << (win.is_popup ? "true" : "false") << ",";
+            ss << "\"is_modal\":" << (win.is_modal ? "true" : "false") << ",";
+            ss << "\"collapsed\":" << (win.collapsed ? "true" : "false") << ",";
             ss << "\"elements\":[";
 
             for (size_t ei = 0; ei < win.elements.size(); ++ei) {
@@ -81,6 +98,7 @@ struct Document {
                 ss << "\"label\":\"" << EscapeJson(el.label) << "\",";
                 ss << "\"x\":" << el.x << ",\"y\":" << el.y << ",";
                 ss << "\"w\":" << el.w << ",\"h\":" << el.h << ",";
+                if (el.disabled) ss << "\"disabled\":true,";
 
                 switch (el.type) {
                 case ElementType::Button:

@@ -41,7 +41,11 @@ public:
     void EndFrame();
 
     // DOM Element recording methods
-    void RecordWindowBegin(uint32_t id, const char* title, float x, float y, float w, float h);
+    void RecordWindowBegin(uint32_t id, const char* title, float x, float y, float w, float h,
+                           float title_bar_h = 24.0f, float menu_bar_h = 0.0f,
+                           bool has_title_bar = true, bool has_menu_bar = false,
+                           bool is_popup = false, bool is_modal = false, bool collapsed = false,
+                           float scroll_x = 0.0f, float scroll_y = 0.0f);
     void RecordWindowEnd();
 
     void RecordButton(uint32_t id, const char* label, float x, float y, float w, float h);
@@ -67,7 +71,7 @@ public:
     bool ConsumeInputText(uint32_t id, std::string& out_str);
 
     // Internal ImGui Hook callbacks
-    void OnHookItemAdd(uint32_t id, float x, float y, float w, float h, uint32_t status_flags);
+    void OnHookItemAdd(uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags = 0);
     void OnHookItemInfo(uint32_t id, const char* label, uint32_t status_flags);
     const char* GetItemLabel(uint32_t id);
 
@@ -96,6 +100,7 @@ private:
         uint32_t id = 0;
         float x = 0, y = 0, w = 0, h = 0;
         uint32_t flags = 0;
+        uint32_t item_flags = 0;
         std::string label;
     };
     std::unordered_map<uint32_t, HookItem> m_hooked_items;

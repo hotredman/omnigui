@@ -17,11 +17,23 @@ void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb
     // Check if this item is a window registration itself
     if (id == window->ID) {
         if (strncmp(window->Name, "Debug##", 7) == 0) return;
+        float title_bar_h = window->TitleBarHeight;
+        float menu_bar_h = window->MenuBarHeight;
+        bool has_title_bar = !(window->Flags & ImGuiWindowFlags_NoTitleBar);
+        bool has_menu_bar = (window->Flags & ImGuiWindowFlags_MenuBar) != 0;
+        bool is_popup = (window->Flags & ImGuiWindowFlags_Popup) != 0;
+        bool is_modal = (window->Flags & ImGuiWindowFlags_Modal) != 0;
+        bool collapsed = window->Collapsed;
+
         ImGuiDom::DomContext::Instance().RecordWindowBegin(
             static_cast<uint32_t>(id),
             window->Name,
             window->Pos.x, window->Pos.y,
-            window->Size.x, window->Size.y
+            window->Size.x, window->Size.y,
+            title_bar_h, menu_bar_h,
+            has_title_bar, has_menu_bar,
+            is_popup, is_modal, collapsed,
+            window->Scroll.x, window->Scroll.y
         );
         return;
     }
@@ -31,10 +43,12 @@ void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb
     if (w <= 0.0f || h <= 0.0f) return;
 
     uint32_t status_flags = item_data ? item_data->StatusFlags : 0;
+    uint32_t item_flags = item_data ? item_data->ItemFlags : 0;
     ImGuiDom::DomContext::Instance().OnHookItemAdd(
         static_cast<uint32_t>(id),
         bb.Min.x, bb.Min.y, w, h,
-        status_flags
+        status_flags,
+        item_flags
     );
 }
 

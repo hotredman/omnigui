@@ -249,6 +249,11 @@ inline const char* GetWebClientHtml() {
             display: inline-block;
             text-align: center;
         }
+
+        .imgui-disabled {
+            opacity: 0.45 !important;
+            pointer-events: none !important;
+        }
     </style>
 </head>
 )HTML"
@@ -433,6 +438,17 @@ R"HTML(
                 winEl.style.height = `${win.h}px`;
                 winEl.style.zIndex = 10 + winIdx;
 
+                // Header visibility and height
+                const header = winEl.querySelector('.imgui-header');
+                if (win.has_title_bar === false) {
+                    header.style.display = 'none';
+                } else {
+                    header.style.display = '';
+                    if (win.title_bar_h) header.style.height = `${win.title_bar_h}px`;
+                }
+
+                const contentOffsetY = (win.has_title_bar !== false ? (win.title_bar_h || 24) : 0) + (win.has_menu_bar ? (win.menu_bar_h || 0) : 0);
+
                 const body = winEl.querySelector('.imgui-body');
 
                 // Sync elements
@@ -443,7 +459,7 @@ R"HTML(
                         elem = null;
                     }
                     const localX = el.x - win.x;
-                    const localY = el.y - win.y - 28; // Header offset
+                    const localY = el.y - win.y - contentOffsetY;
 
                     if (el.type === 'button') {
                         if (!elem) {
@@ -668,9 +684,59 @@ R"HTML(
                             renderCanvasWave(elem, el.points);
                         }
                     }
+                    if (elem) {
+                        if (el.disabled) elem.classList.add('imgui-disabled');
+                        else elem.classList.remove('imgui-disabled');
+                    }
                 }
             }
         }
+)HTML"
+R"HTML(
+        window.__auditDomLayout = function() {
+            const report = {
+                ok: true,
+                checkedPairs: 0,
+                collisions: [],
+                timestamp: performance.now()
+            };
+            const windows = document.querySelectorAll('.imgui-window');
+            windows.forEach(win => {
+                const header = win.querySelector('.imgui-header');
+                const winTitle = header ? header.textContent : win.id;
+                const interactive = Array.from(win.querySelectorAll(
+                    '.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box'
+                ));
+
+                for (let i = 0; i < interactive.length; i++) {
+                    const a = interactive[i];
+                    const rA = a.getBoundingClientRect();
+                    if (rA.width <= 0 || rA.height <= 0) continue;
+
+                    for (let j = i + 1; j < interactive.length; j++) {
+                        const b = interactive[j];
+                        const rB = b.getBoundingClientRect();
+                        if (rB.width <= 0 || rB.height <= 0) continue;
+
+                        report.checkedPairs++;
+
+                        const overlapX = Math.min(rA.right, rB.right) - Math.max(rA.left, rB.left);
+                        const overlapY = Math.min(rA.bottom, rB.bottom) - Math.max(rA.top, rB.top);
+
+                        if (overlapX > 2 && overlapY > 2) {
+                            report.ok = false;
+                            report.collisions.push({
+                                window: winTitle,
+                                elemA: { id: a.id, type: a.dataset.type, text: a.textContent.trim().substring(0, 30), rect: { x: rA.x, y: rA.y, w: rA.width, h: rA.height } },
+                                elemB: { id: b.id, type: b.dataset.type, text: b.textContent.trim().substring(0, 30), rect: { x: rB.x, y: rB.y, w: rB.width, h: rB.height } },
+                                overlap: { w: overlapX, h: overlapY }
+                            });
+                        }
+                    }
+                }
+            });
+            return report;
+        };
 
         function connectWS() {
             if (!window.WebSocket) {
