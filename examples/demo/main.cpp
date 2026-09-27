@@ -18,6 +18,11 @@
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
+
 #include "imgui_ext/event_loop.h"
 #include "imgui_ext/frame_dedup.h"
 #include "imgui_ext/recorder.h"
@@ -555,6 +560,9 @@ int main(int argc, char* argv[]) {
     if (!font) {
         font_path = "C:/Windows/Fonts/arial.ttf";
         font = io.Fonts->AddFontFromFileTTF(font_path, font_size, &cfg, io.Fonts->GetGlyphRangesCyrillic());
+    }
+    if (!font) {
+        font = io.Fonts->AddFontDefault();
     }
 
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);

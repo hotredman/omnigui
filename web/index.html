@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniGUI - Universal Immediate Mode GUI Showcase</title>
+    <style>
+        :root {
+            --bg-color: #141416;
+            --surface-color: #1e1e24;
+            --surface-hover: #26262e;
+            --border-color: #2e2e38;
+            --accent-color: #2d7df6;
+            --text-color: #e1e1e6;
+            --text-muted: #8e8e9a;
+            --tag-bg: #2a2a36;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1080px;
+            width: 100%;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .logo-badge {
+            display: inline-block;
+            background: rgba(45, 125, 246, 0.15);
+            border: 1px solid var(--accent-color);
+            color: #7ab3ff;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+        h1 {
+            font-size: 38px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+        }
+        p.subtitle {
+            font-size: 17px;
+            color: var(--text-muted);
+            max-width: 680px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        .card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #3f3f50;
+            background: var(--surface-hover);
+        }
+        .card-header {
+            margin-bottom: 16px;
+        }
+        .card-num {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+        .card-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 24px;
+        }
+        .tag {
+            background: var(--tag-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 11px;
+            padding: 2px 8px;
+            color: #c4c4ce;
+        }
+        .tag.highlight {
+            border-color: rgba(45, 125, 246, 0.4);
+            color: #7ab3ff;
+            background: rgba(45, 125, 246, 0.1);
+        }
+        .card-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-color);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .card-btn:hover {
+            background: #256ad6;
+        }
+        .card-btn:active {
+            transform: scale(0.98);
+        }
+        .matrix-section {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 28px;
+        }
+        .matrix-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+            background: #19191e;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        footer {
+            margin-top: 48px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-badge">OMNIGUI MULTI-BACKEND PLATFORM</div>
+            <h1>OmniGUI Showcase</h1>
+            <p class="subtitle">Experience Dear ImGui executed across every modern presentation paradigm: Vector Curves, Hardware Triangles, and Native Semantic HTML5 DOM.</p>
+        </header>
+
+        <div class="grid">
+            <!-- Card 1: ThorVG Vector -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <div class="card-num">Backend Mode 1</div>
+                        <h2 class="card-title">ImGui + ThorVG (WASM)</h2>
+                    </div>
+                    <p class="card-desc">Resolution-independent vector rendering via ThorVG into WebGL. Perfect anti-aliased curves and crisp text at any zoom level or high-DPI display.</p>
+                    <div class="tag-list">
+                        <span class="tag highlight">ThorVG Vector</span>
+                        <span class="tag">WebGL2 Canvas</span>
+                        <span class="tag">Infinite DPI</span>
+                        <span class="tag">LTTB Decimation</span>
+                    </div>
+                </div>
+                <a href="demo_thorvg.html" class="card-btn">Launch ThorVG Vector Demo &rarr;</a>
+            </div>
+
+            <!-- Card 2: Stock SDL3 -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <div class="card-num">Backend Mode 2</div>
+                        <h2 class="card-title">ImGui + SDL3 (WASM)</h2>
+                    </div>
+                    <p class="card-desc">The canonical Dear ImGui triangle rasterizer running through SDL3 and WebGL2. Pure immediate-mode polygon streaming with standard font atlases.</p>
+                    <div class="tag-list">
+                        <span class="tag highlight">Canonical ImGui</span>
+                        <span class="tag">SDL3 WebGL</span>
+                        <span class="tag">GPU Triangles</span>
+                        <span class="tag">Baseline Parity</span>
+                    </div>
+                </div>
+                <a href="demo_sdl.html" class="card-btn">Launch SDL3 Triangles Demo &rarr;</a>
+            </div>
+
+            <!-- Card 3: Native HTML5 DOM -->
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <div class="card-num">Backend Mode 3</div>
+                        <h2 class="card-title">ImGui + Native DOM (WASM)</h2>
+                    </div>
+                    <p class="card-desc"><strong>Zero canvas!</strong> C++ logic runs in WebAssembly while rendering directly to genuine HTML5 elements with CSS. Accessible, selectable, and zero idle CPU usage.</p>
+                    <div class="tag-list">
+                        <span class="tag highlight">Zero Canvas</span>
+                        <span class="tag">True HTML5 DOM</span>
+                        <span class="tag">CSS Dark Theme</span>
+                        <span class="tag">Direct JS Bridge</span>
+                    </div>
+                </div>
+                <a href="demo_dom.html" class="card-btn">Launch Native DOM Demo &rarr;</a>
+            </div>
+        </div>
+
+        <div class="matrix-section">
+            <h3 class="matrix-title">Architectural Backend Comparison</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th>ImGui + ThorVG (WASM)</th>
+                        <th>ImGui + SDL3 (WASM)</th>
+                        <th>ImGui + Native DOM (WASM)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Rendering Target</strong></td>
+                        <td>WebGL2 &lt;canvas&gt;</td>
+                        <td>WebGL2 &lt;canvas&gt;</td>
+                        <td><strong>Native HTML5 DOM + CSS</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>DPI Scaling & Crispness</strong></td>
+                        <td>Vector Sharp (No Pixels)</td>
+                        <td>Raster Bitmap Scaled</td>
+                        <td>Native OS Subpixel Fonts</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DOM / Text Selectable</strong></td>
+                        <td>No (Opaque Canvas)</td>
+                        <td>No (Opaque Canvas)</td>
+                        <td><strong>Yes (Real &lt;div&gt; &amp; &lt;span&gt;)</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Browser DevTools (F12)</strong></td>
+                        <td>Hidden in canvas</td>
+                        <td>Hidden in canvas</td>
+                        <td><strong>Full DOM Tree Inspectable</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Idle CPU Usage</strong></td>
+                        <td>Low (Continuous rAF)</td>
+                        <td>Low (Continuous rAF)</td>
+                        <td><strong>0% (Event-Driven)</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>Powered by <a href="https://github.com/hotredman/imgui-hooked">imgui-hooked</a> &bull; <a href="https://github.com/hotredman/omnigui">OmniGUI Platform</a></p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniGUI - WebAssembly Canvas</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #141416;
+            color: #dcdcdc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            background: #1e1e24;
+            border-bottom: 1px solid #2d2d38;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            user-select: none;
+        }
+        .header-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            background: #2a2a36;
+            border: 1px solid #3c3c4e;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .badge.accent {
+            background: rgba(45, 125, 246, 0.2);
+            border-color: #2d7df6;
+            color: #7ab3ff;
+        }
+        .nav-links a {
+            color: #8e8e9a;
+            text-decoration: none;
+            margin-left: 12px;
+            transition: color 0.15s;
+        }
+        .nav-links a:hover {
+            color: #ffffff;
+        }
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 40px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #18181c;
+        }
+        canvas.emscripten {
+            border: 0 none;
+            background-color: #1f1f24;
+            display: block;
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+        #loading {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: #8e8e9a;
+            font-size: 14px;
+        }
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #2d7df6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-title">
+            <span>OmniGUI</span>
+            <span class="badge accent">WebAssembly + WebGL2</span>
+            <span class="badge" id="backendBadge">WASM Canvas</span>
+        </div>
+        <div class="nav-links">
+            <a href="demo_thorvg.html">ThorVG Vector</a>
+            <a href="demo_sdl.html">SDL3 Triangles</a>
+            <a href="demo_dom.html">Native HTML5 DOM</a>
+            <a href="index.html">All Demos</a>
+        </div>
+    </header>
+    <div id="canvas-container">
+        <div id="loading">
+            <div class="spinner"></div>
+            <span>Loading WebAssembly runtime...</span>
+        </div>
+        <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    </div>
+
+    <script type="text/javascript">
+        var Module = {
+            preRun: [],
+            postRun: [function() {
+                var loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            }],
+            print: function(text) {
+                console.log("[WASM stdout] " + text);
+            },
+            printErr: function(text) {
+                console.error("[WASM stderr] " + text);
+            },
+            canvas: (function() {
+                var canvas = document.getElementById('canvas');
+                return canvas;
+            })(),
+            setStatus: function(text) {
+                if (!text) {
+                    var loading = document.getElementById('loading');
+                    if (loading) loading.style.display = 'none';
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+            }
+        };
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>
