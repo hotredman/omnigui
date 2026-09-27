@@ -297,7 +297,7 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "--benchmark") {
             auto_benchmark = true;
-        } else if (std::string(argv[i]) == "--profile" && i + 1 < argc) {
+        } else if ((std::string(argv[i]) == "--profile" || std::string(argv[i]) == "--auto-exit") && i + 1 < argc) {
             auto_exit_seconds = std::atof(argv[++i]);
         } else if (std::string(argv[i]) == "--software") {
             SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
