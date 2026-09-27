@@ -138,6 +138,50 @@ void DomContext::EndFrame() {
     m_hooked_items.clear();
     m_hooked_order.clear();
 
+    // Reorder m_doc.windows to match Dear ImGui's true display/stacking order (g.Windows)
+    ImGuiContext* g = ImGui::GetCurrentContext();
+    if (g && g->Windows.Size > 0 && m_doc.windows.size() > 1) {
+        std::unordered_map<uint32_t, int> win_order;
+        for (int i = 0; i < g->Windows.Size; ++i) {
+            ImGuiWindow* w = g->Windows[i];
+            if (w) {
+                int layer = (w->Flags & ImGuiWindowFlags_Tooltip) ? 10000 : 0;
+                win_order[static_cast<uint32_t>(w->ID)] = layer + i;
+            }
+        }
+
+        auto get_order = [&](const Window& win, int fallback_idx) -> int {
+            auto it = win_order.find(win.id);
+            if (it != win_order.end()) return it->second;
+            for (int i = 0; i < g->Windows.Size; ++i) {
+                ImGuiWindow* w = g->Windows[i];
+                if (w && w->Name && win.title == w->Name) {
+                    int layer = (w->Flags & ImGuiWindowFlags_Tooltip) ? 10000 : 0;
+                    return layer + i;
+                }
+            }
+            return fallback_idx;
+        };
+
+        std::vector<std::pair<int, size_t>> indexed_order;
+        indexed_order.reserve(m_doc.windows.size());
+        for (size_t i = 0; i < m_doc.windows.size(); ++i) {
+            indexed_order.push_back({ get_order(m_doc.windows[i], static_cast<int>(i)), i });
+        }
+
+        std::stable_sort(indexed_order.begin(), indexed_order.end(),
+            [](const std::pair<int, size_t>& a, const std::pair<int, size_t>& b) {
+                return a.first < b.first;
+            });
+
+        std::vector<Window> sorted_windows;
+        sorted_windows.reserve(m_doc.windows.size());
+        for (const auto& item : indexed_order) {
+            sorted_windows.push_back(std::move(m_doc.windows[item.second]));
+        }
+        m_doc.windows = std::move(sorted_windows);
+    }
+
     std::string json = m_doc.ToJson();
     SnapshotCallback cb;
     {
@@ -809,6 +853,7 @@ void DomContext::ProcessInputEvents(ImGuiIO& io) {
                 if (win) {
                     ImGui::SetWindowPos(win, ImVec2(evt.x, evt.y), ImGuiCond_Always);
                     ImGui::FocusWindow(win);
+                    ImGui::BringWindowToDisplayFront(win);
                 }
             }
         } else if (evt.type == "window_focus") {
@@ -822,6 +867,7 @@ void DomContext::ProcessInputEvents(ImGuiIO& io) {
                 }
                 if (win) {
                     ImGui::FocusWindow(win);
+                    ImGui::BringWindowToDisplayFront(win);
                 }
             }
         }

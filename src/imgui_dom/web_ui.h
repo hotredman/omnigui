@@ -744,6 +744,7 @@ inline const std::string& GetWebClientHtml() {
         let lastMouseMoveTime = 0;
         let draggingWin = null;
         let draggingWinId = null;
+        let activeFocusWinId = null;
         let topZIndex = 50;
 
         function setupWindowDragging(winEl) {
@@ -751,9 +752,17 @@ inline const std::string& GetWebClientHtml() {
             if (!header) return;
 
             winEl.addEventListener('pointerdown', () => {
-                topZIndex++;
-                winEl.style.zIndex = topZIndex;
-                winEl.dataset.topZ = "1";
+                const winId = parseInt(winEl.dataset.winId, 10);
+                const winTitle = winEl.dataset.winTitle || '';
+                const topWin = (window.__latestDoc && window.__latestDoc.windows && window.__latestDoc.windows.length > 0)
+                    ? window.__latestDoc.windows[window.__latestDoc.windows.length - 1]
+                    : null;
+                if (!topWin || topWin.id !== winId) {
+                    activeFocusWinId = winId;
+                    topZIndex++;
+                    winEl.style.zIndex = topZIndex;
+                    postEvent({ type: 'window_focus', id: winId, title: winTitle });
+                }
             }, { passive: true });
 
             header.addEventListener('pointerdown', (e) => {
@@ -787,10 +796,10 @@ inline const std::string& GetWebClientHtml() {
                     lastSentTime: 0
                 };
                 draggingWinId = winId;
+                activeFocusWinId = winId;
 
                 topZIndex++;
                 winEl.style.zIndex = topZIndex;
-                winEl.dataset.topZ = "1";
                 header.classList.add('dragging');
 
                 postEvent({ type: 'window_focus', id: winId, title: winTitle });
@@ -926,6 +935,12 @@ inline const std::string& GetWebClientHtml() {
                 lastFrameTime = now;
             }
 
+            // Sync active focus acknowledgment from backend display order
+            const topDocWin = (doc.windows && doc.windows.length > 0) ? doc.windows[doc.windows.length - 1] : null;
+            if (topDocWin && topDocWin.id === activeFocusWinId) {
+                activeFocusWinId = null;
+            }
+
             // 1. Collect all active window and element IDs in current snapshot
             const activeWinIds = new Set();
             const activeElIds = new Set();
@@ -975,7 +990,9 @@ inline const std::string& GetWebClientHtml() {
                 }
                 winEl.style.width = `${win.w}px`;
                 winEl.style.height = `${win.h}px`;
-                if (!winEl.dataset.topZ || draggingWinId !== win.id) {
+                if (draggingWinId === win.id || activeFocusWinId === win.id) {
+                    winEl.style.zIndex = Math.max(10 + winIdx, topZIndex);
+                } else {
                     winEl.style.zIndex = 10 + winIdx;
                 }
                 if (win.is_tooltip) {

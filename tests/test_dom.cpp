@@ -698,6 +698,88 @@ int main() {
         std::cout << ">>> [PASS] window_move synchronization verified!\n";
     }
 
+    // -----------------------------------------------------------------
+    // Step 14: Window Stacking Order and Focus Synchronization Verification
+    // -----------------------------------------------------------------
+    std::cout << "[Step 14] Testing Window Stacking Order and Focus Synchronization...\n";
+    httplib::ws::WebSocketClient ws_cli4("ws://127.0.0.1:" + std::to_string(test_port) + "/ws");
+    ws_cli4.set_read_timeout(std::chrono::seconds(2));
+    if (ws_cli4.connect()) {
+        // Frame 17: Create two windows in order: Window Alpha, Window Beta
+        ImGuiDom::BeginFrame(17);
+        ImGui::NewFrame();
+        ImGui::Begin("Window Alpha", nullptr);
+        ImGui::Text("Alpha Content");
+        ImGui::End();
+        ImGui::Begin("Window Beta", nullptr);
+        ImGui::Text("Beta Content");
+        ImGui::End();
+        ImGui::Render();
+        ImGuiDom::EndFrame();
+
+        std::string initial_order_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+        std::cout << "Initial Stacking JSON: " << initial_order_json << "\n";
+        size_t pos_alpha = initial_order_json.find("\"title\":\"Window Alpha\"");
+        size_t pos_beta = initial_order_json.find("\"title\":\"Window Beta\"");
+        if (pos_alpha == std::string::npos || pos_beta == std::string::npos) {
+            std::cerr << "[FAIL] Windows not found in initial DOM JSON!\n";
+            return 1;
+        }
+
+        // Now activate Window Alpha via window_focus event over WebSocket
+        ws_cli4.send("{\"type\":\"window_focus\",\"title\":\"Window Alpha\"}");
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+
+        // Frame 18: Render both windows again
+        ImGuiDom::BeginFrame(18);
+        ImGui::NewFrame();
+        ImGui::Begin("Window Alpha", nullptr);
+        ImGui::Text("Alpha Content");
+        ImGui::End();
+        ImGui::Begin("Window Beta", nullptr);
+        ImGui::Text("Beta Content");
+        ImGui::End();
+        ImGui::Render();
+        ImGuiDom::EndFrame();
+
+        std::string alpha_focused_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+        std::cout << "Alpha Focused JSON: " << alpha_focused_json << "\n";
+        pos_alpha = alpha_focused_json.find("\"title\":\"Window Alpha\"");
+        pos_beta = alpha_focused_json.find("\"title\":\"Window Beta\"");
+        if (pos_alpha < pos_beta) {
+            std::cerr << "[FAIL] Window Alpha not brought to front in DOM stacking order!\n";
+            return 1;
+        }
+        std::cout << ">>> [PASS] Window Alpha successfully brought to front (display front)!\n";
+
+        // Now activate Window Beta via window_focus
+        ws_cli4.send("{\"type\":\"window_focus\",\"title\":\"Window Beta\"}");
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+
+        // Frame 19: Render both windows again
+        ImGuiDom::BeginFrame(19);
+        ImGui::NewFrame();
+        ImGui::Begin("Window Alpha", nullptr);
+        ImGui::Text("Alpha Content");
+        ImGui::End();
+        ImGui::Begin("Window Beta", nullptr);
+        ImGui::Text("Beta Content");
+        ImGui::End();
+        ImGui::Render();
+        ImGuiDom::EndFrame();
+
+        std::string beta_focused_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+        std::cout << "Beta Focused JSON: " << beta_focused_json << "\n";
+        pos_alpha = beta_focused_json.find("\"title\":\"Window Alpha\"");
+        pos_beta = beta_focused_json.find("\"title\":\"Window Beta\"");
+        if (pos_beta < pos_alpha) {
+            std::cerr << "[FAIL] Window Beta not brought to front in DOM stacking order!\n";
+            return 1;
+        }
+        std::cout << ">>> [PASS] Window Beta successfully brought to front (display front)!\n";
+        ws_cli4.close();
+    }
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 

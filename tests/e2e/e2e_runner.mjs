@@ -612,6 +612,92 @@ async function runE2ETests() {
     // Wait 200ms for C++ ImGui to process window_move and broadcast updated snapshot
     await new Promise(r => setTimeout(r, 200));
 
+    // 8.6. Window Stacking Order and Persistent Activation Parity
+    console.log('\n[Step 8.6] Testing Window Activation and Persistent Stacking Order Parity...');
+    const activationTestResult = await cdp.evaluate(`
+      (async () => {
+        const windows = Array.from(document.querySelectorAll('.imgui-window'));
+        if (windows.length < 2) return { ok: false, error: 'Expected at least 2 windows, found ' + windows.length };
+
+        const getWinInfo = (el) => {
+          const h = el.querySelector('.imgui-header');
+          const title = h ? h.textContent.trim() : (el.dataset.winTitle || '');
+          const z = parseInt(el.style.zIndex || window.getComputedStyle(el).zIndex, 10) || 0;
+          return { el, title, z, id: el.dataset.winId };
+        };
+
+        let winList = windows.map(getWinInfo);
+        winList.sort((a, b) => a.z - b.z);
+
+        const bottomWin = winList[0];
+        const initialTopWin = winList[winList.length - 1];
+
+        const targetHeader = bottomWin.el.querySelector('.imgui-header') || bottomWin.el;
+        const rect = targetHeader.getBoundingClientRect();
+        targetHeader.dispatchEvent(new PointerEvent('pointerdown', {
+          bubbles: true, cancelable: true,
+          clientX: rect.left + 20, clientY: rect.top + 10,
+          button: 0, pointerId: 1
+        }));
+        targetHeader.dispatchEvent(new PointerEvent('pointerup', {
+          bubbles: true, cancelable: true,
+          clientX: rect.left + 20, clientY: rect.top + 10,
+          button: 0, pointerId: 1
+        }));
+
+        await new Promise(r => setTimeout(r, 150));
+
+        let updatedList1 = windows.map(getWinInfo);
+        updatedList1.sort((a, b) => a.z - b.z);
+        const topAfterClick = updatedList1[updatedList1.length - 1];
+
+        if (topAfterClick.id !== bottomWin.id) {
+          return {
+            ok: false,
+            error: 'Activated window did not become top-most after click',
+            expectedTopId: bottomWin.id,
+            actualTopId: topAfterClick.id,
+            actualTopTitle: topAfterClick.title
+          };
+        }
+
+        await new Promise(r => setTimeout(r, 300));
+
+        let updatedList2 = windows.map(getWinInfo);
+        updatedList2.sort((a, b) => a.z - b.z);
+        const topPersistent = updatedList2[updatedList2.length - 1];
+
+        if (topPersistent.id !== bottomWin.id) {
+          return {
+            ok: false,
+            error: 'Activated window reverted back behind another window over subsequent frames!',
+            expectedTopId: bottomWin.id,
+            actualTopId: topPersistent.id,
+            actualTopTitle: topPersistent.title
+          };
+        }
+
+        return {
+          ok: true,
+          activatedTitle: bottomWin.title,
+          previousTopTitle: initialTopWin.title,
+          finalZIndex: topPersistent.z
+        };
+      })()
+    `);
+
+    if (!activationTestResult.ok) {
+      console.error('\n>>> [FAIL] Window Stacking & Activation Test Failed!', activationTestResult);
+      process.exit(1);
+    }
+    console.log(`  Activated Window: "${activationTestResult.activatedTitle}" (was behind "${activationTestResult.previousTopTitle}")`);
+    console.log(`  Persistent Top Z-Index: ${activationTestResult.finalZIndex} (stably maintained across frames)`);
+    console.log('>>> [PASS] Window Stacking & Persistent Activation Parity Verified!');
+
+    const activationScreenshot = await cdp.captureScreenshot();
+    fs.writeFileSync(path.join(screenshotsDir, 'window_activation_front.png'), activationScreenshot);
+    savedScreenshots.push({ file: 'window_activation_front.png', title: 'Window Activation - Permanent Overlap' });
+
     // 9. Pure Element Coordinate & Semantic Parity Verification (No Screenshots)
     console.log('\n[Step 9] Running Pure Element Coordinate & Semantic Parity Validator (No Screenshots)...');
     const parityReport = await cdp.evaluate('window.__auditCoordinateParity()');
