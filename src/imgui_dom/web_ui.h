@@ -65,25 +65,40 @@ inline const char* GetWebClientHtml() {
             border: 1px solid #454558;
             border-radius: 6px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
             overflow: hidden;
         }
 
         .imgui-header {
+            position: absolute;
+            top: 0; left: 0; right: 0;
             background: linear-gradient(180deg, #3d4a68 0%, #2b354c 100%);
-            padding: 6px 12px;
+            padding: 2px 10px;
             font-weight: 600;
             font-size: 13px;
             color: #ffffff;
             border-bottom: 1px solid #454558;
             cursor: default;
+            user-select: none;
+            box-sizing: border-box;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .imgui-menubar {
+            position: absolute;
+            left: 0; right: 0;
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            box-sizing: border-box;
+            z-index: 1;
         }
 
         .imgui-body {
-            position: relative;
-            flex: 1;
-            padding: 8px;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden;
+            z-index: 2;
         }
 
         /* Native HTML Button styled as ImGui */
@@ -427,7 +442,7 @@ R"HTML(
                     winEl = document.createElement('div');
                     winEl.id = `win_${win.id}`;
                     winEl.className = 'imgui-window';
-                    winEl.innerHTML = `<div class="imgui-header">${win.title}</div><div class="imgui-body"></div>`;
+                    winEl.innerHTML = `<div class="imgui-header">${win.title}</div><div class="imgui-menubar" style="display:none"></div><div class="imgui-body"></div>`;
                     desktop.appendChild(winEl);
                 }
 
@@ -447,7 +462,15 @@ R"HTML(
                     if (win.title_bar_h) header.style.height = `${win.title_bar_h}px`;
                 }
 
-                const contentOffsetY = (win.has_title_bar !== false ? (win.title_bar_h || 24) : 0) + (win.has_menu_bar ? (win.menu_bar_h || 0) : 0);
+                // Menubar strip
+                const menuBarEl = winEl.querySelector('.imgui-menubar');
+                if (win.has_menu_bar) {
+                    menuBarEl.style.display = '';
+                    menuBarEl.style.top = `${win.has_title_bar !== false ? (win.title_bar_h || 19) : 0}px`;
+                    menuBarEl.style.height = `${win.menu_bar_h || 19}px`;
+                } else {
+                    menuBarEl.style.display = 'none';
+                }
 
                 const body = winEl.querySelector('.imgui-body');
 
@@ -459,7 +482,7 @@ R"HTML(
                         elem = null;
                     }
                     const localX = el.x - win.x;
-                    const localY = el.y - win.y - contentOffsetY;
+                    const localY = el.y - win.y;
 
                     if (el.type === 'button') {
                         if (!elem) {

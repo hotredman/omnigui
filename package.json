@@ -1,0 +1,20 @@
+{
+  "name": "imthorgui-e2e",
+  "version": "1.0.0",
+  "description": "Headless Browser E2E Test Suite and Layout Fuzzer for Dear ImGui Web DOM Backend",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/e2e/e2e_runner.mjs",
+    "test:e2e": "node tests/e2e/e2e_runner.mjs",
+    "test:crawl": "node tests/e2e/e2e_runner.mjs --crawl"
+  },
+  "keywords": [
+    "imgui",
+    "thorvg",
+    "cdp",
+    "e2e",
+    "headless"
+  ],
+  "author": "hotredman",
+  "license": "MIT"
+}

@@ -430,6 +430,7 @@ public:
             m_signal.SetSignalType((SignalType)current_type);
         }
 
+        ImGui::PushItemWidth(-160);
         float freq = m_signal.GetFrequency();
         if (ImGuiDom::SliderFloat("Signal Frequency (Hz)", &freq, 0.5f, 50.0f, "%.1f Hz")) {
             m_signal.SetFrequency(freq);
@@ -439,6 +440,7 @@ public:
         if (ImGuiDom::SliderFloat("Noise Floor", &noise, 0.0f, 0.20f, "%.2f")) {
             m_signal.SetNoiseLevel(noise);
         }
+        ImGui::PopItemWidth();
 
         ImGui::NextColumn();
 
@@ -455,12 +457,14 @@ public:
         ImGuiDom::SameLine();
         ImGuiDom::Checkbox("Phosphor Glow", &m_glow_effect);
 
+        ImGui::PushItemWidth(-160);
         int cap = (int)(m_signal.GetBufferCapacity() / 1000);
         if (ImGuiDom::SliderInt("Buffer Size (kSamples)", &cap, 10, 250, "%d kPts")) {
             m_signal.SetBufferCapacity((size_t)cap * 1000);
         }
 
         ImGuiDom::SliderFloat("Trace Thickness", &m_line_thickness, 1.0f, 4.0f, "%.1f px");
+        ImGui::PopItemWidth();
 
         ImGui::Columns(1);
         ImGuiDom::End();

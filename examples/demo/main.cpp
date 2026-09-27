@@ -351,8 +351,29 @@ int main(int argc, char* argv[]) {
             ImGuiDom::BeginFrame(dom_frame);
             ImGui::NewFrame();
 
+            float pad = 12.0f;
+            float total_w = io.DisplaySize.x;
+            float total_h = io.DisplaySize.y;
+
+            float hud_w = 480.0f;
+            float hud_h = total_h - pad * 2.0f;
+            float demo_x = pad + hud_w + pad;
+            float demo_w = total_w - demo_x - pad;
+            float demo_h = total_h - pad * 2.0f;
+
+            float half_h = (demo_h - pad) * 0.48f;
+            float osc_h = demo_h - half_h - pad;
+
+            ImGui::SetNextWindowPos(ImVec2(demo_x, pad), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(demo_w, half_h), ImGuiCond_FirstUseEver);
+            ImGui::ShowDemoWindow();
+
+            ImGui::SetNextWindowPos(ImVec2(demo_x, pad + half_h + pad), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(demo_w, osc_h), ImGuiCond_FirstUseEver);
             oscilloscope.RenderUI();
 
+            ImGui::SetNextWindowPos(ImVec2(pad, pad), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(hud_w, hud_h), ImGuiCond_FirstUseEver);
             ImGuiDom::Begin("ImGui Web DOM Backend - Server Controls", nullptr);
             ImGuiDom::Text("Dear ImGui %s (Headless Web Server)", IMGUI_VERSION);
             ImGuiDom::Separator();
