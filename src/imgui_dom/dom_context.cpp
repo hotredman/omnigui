@@ -18,7 +18,7 @@ void DomContext::BeginFrame(uint64_t frame_index) {
     m_current_frame = frame_index;
     m_doc.Clear();
     m_doc.frame_index = frame_index;
-    m_has_active_window = false;
+    m_current_window_id = 0;
     m_hooked_items.clear();
     m_hooked_order.clear();
     m_active_clicks.clear();
@@ -30,68 +30,30 @@ void DomContext::BeginFrame(uint64_t frame_index) {
 
 void DomContext::EndFrame() {
     if (!m_enabled) return;
-    if (m_has_active_window) {
-        RecordWindowEnd();
-    }
 
-    std::string json = m_doc.ToJson();
-    SnapshotCallback cb;
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_latest_json = std::move(json);
-        m_latest_ready_frame = m_current_frame;
-        cb = m_snapshot_callback;
-    }
-    if (cb) {
-        cb(m_latest_json);
-    }
-}
-
-void DomContext::RecordWindowBegin(uint32_t id, const char* title, float x, float y, float w, float h,
-                                   float title_bar_h, float menu_bar_h,
-                                   bool has_title_bar, bool has_menu_bar,
-                                   bool is_popup, bool is_modal, bool collapsed,
-                                   float scroll_x, float scroll_y) {
-    if (!m_enabled) return;
-    if (m_has_active_window) {
-        RecordWindowEnd();
-    }
-    m_current_window = Window{};
-    m_current_window.id = id;
-    m_current_window.title = title ? title : "";
-    m_current_window.x = x;
-    m_current_window.y = y;
-    m_current_window.w = w;
-    m_current_window.h = h;
-    m_current_window.title_bar_h = title_bar_h;
-    m_current_window.menu_bar_h = menu_bar_h;
-    m_current_window.has_title_bar = has_title_bar;
-    m_current_window.has_menu_bar = has_menu_bar;
-    m_current_window.is_popup = is_popup;
-    m_current_window.is_modal = is_modal;
-    m_current_window.collapsed = collapsed;
-    m_current_window.scroll_x = scroll_x;
-    m_current_window.scroll_y = scroll_y;
-    m_has_active_window = true;
-}
-
-void DomContext::RecordWindowEnd() {
-    if (!m_enabled || !m_has_active_window) return;
-
-    // Append hooked items captured from ItemAdd / ItemInfo
+    // Append hooked items captured from ItemAdd / ItemInfo to their respective windows
     for (uint32_t id : m_hooked_order) {
+        const auto& item = m_hooked_items[id];
+        if (item.w <= 0.0f || item.h <= 0.0f) continue;
+        if (item.label.empty()) continue; // Skip internal/decorations
+
+        Window* target_win = nullptr;
+        for (auto& win : m_doc.windows) {
+            if (win.id == item.win_id) {
+                target_win = &win;
+                break;
+            }
+        }
+        if (!target_win) continue;
+
         bool already_exists = false;
-        for (const auto& el : m_current_window.elements) {
+        for (const auto& el : target_win->elements) {
             if (el.id == id) {
                 already_exists = true;
                 break;
             }
         }
         if (already_exists) continue;
-
-        const auto& item = m_hooked_items[id];
-        if (item.w <= 0.0f || item.h <= 0.0f) continue;
-        if (item.label.empty()) continue; // Skip internal/decorations
 
         Element el;
         el.id = id;
@@ -130,20 +92,91 @@ void DomContext::RecordWindowEnd() {
             el.type = ElementType::Button;
         }
 
-        m_current_window.elements.push_back(std::move(el));
+        target_win->elements.push_back(std::move(el));
     }
     m_hooked_items.clear();
     m_hooked_order.clear();
 
-    m_doc.windows.push_back(std::move(m_current_window));
-    m_current_window = Window{};
-    m_has_active_window = false;
+    std::string json = m_doc.ToJson();
+    SnapshotCallback cb;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_latest_json = std::move(json);
+        m_latest_ready_frame = m_current_frame;
+        cb = m_snapshot_callback;
+    }
+    if (cb) {
+        cb(m_latest_json);
+    }
 }
 
-void DomContext::OnHookItemAdd(uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags) {
+Window* DomContext::GetCurrentWindow() {
+    for (auto& win : m_doc.windows) {
+        if (win.id == m_current_window_id) return &win;
+    }
+    if (!m_doc.windows.empty()) return &m_doc.windows.back();
+    return nullptr;
+}
+
+Window* DomContext::FindOrCreateWindow(uint32_t id, const char* title, float x, float y, float w, float h,
+                                       float title_bar_h, float menu_bar_h,
+                                       bool has_title_bar, bool has_menu_bar,
+                                       bool is_popup, bool is_modal, bool collapsed,
+                                       float scroll_x, float scroll_y) {
+    for (auto& win : m_doc.windows) {
+        if (win.id == id) {
+            win.x = x; win.y = y; win.w = w; win.h = h;
+            win.title_bar_h = title_bar_h;
+            win.menu_bar_h = menu_bar_h;
+            win.has_title_bar = has_title_bar;
+            win.has_menu_bar = has_menu_bar;
+            win.is_popup = is_popup;
+            win.is_modal = is_modal;
+            win.collapsed = collapsed;
+            win.scroll_x = scroll_x;
+            win.scroll_y = scroll_y;
+            m_current_window_id = id;
+            return &win;
+        }
+    }
+
+    Window win{};
+    win.id = id;
+    win.title = title ? title : "";
+    win.x = x; win.y = y; win.w = w; win.h = h;
+    win.title_bar_h = title_bar_h;
+    win.menu_bar_h = menu_bar_h;
+    win.has_title_bar = has_title_bar;
+    win.has_menu_bar = has_menu_bar;
+    win.is_popup = is_popup;
+    win.is_modal = is_modal;
+    win.collapsed = collapsed;
+    win.scroll_x = scroll_x;
+    win.scroll_y = scroll_y;
+
+    m_doc.windows.push_back(std::move(win));
+    m_current_window_id = id;
+    return &m_doc.windows.back();
+}
+
+void DomContext::RecordWindowBegin(uint32_t id, const char* title, float x, float y, float w, float h,
+                                   float title_bar_h, float menu_bar_h,
+                                   bool has_title_bar, bool has_menu_bar,
+                                   bool is_popup, bool is_modal, bool collapsed,
+                                   float scroll_x, float scroll_y) {
+    if (!m_enabled) return;
+    FindOrCreateWindow(id, title, x, y, w, h, title_bar_h, menu_bar_h, has_title_bar, has_menu_bar, is_popup, is_modal, collapsed, scroll_x, scroll_y);
+}
+
+void DomContext::RecordWindowEnd() {
+    m_current_window_id = 0;
+}
+
+void DomContext::OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags) {
     if (!m_enabled) return;
     HookItem item;
     item.id = id;
+    item.win_id = win_id;
     item.x = x; item.y = y; item.w = w; item.h = h;
     item.flags = status_flags;
     item.item_flags = item_flags;
@@ -184,27 +217,33 @@ const char* DomContext::GetItemLabel(uint32_t id) {
 }
 
 void DomContext::RecordButton(uint32_t id, const char* label, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::Button;
     el.label = label ? label : "";
     el.x = x; el.y = y; el.w = w; el.h = h;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordText(uint32_t id, const char* text, float x, float y) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::Text;
     el.value_str = text ? text : "";
     el.x = x; el.y = y;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordSliderFloat(uint32_t id, const char* label, float val, float min_v, float max_v, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::SliderFloat;
@@ -213,22 +252,26 @@ void DomContext::RecordSliderFloat(uint32_t id, const char* label, float val, fl
     el.min_val = min_v;
     el.max_val = max_v;
     el.x = x; el.y = y; el.w = w; el.h = h;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordCheckbox(uint32_t id, const char* label, bool checked, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::Checkbox;
     el.label = label ? label : "";
     el.checked = checked;
     el.x = x; el.y = y; el.w = w; el.h = h;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordCanvas(uint32_t id, const char* stream_name, const float* points, size_t count, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::Canvas;
@@ -237,33 +280,39 @@ void DomContext::RecordCanvas(uint32_t id, const char* stream_name, const float*
     if (points && count > 0) {
         el.points.assign(points, points + count);
     }
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordRadioButton(uint32_t id, const char* label, bool active, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::RadioButton;
     el.label = label ? label : "";
     el.checked = active;
     el.x = x; el.y = y; el.w = w; el.h = h;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordInputText(uint32_t id, const char* label, const char* text, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::InputText;
     el.label = label ? label : "";
     el.value_str = text ? text : "";
     el.x = x; el.y = y; el.w = w; el.h = h;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordCombo(uint32_t id, const char* label, const char* preview, bool opened, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::Combo;
@@ -271,27 +320,31 @@ void DomContext::RecordCombo(uint32_t id, const char* label, const char* preview
     el.value_str = preview ? preview : "";
     el.opened = opened;
     el.x = x; el.y = y; el.w = w; el.h = h;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordProgressBar(uint32_t id, float fraction, const char* overlay, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::ProgressBar;
     el.value_num = fraction;
     el.value_str = overlay ? overlay : "";
     el.x = x; el.y = y; el.w = w; el.h = h;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::RecordSeparator(uint32_t id, float x, float y, float w, float h) {
-    if (!m_enabled || !m_has_active_window) return;
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
     Element el;
     el.id = id;
     el.type = ElementType::Separator;
     el.x = x; el.y = y; el.w = w; el.h = h;
-    m_current_window.elements.push_back(std::move(el));
+    win->elements.push_back(std::move(el));
 }
 
 void DomContext::SetEventCallback(EventCallback cb) {

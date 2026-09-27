@@ -37,20 +37,10 @@ inline void RecordCanvas(const char* name, const float* points, size_t count, fl
 
 // Semantic DOM wrappers over standard Dear ImGui calls
 inline bool Begin(const char* name, bool* p_open = nullptr, ImGuiWindowFlags flags = 0) {
-    bool res = ImGui::Begin(name, p_open, flags);
-    if (DomContext::Instance().IsEnabled()) {
-        ImVec2 pos = ImGui::GetWindowPos();
-        ImVec2 size = ImGui::GetWindowSize();
-        uint32_t id = static_cast<uint32_t>(ImGui::GetID(name));
-        DomContext::Instance().RecordWindowBegin(id, name, pos.x, pos.y, size.x, size.y);
-    }
-    return res;
+    return ImGui::Begin(name, p_open, flags);
 }
 
 inline void End() {
-    if (DomContext::Instance().IsEnabled()) {
-        DomContext::Instance().RecordWindowEnd();
-    }
     ImGui::End();
 }
 

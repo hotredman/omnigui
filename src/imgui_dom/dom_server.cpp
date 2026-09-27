@@ -128,6 +128,10 @@ bool DomServer::Start(const std::string& host, int port) {
     m_server->Get("/index.html", [](const httplib::Request&, httplib::Response& res) {
         res.set_content(GetWebClientHtml(), "text/html");
     });
+    m_server->Get("/api/snapshot", [](const httplib::Request&, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_content(DomContext::Instance().GetLatestJson(), "application/json");
+    });
 
     // 2. Real-time DOM stream via Server-Sent Events (SSE)
     m_server->Get("/api/stream", [this](const httplib::Request&, httplib::Response& res) {

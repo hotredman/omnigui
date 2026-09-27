@@ -71,7 +71,7 @@ public:
     bool ConsumeInputText(uint32_t id, std::string& out_str);
 
     // Internal ImGui Hook callbacks
-    void OnHookItemAdd(uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags = 0);
+    void OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags = 0);
     void OnHookItemInfo(uint32_t id, const char* label, uint32_t status_flags);
     const char* GetItemLabel(uint32_t id);
 
@@ -88,16 +88,23 @@ public:
 private:
     DomContext() = default;
 
+    Window* GetCurrentWindow();
+    Window* FindOrCreateWindow(uint32_t id, const char* title, float x, float y, float w, float h,
+                               float title_bar_h, float menu_bar_h,
+                               bool has_title_bar, bool has_menu_bar,
+                               bool is_popup, bool is_modal, bool collapsed,
+                               float scroll_x, float scroll_y);
+
     bool m_enabled = false;
     uint64_t m_current_frame = 0;
     uint64_t m_latest_ready_frame = 0;
     Document m_doc;
-    Window m_current_window;
-    bool m_has_active_window = false;
+    uint32_t m_current_window_id = 0;
 
     // Automatic item capture via ItemAdd/ItemInfo hooks
     struct HookItem {
         uint32_t id = 0;
+        uint32_t win_id = 0;
         float x = 0, y = 0, w = 0, h = 0;
         uint32_t flags = 0;
         uint32_t item_flags = 0;

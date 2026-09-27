@@ -45,6 +45,7 @@ void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb
     uint32_t status_flags = item_data ? item_data->StatusFlags : 0;
     uint32_t item_flags = item_data ? item_data->ItemFlags : 0;
     ImGuiDom::DomContext::Instance().OnHookItemAdd(
+        static_cast<uint32_t>(window->ID),
         static_cast<uint32_t>(id),
         bb.Min.x, bb.Min.y, w, h,
         status_flags,
