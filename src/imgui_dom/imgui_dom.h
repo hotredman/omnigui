@@ -7,6 +7,8 @@
 #include "imgui_internal.h"
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
+#include <algorithm>
 
 namespace ImGuiDom {
 
@@ -275,6 +277,87 @@ inline bool ListBox(const char* label, int* current_item, const char* const item
             item_list.push_back(items[i] ? items[i] : "");
         }
         DomContext::Instance().RecordListBox(id, label, *current_item, item_list, p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
+    }
+    return changed;
+}
+
+inline bool ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flags = 0) {
+    uint32_t id = 0;
+    if (DomContext::Instance().IsEnabled() && col) {
+        id = static_cast<uint32_t>(ImGui::GetID(label));
+        float new_col[3];
+        if (DomContext::Instance().ConsumeColor3(id, new_col)) {
+            col[0] = new_col[0];
+            col[1] = new_col[1];
+            col[2] = new_col[2];
+        }
+    }
+    bool changed = ImGui::ColorEdit3(label, col, flags);
+    if (DomContext::Instance().IsEnabled() && col) {
+        ImVec2 p_min = ImGui::GetItemRectMin();
+        ImVec2 p_max = ImGui::GetItemRectMax();
+        DomContext::Instance().RecordColorEdit(id, label, col[0], col[1], col[2], 1.0f, false, p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
+    }
+    return changed;
+}
+
+inline bool ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags = 0) {
+    uint32_t id = 0;
+    if (DomContext::Instance().IsEnabled() && col) {
+        id = static_cast<uint32_t>(ImGui::GetID(label));
+        float new_col[4];
+        if (DomContext::Instance().ConsumeColor4(id, new_col)) {
+            col[0] = new_col[0];
+            col[1] = new_col[1];
+            col[2] = new_col[2];
+            col[3] = new_col[3];
+        }
+    }
+    bool changed = ImGui::ColorEdit4(label, col, flags);
+    if (DomContext::Instance().IsEnabled() && col) {
+        ImVec2 p_min = ImGui::GetItemRectMin();
+        ImVec2 p_max = ImGui::GetItemRectMax();
+        DomContext::Instance().RecordColorEdit(id, label, col[0], col[1], col[2], col[3], true, p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
+    }
+    return changed;
+}
+
+inline bool InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr) {
+    uint32_t id = 0;
+    if (DomContext::Instance().IsEnabled() && buf && buf_size > 0) {
+        id = static_cast<uint32_t>(ImGui::GetID(label));
+        std::string new_text;
+        if (DomContext::Instance().ConsumeInputText(id, new_text)) {
+            size_t copy_len = std::min(new_text.size(), buf_size - 1);
+            std::memcpy(buf, new_text.data(), copy_len);
+            buf[copy_len] = '\0';
+        }
+    }
+    bool changed = ImGui::InputText(label, buf, buf_size, flags, callback, user_data);
+    if (DomContext::Instance().IsEnabled() && buf) {
+        ImVec2 p_min = ImGui::GetItemRectMin();
+        ImVec2 p_max = ImGui::GetItemRectMax();
+        DomContext::Instance().RecordInputText(id, label, buf, p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
+    }
+    return changed;
+}
+
+inline bool InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr) {
+    uint32_t id = 0;
+    if (DomContext::Instance().IsEnabled() && buf && buf_size > 0) {
+        id = static_cast<uint32_t>(ImGui::GetID(label));
+        std::string new_text;
+        if (DomContext::Instance().ConsumeInputText(id, new_text)) {
+            size_t copy_len = std::min(new_text.size(), buf_size - 1);
+            std::memcpy(buf, new_text.data(), copy_len);
+            buf[copy_len] = '\0';
+        }
+    }
+    bool changed = ImGui::InputTextMultiline(label, buf, buf_size, size, flags, callback, user_data);
+    if (DomContext::Instance().IsEnabled() && buf) {
+        ImVec2 p_min = ImGui::GetItemRectMin();
+        ImVec2 p_max = ImGui::GetItemRectMax();
+        DomContext::Instance().RecordInputTextMultiline(id, label, buf, p_min.x, p_min.y, p_max.x - p_min.x, p_max.y - p_min.y);
     }
     return changed;
 }

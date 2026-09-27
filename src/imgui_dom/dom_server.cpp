@@ -98,8 +98,14 @@ static BrowserEvent ParseBrowserEvent(const std::string& json) {
     evt.button = ExtractJsonInt(json, "button", 0);
     evt.key = ExtractJsonInt(json, "key", 0);
     evt.value_num = ExtractJsonFloat(json, "val");
+    if (evt.value_num == 0.0f) {
+        evt.value_num = ExtractJsonFloat(json, "value_num");
+    }
     evt.checked = ExtractJsonBool(json, "checked");
     evt.value_str = ExtractJsonString(json, "text");
+    if (evt.value_str.empty()) {
+        evt.value_str = ExtractJsonString(json, "color");
+    }
     return evt;
 }
 

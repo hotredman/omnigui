@@ -8,6 +8,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <array>
 
 struct ImGuiIO;
 
@@ -66,6 +67,8 @@ public:
     void RecordTableHeadersRow();
     void RecordTableEnd(float x, float y, float w, float h);
     void RecordListBox(uint32_t id, const char* label, int current_item, const std::vector<std::string>& items, float x, float y, float w, float h);
+    void RecordColorEdit(uint32_t id, const char* label, float r, float g, float b, float a, bool has_alpha, float x, float y, float w, float h);
+    void RecordInputTextMultiline(uint32_t id, const char* label, const char* text, float x, float y, float w, float h);
 
     // Browser event handling (called by HTTP server)
     void PushBrowserEvent(const BrowserEvent& evt);
@@ -79,6 +82,8 @@ public:
     bool ConsumeInputText(uint32_t id, std::string& out_str);
     bool ConsumeTabSelect(uint32_t id);
     bool ConsumeListBox(uint32_t id, int& out_index);
+    bool ConsumeColor3(uint32_t id, float out_col[3]);
+    bool ConsumeColor4(uint32_t id, float out_col[4]);
 
     // Internal ImGui Hook callbacks
     void OnHookItemAdd(uint32_t win_id, uint32_t id, float x, float y, float w, float h, uint32_t status_flags, uint32_t item_flags = 0);
@@ -143,6 +148,7 @@ private:
     std::unordered_set<uint32_t> m_active_clicks;
     std::unordered_set<uint32_t> m_tab_selections;
     std::unordered_map<uint32_t, int> m_listbox_selections;
+    std::unordered_map<uint32_t, std::array<float, 4>> m_color_values;
     std::unordered_map<uint32_t, float> m_slider_values;
     std::unordered_map<uint32_t, bool> m_checkbox_values;
     std::unordered_map<uint32_t, std::string> m_input_strings;

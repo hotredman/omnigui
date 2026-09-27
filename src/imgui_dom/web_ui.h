@@ -376,6 +376,54 @@ inline const char* GetWebClientHtml() {
             background: #2f6690;
             color: #fff;
         }
+
+        /* Native ColorEdit */
+        .imgui-color-box {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+        .imgui-color-picker {
+            width: 24px;
+            height: 20px;
+            border: 1px solid #444458;
+            border-radius: 3px;
+            padding: 0;
+            background: none;
+            cursor: pointer;
+            outline: none;
+        }
+        .imgui-color-lbl {
+            color: #eaeaea;
+            white-space: nowrap;
+        }
+
+        /* Native Textarea (InputTextMultiline) */
+        .imgui-textarea-box {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 13px;
+        }
+        .imgui-textarea {
+            background: #1e1e28;
+            color: #efefef;
+            border: 1px solid #444458;
+            border-radius: 4px;
+            padding: 6px;
+            font-size: 12px;
+            font-family: monospace;
+            outline: none;
+            resize: none;
+            flex: 1;
+        }
+        .imgui-textarea:focus {
+            border-color: #3a7ca5;
+            box-shadow: 0 0 4px rgba(58,124,165,0.5);
+        }
     </style>
 </head>
 )HTML"
@@ -468,7 +516,7 @@ R"HTML(
         });
 
         window.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box')) {
+            if (e.target.closest('.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box, .imgui-color-box, .imgui-textarea-box')) {
                 return;
             }
             const dRect = desktop.getBoundingClientRect();
@@ -479,7 +527,7 @@ R"HTML(
 
         window.addEventListener('mouseup', (e) => {
             activeSliders.clear();
-            if (e.target.closest('.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box')) {
+            if (e.target.closest('.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box, .imgui-color-box, .imgui-textarea-box')) {
                 return;
             }
             const dRect = desktop.getBoundingClientRect();
@@ -500,7 +548,7 @@ R"HTML(
         }, { passive: true });
 
         window.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
             if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 postEvent({ type: 'char', text: e.key });
             }
@@ -799,7 +847,10 @@ R"HTML(
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
 
-                    } else if (el.type === 'canvas') {
+                    }
+)HTML"
+R"HTML(
+                    else if (el.type === 'canvas') {
                         if (!elem) {
                             elem = document.createElement('canvas');
                             elem.id = `el_${el.id}`;
@@ -914,6 +965,53 @@ R"HTML(
                         elem.style.top = `${localY}px`;
                         elem.style.width = `${el.w}px`;
                         elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'coloredit') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
+                            elem.className = 'imgui-color-box';
+                            elem.innerHTML = `<input type="color" class="imgui-color-picker"> <span class="imgui-color-lbl"></span>`;
+                            const picker = elem.querySelector('input');
+                            picker.oninput = (e) => {
+                                e.stopPropagation();
+                                postEvent({ type: 'color', id: el.id, color: e.target.value, text: e.target.value });
+                            };
+                            body.appendChild(elem);
+                        }
+                        elem.querySelector('.imgui-color-lbl').textContent = el.label ? el.label : '';
+                        const picker = elem.querySelector('input');
+                        if (document.activeElement !== picker) {
+                            picker.value = el.val || '#ffffff';
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
+
+                    } else if (el.type === 'textarea') {
+                        if (!elem) {
+                            elem = document.createElement('div');
+                            elem.id = `el_${el.id}`;
+                            elem.dataset.type = el.type;
+                            elem.className = 'imgui-textarea-box';
+                            elem.innerHTML = `<textarea class="imgui-textarea" spellcheck="false"></textarea>`;
+                            const txt = elem.querySelector('textarea');
+                            txt.oninput = (e) => {
+                                e.stopPropagation();
+                                postEvent({ type: 'input_multiline', id: el.id, text: e.target.value });
+                            };
+                            body.appendChild(elem);
+                        }
+                        const txt = elem.querySelector('textarea');
+                        if (document.activeElement !== txt) {
+                            txt.value = el.val || '';
+                        }
+                        elem.style.left = `${localX}px`;
+                        elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
                     }
                     if (elem) {
                         if (el.disabled) elem.classList.add('imgui-disabled');
@@ -938,7 +1036,7 @@ R"HTML(
                 const header = win.querySelector('.imgui-header');
                 const winTitle = header ? header.textContent : win.id;
                 const interactive = Array.from(win.querySelectorAll(
-                    '.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box'
+                    '.imgui-btn, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box, .imgui-color-box, .imgui-textarea-box'
                 ));
 
                 for (let i = 0; i < interactive.length; i++) {

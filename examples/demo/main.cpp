@@ -796,6 +796,18 @@ int main(int argc, char* argv[]) {
                     ImGuiDom::EndTabItem();
                 }
 
+                if (ImGuiDom::BeginTabItem("Appearance & Notes")) {
+                    ImGuiDom::Text("Waveform Trace Color:");
+                    static float trace_color[3] = { 0.0f, 0.95f, 0.8f };
+                    ImGuiDom::ColorEdit3("Trace Color", trace_color);
+
+                    ImGuiDom::Separator();
+                    ImGuiDom::Text("Session Notes & Annotation:");
+                    static char session_notes[512] = "Observation: Signal stable at 1kHz.\nNoise floor: -65dB.\nStatus: Nominal.";
+                    ImGuiDom::InputTextMultiline("Notes", session_notes, sizeof(session_notes), ImVec2(0, 80));
+                    ImGuiDom::EndTabItem();
+                }
+
                 if (ImGuiDom::BeginTabItem("Layout")) {
                     if (ImGuiDom::Button("Reset Layout to Default")) {
                         ImGui::SetWindowPos("ImGui Vector Backend - Controls & Metrics", ImVec2(pad, pad));

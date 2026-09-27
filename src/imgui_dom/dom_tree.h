@@ -25,7 +25,9 @@ enum class ElementType {
     TabItem,
     Tooltip,
     Table,
-    ListBox
+    ListBox,
+    ColorEdit,
+    InputTextMultiline
 };
 
 struct Element {
@@ -52,6 +54,7 @@ struct Element {
     int selected_idx = 0;
     int columns_count = 0;
     bool has_headers = false;
+    bool has_alpha = false;
 };
 
 struct Window {
@@ -179,6 +182,13 @@ struct Document {
                     }
                     ss << "],";
                     break;
+                case ElementType::ColorEdit:
+                    ss << "\"val\":\"" << EscapeJson(el.value_str) << "\",";
+                    ss << "\"has_alpha\":" << (el.has_alpha ? "true" : "false") << ",";
+                    break;
+                case ElementType::InputTextMultiline:
+                    ss << "\"val\":\"" << EscapeJson(el.value_str) << "\",";
+                    break;
                 default:
                     break;
                 }
@@ -217,6 +227,8 @@ private:
         case ElementType::Tooltip: return "tooltip";
         case ElementType::Table: return "table";
         case ElementType::ListBox: return "listbox";
+        case ElementType::ColorEdit: return "coloredit";
+        case ElementType::InputTextMultiline: return "textarea";
         default: return "unknown";
         }
     }

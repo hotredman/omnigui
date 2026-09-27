@@ -3,6 +3,7 @@
 #include "imgui_internal.h"
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 
 namespace ImGuiDom {
 
@@ -435,6 +436,40 @@ void DomContext::RecordListBox(uint32_t id, const char* label, int current_item,
     win->elements.push_back(std::move(el));
 }
 
+void DomContext::RecordColorEdit(uint32_t id, const char* label, float r, float g, float b, float a, bool has_alpha, float x, float y, float w, float h) {
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::ColorEdit;
+    el.label = label ? label : "";
+    el.has_alpha = has_alpha;
+
+    int ir = std::clamp(static_cast<int>(r * 255.0f + 0.5f), 0, 255);
+    int ig = std::clamp(static_cast<int>(g * 255.0f + 0.5f), 0, 255);
+    int ib = std::clamp(static_cast<int>(b * 255.0f + 0.5f), 0, 255);
+    char hex[16];
+    snprintf(hex, sizeof(hex), "#%02x%02x%02x", ir, ig, ib);
+    el.value_str = hex;
+
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    win->elements.push_back(std::move(el));
+}
+
+void DomContext::RecordInputTextMultiline(uint32_t id, const char* label, const char* text, float x, float y, float w, float h) {
+    if (!m_enabled) return;
+    Window* win = GetCurrentWindow();
+    if (!win) return;
+    Element el;
+    el.id = id;
+    el.type = ElementType::InputTextMultiline;
+    el.label = label ? label : "";
+    el.value_str = text ? text : "";
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    win->elements.push_back(std::move(el));
+}
+
 void DomContext::SetEventCallback(EventCallback cb) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_event_callback = std::move(cb);
@@ -450,7 +485,7 @@ void DomContext::PushBrowserEvent(const BrowserEvent& evt) {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_pending_events.push(evt);
-        if (evt.type == "input") {
+        if (evt.type == "input" || evt.type == "input_multiline") {
             m_input_strings[evt.id] = evt.value_str;
         } else if (evt.type == "slider") {
             m_slider_values[evt.id] = evt.value_num;
@@ -463,6 +498,15 @@ void DomContext::PushBrowserEvent(const BrowserEvent& evt) {
             m_active_clicks.insert(evt.id);
         } else if (evt.type == "listbox") {
             m_listbox_selections[evt.id] = static_cast<int>(evt.value_num);
+            m_active_clicks.insert(evt.id);
+        } else if (evt.type == "color") {
+            int ir = 0, ig = 0, ib = 0;
+            if (sscanf(evt.value_str.c_str(), "#%02x%02x%02x", &ir, &ig, &ib) == 3) {
+                float r = ir / 255.0f;
+                float g = ig / 255.0f;
+                float b = ib / 255.0f;
+                m_color_values[evt.id] = { r, g, b, 1.0f };
+            }
             m_active_clicks.insert(evt.id);
         }
         cb = m_event_callback;
@@ -498,6 +542,33 @@ bool DomContext::ConsumeListBox(uint32_t id, int& out_index) {
     if (it != m_listbox_selections.end()) {
         out_index = it->second;
         m_listbox_selections.erase(it);
+        return true;
+    }
+    return false;
+}
+
+bool DomContext::ConsumeColor3(uint32_t id, float out_col[3]) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_color_values.find(id);
+    if (it != m_color_values.end()) {
+        out_col[0] = it->second[0];
+        out_col[1] = it->second[1];
+        out_col[2] = it->second[2];
+        m_color_values.erase(it);
+        return true;
+    }
+    return false;
+}
+
+bool DomContext::ConsumeColor4(uint32_t id, float out_col[4]) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_color_values.find(id);
+    if (it != m_color_values.end()) {
+        out_col[0] = it->second[0];
+        out_col[1] = it->second[1];
+        out_col[2] = it->second[2];
+        out_col[3] = it->second[3];
+        m_color_values.erase(it);
         return true;
     }
     return false;

@@ -534,6 +534,103 @@ int main() {
     }
     std::cout << ">>> [PASS] Table and ListBox two-way sync verified!\n";
 
+    // -----------------------------------------------------------------
+    // Step 11: ColorEdit & InputTextMultiline Widgets Test
+    // -----------------------------------------------------------------
+    std::cout << "[Step 11] Testing ColorEdit and InputTextMultiline widgets...\n";
+    ImGuiDom::BeginFrame(13);
+    ImGui::NewFrame();
+
+    ImGui::SetNextWindowSize(ImVec2(500, 450));
+    ImGui::Begin("ColorAndMultiline", nullptr);
+
+    static float trace_color[3] = { 0.2f, 0.8f, 0.4f };
+    ImGuiDom::ColorEdit3("Trace Color", trace_color);
+
+    static char notes_buf[256] = "Initial notes";
+    ImGuiDom::InputTextMultiline("Notes Editor", notes_buf, sizeof(notes_buf), ImVec2(350, 80));
+
+    ImGui::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    std::string color_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    std::cout << "Color/Multiline DOM JSON: " << color_json << "\n";
+
+    if (color_json.find("\"type\":\"coloredit\"") == std::string::npos) {
+        std::cerr << "[FAIL] ColorEdit element not found in DOM JSON!\n";
+        return 1;
+    }
+    if (color_json.find("\"label\":\"Trace Color\"") == std::string::npos) {
+        std::cerr << "[FAIL] Trace Color label not found in DOM JSON!\n";
+        return 1;
+    }
+    if (color_json.find("\"type\":\"textarea\"") == std::string::npos) {
+        std::cerr << "[FAIL] InputTextMultiline element not found in DOM JSON!\n";
+        return 1;
+    }
+    if (color_json.find("\"val\":\"Initial notes\"") == std::string::npos) {
+        std::cerr << "[FAIL] InputTextMultiline initial value not found in DOM JSON!\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] ColorEdit and InputTextMultiline export verified!\n";
+
+    // Test two-way synchronization from browser events
+    size_t col_lbl_pos = color_json.find("\"label\":\"Trace Color\"");
+    size_t col_id_pos = color_json.rfind("\"id\":", col_lbl_pos);
+    uint32_t color_id = static_cast<uint32_t>(std::stoul(color_json.substr(col_id_pos + 5)));
+
+    size_t notes_lbl_pos = color_json.find("\"label\":\"Notes Editor\"");
+    size_t notes_id_pos = color_json.rfind("\"id\":", notes_lbl_pos);
+    uint32_t notes_id = static_cast<uint32_t>(std::stoul(color_json.substr(notes_id_pos + 5)));
+
+    std::cout << "Target ColorEdit ID: " << color_id << ", Multiline ID: " << notes_id << "\n";
+
+    // 1. Send color event: #ff0080 (r=1.0, g=0.0, b=0.502)
+    ImGuiDom::BrowserEvent col_evt;
+    col_evt.type = "color";
+    col_evt.id = color_id;
+    col_evt.value_str = "#ff0080";
+    ImGuiDom::DomContext::Instance().PushBrowserEvent(col_evt);
+
+    // 2. Send multiline text event
+    ImGuiDom::BrowserEvent txt_evt;
+    txt_evt.type = "input_multiline";
+    txt_evt.id = notes_id;
+    txt_evt.value_str = "Line 1: OK\nLine 2: Running";
+    ImGuiDom::DomContext::Instance().PushBrowserEvent(txt_evt);
+
+    // Frame 14: Consume browser events in next Dear ImGui frame
+    ImGuiDom::BeginFrame(14);
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(500, 450));
+    ImGui::Begin("ColorAndMultiline", nullptr);
+
+    ImGuiDom::ColorEdit3("Trace Color", trace_color);
+    ImGuiDom::InputTextMultiline("Notes Editor", notes_buf, sizeof(notes_buf), ImVec2(350, 80));
+
+    ImGui::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    // Verify trace_color updated in C++
+    if (std::abs(trace_color[0] - 1.0f) > 0.05f || std::abs(trace_color[1] - 0.0f) > 0.05f || std::abs(trace_color[2] - 0.502f) > 0.05f) {
+        std::cerr << "[FAIL] trace_color not updated properly: {" << trace_color[0] << ", " << trace_color[1] << ", " << trace_color[2] << "}\n";
+        return 1;
+    }
+
+    if (std::string(notes_buf).find("Line 1: OK") == std::string::npos) {
+        std::cerr << "[FAIL] notes_buf not updated in C++: " << notes_buf << "\n";
+        return 1;
+    }
+
+    std::string updated_color_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    if (updated_color_json.find("\"val\":\"#ff0080\"") == std::string::npos) {
+        std::cerr << "[FAIL] Updated color #ff0080 not reflected in DOM JSON!\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] ColorEdit and InputTextMultiline two-way sync verified!\n";
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 
