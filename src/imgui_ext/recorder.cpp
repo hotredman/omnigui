@@ -1,4 +1,5 @@
 #include "recorder.h"
+#include "imgui_dom/dom_context.h"
 #include <algorithm>
 #include <cmath>
 
@@ -901,6 +902,9 @@ bool HookConcavePolyFilled(ImDrawList* dl, const ImVec2* points, int count, ImU3
 }
 
 bool HookText(ImDrawList* dl, ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect) {
+    if (ImGuiDom::DomContext::Instance().IsEnabled()) {
+        ImGuiDom::DomContext::Instance().OnHookText(dl, font, font_size, pos, col, text_begin, text_end, wrap_width, cpu_fine_clip_rect);
+    }
     return Recorder::Instance().RecordText(dl, font, font_size, pos, col, text_begin, text_end, wrap_width, cpu_fine_clip_rect);
 }
 

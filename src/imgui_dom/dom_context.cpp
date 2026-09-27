@@ -62,6 +62,16 @@ void DomContext::EndFrame() {
         }
         if (already_exists) continue;
 
+        if (item.is_text) {
+            Element el;
+            el.id = item.id;
+            el.type = ElementType::Text;
+            el.value_str = item.label;
+            el.x = item.x; el.y = item.y; el.w = item.w; el.h = item.h;
+            target_win->elements.push_back(std::move(el));
+            continue;
+        }
+
         // 1. Skip stepper buttons (- and + inside InputScalar)
         if (item.is_stepper && (item.label == "-" || item.label == "+" || item.label.empty())) {
             continue;
@@ -246,6 +256,87 @@ const char* DomContext::GetItemLabel(uint32_t id) {
     return "";
 }
 
+static inline uint32_t HashTextPos(const char* text, float x, float y) {
+    uint32_t hash = 2166136261u;
+    if (text) {
+        for (const char* p = text; *p; ++p) {
+            hash ^= static_cast<uint8_t>(*p);
+            hash *= 16777619u;
+        }
+    }
+    int ix = static_cast<int>(x * 10.0f);
+    int iy = static_cast<int>(y * 10.0f);
+    hash ^= static_cast<uint32_t>(ix);
+    hash *= 16777619u;
+    hash ^= static_cast<uint32_t>(iy);
+    hash *= 16777619u;
+    return (hash == 0) ? 1u : hash;
+}
+
+void DomContext::OnHookText(ImDrawList* dl, ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect) {
+    (void)col;
+    (void)cpu_fine_clip_rect;
+    if (!m_enabled) return;
+    ImGuiContext* g = ImGui::GetCurrentContext();
+    if (!g || !g->CurrentWindow) return;
+    ImGuiWindow* window = g->CurrentWindow;
+    if (dl != window->DrawList) return;
+    if (window->Collapsed) return;
+
+    // Skip text in title bar
+    if (!(window->Flags & ImGuiWindowFlags_NoTitleBar)) {
+        float title_bar_bottom = window->Pos.y + window->TitleBarHeight;
+        if (pos.y < title_bar_bottom) return;
+    }
+
+    // Skip text that is part of an active widget with an explicit ID
+    if (g->LastItemData.ID != 0) return;
+
+    if (!text_begin) return;
+    if (!text_end) {
+        text_end = text_begin + strlen(text_begin);
+    }
+    if (text_begin == text_end) return;
+
+    // Check if non-empty (not just spaces/newlines)
+    bool has_visible_char = false;
+    for (const char* p = text_begin; p < text_end; ++p) {
+        if (!isspace(static_cast<unsigned char>(*p))) {
+            has_visible_char = true;
+            break;
+        }
+    }
+    if (!has_visible_char) return;
+
+    std::string text_str(text_begin, text_end);
+
+    // Bounding box from ImGui last item rect or font size
+    float w = g->LastItemData.Rect.GetWidth();
+    float h = g->LastItemData.Rect.GetHeight();
+    if (w <= 0.0f || h <= 0.0f) {
+        ImVec2 sz = font ? font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text_begin, text_end) : ImVec2(0.0f, font_size);
+        w = sz.x;
+        h = sz.y;
+    }
+
+    uint32_t text_id = HashTextPos(text_str.c_str(), pos.x, pos.y);
+
+    HookItem item;
+    item.id = text_id;
+    item.win_id = static_cast<uint32_t>(window->ID);
+    item.x = pos.x;
+    item.y = pos.y;
+    item.w = w;
+    item.h = h;
+    item.is_text = true;
+    item.label = std::move(text_str);
+
+    if (m_hooked_items.find(text_id) == m_hooked_items.end()) {
+        m_hooked_order.push_back(text_id);
+    }
+    m_hooked_items[text_id] = std::move(item);
+}
+
 void DomContext::RecordButton(uint32_t id, const char* label, float x, float y, float w, float h) {
     if (!m_enabled) return;
     Window* win = GetCurrentWindow();
@@ -258,15 +349,31 @@ void DomContext::RecordButton(uint32_t id, const char* label, float x, float y, 
     win->elements.push_back(std::move(el));
 }
 
-void DomContext::RecordText(uint32_t id, const char* text, float x, float y) {
+void DomContext::RecordText(uint32_t id, const char* text, float x, float y, float w, float h) {
     if (!m_enabled) return;
     Window* win = GetCurrentWindow();
     if (!win) return;
+    if (!text || !*text) return;
+
+    if (id == 0) {
+        id = HashTextPos(text, x, y);
+    }
+
+    // Deduplication check: if element already recorded (e.g. from OnHookText)
+    for (auto& el : win->elements) {
+        if (el.id == id || (el.type == ElementType::Text && el.value_str == text &&
+            std::abs(el.x - x) < 2.0f && std::abs(el.y - y) < 2.0f)) {
+            if (el.w <= 0.0f && w > 0.0f) el.w = w;
+            if (el.h <= 0.0f && h > 0.0f) el.h = h;
+            return;
+        }
+    }
+
     Element el;
     el.id = id;
     el.type = ElementType::Text;
-    el.value_str = text ? text : "";
-    el.x = x; el.y = y;
+    el.value_str = text;
+    el.x = x; el.y = y; el.w = w; el.h = h;
     win->elements.push_back(std::move(el));
 }
 

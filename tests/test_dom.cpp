@@ -89,6 +89,10 @@ int main() {
         std::cerr << "[FAIL] Slider not found in DOM JSON\n";
         return 1;
     }
+    if (json.find("\"val\":\"Status: Active 60 FPS\"") == std::string::npos) {
+        std::cerr << "[FAIL] Static text not found in DOM JSON\n";
+        return 1;
+    }
 
     // -----------------------------------------------------------------
     // HTTP Client Test: Request HTML web client from server

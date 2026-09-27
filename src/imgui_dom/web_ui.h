@@ -1008,7 +1008,8 @@ inline const std::string& GetWebClientHtml() {
                         elem.textContent = el.val || el.label;
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
-
+                        if (el.w) elem.style.width = `${el.w}px`;
+                        if (el.h) elem.style.height = `${el.h}px`;
                     }
 )HTML";
         s += R"HTML(
