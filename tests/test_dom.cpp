@@ -780,6 +780,103 @@ int main() {
         ws_cli4.close();
     }
 
+    // -----------------------------------------------------------------
+    // Step 15: Element Gallery Matrix Verification (Widget Types & Visual States)
+    // -----------------------------------------------------------------
+    std::cout << "[Step 15] Verifying Element Gallery Matrix & Visual States in DOM JSON...\n";
+    ImGuiDom::BeginFrame(20);
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(600, 500));
+    ImGui::Begin("Element Gallery Window", nullptr);
+
+    // Normal & Disabled Buttons
+    ImGuiDom::Button("Gallery Button");
+    ImGui::BeginDisabled(true);
+    ImGuiDom::Button("Disabled Button");
+    ImGui::EndDisabled();
+
+    // Checkboxes
+    bool c_uncheck = false;
+    bool c_check = true;
+    ImGuiDom::Checkbox("Unchecked", &c_uncheck);
+    ImGuiDom::Checkbox("Checked", &c_check);
+    ImGui::BeginDisabled(true);
+    ImGuiDom::Checkbox("Disabled Check", &c_check);
+    ImGui::EndDisabled();
+
+    // Radio
+    int r_val = 1;
+    ImGuiDom::RadioButton("Radio 0", &r_val, 0);
+    ImGuiDom::RadioButton("Radio 1", &r_val, 1);
+    ImGui::BeginDisabled(true);
+    ImGuiDom::RadioButton("Radio Dis", &r_val, 1);
+    ImGui::EndDisabled();
+
+    // Slider
+    float s_val = 50.0f;
+    ImGuiDom::SliderFloat("Slider 50%", &s_val, 0.0f, 100.0f);
+    ImGui::BeginDisabled(true);
+    ImGuiDom::SliderFloat("Disabled Slider", &s_val, 0.0f, 100.0f);
+    ImGui::EndDisabled();
+
+    // InputText
+    char buf[32] = "Hello";
+    ImGuiDom::InputText("Input Text", buf, sizeof(buf));
+    ImGui::BeginDisabled(true);
+    ImGuiDom::InputText("Disabled Input", buf, sizeof(buf));
+    ImGui::EndDisabled();
+
+    // Combo
+    int combo_sel = 0;
+    const char* combo_items[] = { "Option Alpha", "Option Beta" };
+    ImGuiDom::Combo("Select Combo", &combo_sel, combo_items, 2);
+
+    // ProgressBar
+    ImGuiDom::ProgressBar(0.70f, ImVec2(100, 20), "70%");
+
+    // CollapsingHeader
+    ImGui::CollapsingHeader("Gallery Collapsing Header");
+
+    ImGui::End();
+    ImGui::Render();
+    ImGuiDom::EndFrame();
+
+    std::string gallery_json = ImGuiDom::DomContext::Instance().GetLatestJson();
+    std::cout << "Element Gallery JSON length: " << gallery_json.size() << " bytes\n";
+
+    if (gallery_json.find("\"label\":\"Gallery Button\"") == std::string::npos) {
+        std::cerr << "[FAIL] Gallery Button not found in DOM JSON\n";
+        return 1;
+    }
+    if (gallery_json.find("\"label\":\"Disabled Button\"") == std::string::npos ||
+        gallery_json.find("\"disabled\":true") == std::string::npos) {
+        std::cerr << "[FAIL] Disabled Button with disabled flag not found in DOM JSON\n";
+        return 1;
+    }
+    if (gallery_json.find("\"label\":\"Unchecked\"") == std::string::npos ||
+        gallery_json.find("\"checked\":false") == std::string::npos) {
+        std::cerr << "[FAIL] Unchecked checkbox not found in DOM JSON\n";
+        return 1;
+    }
+    if (gallery_json.find("\"label\":\"Checked\"") == std::string::npos ||
+        gallery_json.find("\"checked\":true") == std::string::npos) {
+        std::cerr << "[FAIL] Checked checkbox not found in DOM JSON\n";
+        return 1;
+    }
+    if (gallery_json.find("\"label\":\"Disabled Slider\"") == std::string::npos) {
+        std::cerr << "[FAIL] Disabled Slider not found in DOM JSON\n";
+        return 1;
+    }
+    if (gallery_json.find("\"type\":\"progress\"") == std::string::npos) {
+        std::cerr << "[FAIL] Progress Bar not found in DOM JSON\n";
+        return 1;
+    }
+    if (gallery_json.find("\"label\":\"Gallery Collapsing Header\"") == std::string::npos) {
+        std::cerr << "[FAIL] Collapsing Header not found in DOM JSON\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] Step 15: All Element Gallery widgets and visual states verified in DOM JSON!\n";
+
     ImGuiDom::StopServer();
     ImGui::DestroyContext();
 

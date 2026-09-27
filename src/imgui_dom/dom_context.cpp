@@ -7,6 +7,14 @@
 
 namespace ImGuiDom {
 
+static inline bool IsCurrentItemDisabled() {
+    ImGuiContext* g = ImGui::GetCurrentContext();
+    if (!g) return false;
+    if (g->CurrentItemFlags & ImGuiItemFlags_Disabled) return true;
+    if (ImGui::GetItemFlags() & ImGuiItemFlags_Disabled) return true;
+    return false;
+}
+
 void DomContext::BeginFrame(uint64_t frame_index) {
     if (!m_enabled) return;
 
@@ -54,9 +62,12 @@ void DomContext::EndFrame() {
         if (!target_win) continue;
 
         bool already_exists = false;
-        for (const auto& el : target_win->elements) {
+        for (auto& el : target_win->elements) {
             if (el.id == id) {
                 already_exists = true;
+                if ((item.item_flags & ImGuiItemFlags_Disabled) || (item.item_flags & 0x40)) {
+                    el.disabled = true;
+                }
                 break;
             }
         }
@@ -87,7 +98,7 @@ void DomContext::EndFrame() {
         el.label = item.label;
         el.x = item.x; el.y = item.y; el.w = item.w; el.h = item.h;
         el.is_menu_bar = item.is_menu_bar;
-        if (item.item_flags & 0x01) { // ImGuiItemFlags_Disabled
+        if ((item.item_flags & ImGuiItemFlags_Disabled) || (item.item_flags & 0x40)) {
             el.disabled = true;
         }
 
@@ -395,6 +406,7 @@ void DomContext::RecordButton(uint32_t id, const char* label, float x, float y, 
     el.type = ElementType::Button;
     el.label = label ? label : "";
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -438,6 +450,7 @@ void DomContext::RecordSliderFloat(uint32_t id, const char* label, float val, fl
     el.min_val = min_v;
     el.max_val = max_v;
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -451,6 +464,7 @@ void DomContext::RecordCheckbox(uint32_t id, const char* label, bool checked, fl
     el.label = label ? label : "";
     el.checked = checked;
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -479,6 +493,7 @@ void DomContext::RecordRadioButton(uint32_t id, const char* label, bool active, 
     el.label = label ? label : "";
     el.checked = active;
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -492,6 +507,7 @@ void DomContext::RecordInputText(uint32_t id, const char* label, const char* tex
     el.label = label ? label : "";
     el.value_str = text ? text : "";
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -506,6 +522,7 @@ void DomContext::RecordCombo(uint32_t id, const char* label, const char* preview
     el.value_str = preview ? preview : "";
     el.opened = opened;
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -519,6 +536,7 @@ void DomContext::RecordProgressBar(uint32_t id, float fraction, const char* over
     el.value_num = fraction;
     el.value_str = overlay ? overlay : "";
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -615,6 +633,7 @@ void DomContext::RecordListBox(uint32_t id, const char* label, int current_item,
     el.selected_idx = current_item;
     el.items = items;
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -636,6 +655,7 @@ void DomContext::RecordColorEdit(uint32_t id, const char* label, float r, float 
     el.value_str = hex;
 
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
@@ -649,6 +669,7 @@ void DomContext::RecordInputTextMultiline(uint32_t id, const char* label, const 
     el.label = label ? label : "";
     el.value_str = text ? text : "";
     el.x = x; el.y = y; el.w = w; el.h = h;
+    if (IsCurrentItemDisabled()) el.disabled = true;
     win->elements.push_back(std::move(el));
 }
 
