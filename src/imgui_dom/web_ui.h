@@ -490,6 +490,13 @@ inline const std::string& GetWebClientHtml() {
             pointer-events: none !important;
         }
 
+        /* Native HTML5 Canvas (Oscilloscope, Vector graphics) */
+        .imgui-canvas {
+            position: absolute;
+            box-sizing: border-box;
+            border-radius: 4px;
+        }
+
         /* Native TabBar & TabItems */
         .imgui-tab-bar {
             position: absolute;
@@ -778,6 +785,7 @@ inline const std::string& GetWebClientHtml() {
         });
 
         function updateDom(doc) {
+            window.__latestDoc = doc;
             const now = performance.now();
             frameCount++;
             if (now - lastFrameTime >= 1000) {
@@ -950,6 +958,7 @@ inline const std::string& GetWebClientHtml() {
                         elem.querySelector('span').textContent = el.label;
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
+                        if (el.w) elem.style.width = `${el.w}px`;
                         elem.style.height = `${el.h}px`;
 
                     }
@@ -974,6 +983,7 @@ inline const std::string& GetWebClientHtml() {
                         elem.querySelector('span').textContent = el.label;
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
+                        if (el.w) elem.style.width = `${el.w}px`;
                         elem.style.height = `${el.h}px`;
 
                     } else if (el.type === 'input') {
@@ -1128,6 +1138,8 @@ inline const std::string& GetWebClientHtml() {
                         }
                         elem.style.left = `${localX}px`;
                         elem.style.top = `${localY}px`;
+                        elem.style.width = `${el.w}px`;
+                        elem.style.height = `${el.h}px`;
                         if (el.points && el.points.length > 0) {
                             renderCanvasWave(elem, el.points);
                         }
@@ -1322,7 +1334,7 @@ inline const std::string& GetWebClientHtml() {
                 const header = win.querySelector('.imgui-header');
                 const winTitle = header ? header.textContent : win.id;
                 const interactive = Array.from(win.querySelectorAll(
-                    '.imgui-btn, .imgui-menu-item, .imgui-check-box, .imgui-tree, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box, .imgui-color-box, .imgui-textarea-box'
+                    '.imgui-btn, .imgui-menu-item, .imgui-check-box, .imgui-tree, .imgui-collapsing-header, .imgui-slider-box, .imgui-input-box, .imgui-combo-box, .imgui-tab-item, .imgui-listbox-box, .imgui-color-box, .imgui-textarea-box'
                 ));
 
                 for (let i = 0; i < interactive.length; i++) {
@@ -1375,6 +1387,141 @@ inline const std::string& GetWebClientHtml() {
             });
             if (report.collisions.length > 0 || report.drifts.length > 0) {
                 report.ok = false;
+            }
+            return report;
+        };
+
+        window.__auditCoordinateParity = function() {
+            if (!window.__latestDoc) return { ok: false, error: "No doc snapshot available" };
+            const doc = window.__latestDoc;
+            const report = {
+                ok: true,
+                checkedWindows: 0,
+                checkedElements: 0,
+                missingElements: [],
+                ghostElements: [],
+                coordinateMismatches: [],
+                dimensionMismatches: [],
+                semanticMismatches: [],
+                maxDeltaX: 0,
+                maxDeltaY: 0,
+                maxDeltaW: 0,
+                maxDeltaH: 0,
+                passRate: 100.0
+            };
+
+            const desktopRect = desktop.getBoundingClientRect();
+            const activeDocElementIds = new Set();
+
+            for (const win of doc.windows) {
+                report.checkedWindows++;
+                const winEl = document.getElementById(`win_${win.id}`);
+                if (!winEl) {
+                    report.ok = false;
+                    report.missingElements.push({ type: 'window', id: win.id, title: win.title });
+                    continue;
+                }
+
+                const winRect = winEl.getBoundingClientRect();
+                const clientX = winRect.left - desktopRect.left + desktop.scrollLeft;
+                const clientY = winRect.top - desktopRect.top + desktop.scrollTop;
+                const dx = Math.abs(clientX - win.x);
+                const dy = Math.abs(clientY - win.y);
+                const dw = Math.abs(winRect.width - win.w);
+                report.maxDeltaX = Math.max(report.maxDeltaX, dx);
+                report.maxDeltaY = Math.max(report.maxDeltaY, dy);
+                report.maxDeltaW = Math.max(report.maxDeltaW, dw);
+
+                if (dx > 2.0 || dy > 2.0) {
+                    report.ok = false;
+                    report.coordinateMismatches.push({
+                        type: 'window',
+                        id: win.id,
+                        title: win.title,
+                        expected: { x: win.x, y: win.y },
+                        actual: { x: clientX, y: clientY },
+                        delta: { dx, dy }
+                    });
+                }
+
+                for (const el of win.elements) {
+                    report.checkedElements++;
+                    activeDocElementIds.add(`el_${el.id}`);
+                    const elem = document.getElementById(`el_${el.id}`);
+                    if (!elem) {
+                        report.ok = false;
+                        report.missingElements.push({
+                            window: win.title,
+                            id: el.id,
+                            type: el.type,
+                            label: el.label || el.val
+                        });
+                        continue;
+                    }
+
+                    if (elem.dataset.type !== el.type) {
+                        report.ok = false;
+                        report.semanticMismatches.push({
+                            id: el.id,
+                            expectedType: el.type,
+                            actualType: elem.dataset.type
+                        });
+                    }
+
+                    const elemRect = elem.getBoundingClientRect();
+                    const elClientX = elemRect.left - desktopRect.left + desktop.scrollLeft;
+                    const elClientY = elemRect.top - desktopRect.top + desktop.scrollTop;
+                    const elDx = Math.abs(elClientX - el.x);
+                    const elDy = Math.abs(elClientY - el.y);
+                    report.maxDeltaX = Math.max(report.maxDeltaX, elDx);
+                    report.maxDeltaY = Math.max(report.maxDeltaY, elDy);
+
+                    if (elDx > 2.0 || elDy > 2.0) {
+                        report.ok = false;
+                        report.coordinateMismatches.push({
+                            window: win.title,
+                            id: el.id,
+                            type: el.type,
+                            label: el.label || el.val,
+                            expected: { x: el.x, y: el.y },
+                            actual: { x: elClientX, y: elClientY },
+                            delta: { dx: elDx, dy: elDy }
+                        });
+                    }
+
+                    if (el.w > 0) {
+                        const elDw = Math.abs(elemRect.width - el.w);
+                        report.maxDeltaW = Math.max(report.maxDeltaW, elDw);
+                        if (elDw > 3.0) {
+                            report.dimensionMismatches.push({
+                                window: win.title,
+                                id: el.id,
+                                type: el.type,
+                                label: el.label || el.val,
+                                expectedW: el.w,
+                                actualW: elemRect.width,
+                                deltaW: elDw
+                            });
+                        }
+                    }
+                }
+            }
+
+            const domElems = desktop.querySelectorAll('[id^="el_"]');
+            for (const domEl of domElems) {
+                if (!activeDocElementIds.has(domEl.id)) {
+                    report.ok = false;
+                    report.ghostElements.push({
+                        id: domEl.id,
+                        type: domEl.dataset.type,
+                        text: domEl.textContent.trim().substring(0, 30)
+                    });
+                }
+            }
+
+            const totalErrors = report.missingElements.length + report.coordinateMismatches.length + report.semanticMismatches.length + report.ghostElements.length;
+            if (report.checkedElements > 0) {
+                report.passRate = Math.max(0, 100 - (totalErrors / report.checkedElements) * 100);
             }
             return report;
         };

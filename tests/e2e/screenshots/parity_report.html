@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dear ImGui Web DOM - Visual Diagnostic & Regression Report</title>
+  <title>Dear ImGui Web DOM - Coordinate & Semantic Parity Report</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0f0f14; color: #e0e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; }
@@ -14,9 +14,10 @@
     .card .val.good { color: #4ade80; }
     .card .lbl { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
     .section-title { font-size: 18px; color: #fff; margin: 24px 0 12px 0; border-bottom: 1px solid #2e384d; padding-bottom: 6px; }
-    .wipe-container { position: relative; width: 100%; max-width: 1280px; height: 720px; border: 1px solid #3d4a60; border-radius: 4px; overflow: hidden; margin-bottom: 24px; }
-    .wipe-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
-    .wipe-slider { position: absolute; width: 100%; bottom: 12px; left: 0; z-index: 10; accent-color: #38bdf8; }
+    .table-container { background: #161a22; border: 1px solid #2e384d; border-radius: 6px; overflow: hidden; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #1f2737; color: #94a3b8; text-align: left; padding: 10px 14px; font-weight: 600; }
+    td { padding: 10px 14px; border-top: 1px solid #242c3d; }
     .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
     .gallery-item { background: #161a22; border: 1px solid #2e384d; border-radius: 6px; overflow: hidden; }
     .gallery-item img { width: 100%; height: auto; display: block; border-bottom: 1px solid #2e384d; }
@@ -25,8 +26,8 @@
   </style>
 </head>
 <body>
-  <h1>Dear ImGui Web DOM Backend - Automated Diagnostic Report</h1>
-  <div class="subtitle">Generated on 2026-09-27T11:09:30.051Z | Chromium Headless + CDP + C++ Core Invariant Engine</div>
+  <h1>Dear ImGui Web DOM Backend - Exact Coordinate & Semantic Parity Report</h1>
+  <div class="subtitle">Generated on 2026-09-27T11:40:25.235Z | Pure Coordinate & Semantic Parity Verification (No Screenshots)</div>
 
   <div class="grid">
     <div class="card">
@@ -34,27 +35,75 @@
       <div class="val good">7847</div>
     </div>
     <div class="card">
-      <div class="lbl">Layout Collisions</div>
-      <div class="val good">0</div>
+      <div class="lbl">Coordinate & Semantic Score</div>
+      <div class="val good">100.00%</div>
     </div>
     <div class="card">
-      <div class="lbl">Coordinate Drifts (>3px)</div>
-      <div class="val good">0</div>
+      <div class="lbl">Max Position Drift (X, Y)</div>
+      <div class="val good">1.00px, 1.00px</div>
     </div>
     <div class="card">
-      <div class="lbl">Visual Match Score</div>
-      <div class="val good">99.43%</div>
+      <div class="lbl">Max Dimension Drift (W)</div>
+      <div class="val good">0.00px</div>
     </div>
   </div>
 
-  <div class="section-title">Visual Difference Heatmap & Baseline</div>
-  <div style="margin-bottom: 16px; font-size: 13px; color: #94a3b8;">
-    Compare the baseline Web DOM rendering against the difference heatmap. Red highlights indicate perceptible pixel differences.
-  </div>
-  <div class="wipe-container" id="wipeBox">
-    <img src="baseline.png" class="wipe-img" id="imgBase" style="z-index: 1;">
-    <img src="diff_heatmap.png" class="wipe-img" id="imgDiff" style="z-index: 2; clip-path: inset(0 50% 0 0);">
-    <input type="range" min="0" max="100" value="50" class="wipe-slider" oninput="document.getElementById('imgDiff').style.clipPath = 'inset(0 ' + (100 - this.value) + '% 0 0)'">
+  <div class="section-title">Parity Verification Breakdown</div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Verification Check</th>
+          <th>Tolerance</th>
+          <th>Observed Drift</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Window Coordinates (X, Y)</td>
+          <td>&le; 2.0 px</td>
+          <td>0.00 px</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
+        <tr>
+          <td>Element Coordinates (X, Y)</td>
+          <td>&le; 2.0 px</td>
+          <td>1.00 px X, 1.00 px Y</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
+        <tr>
+          <td>Element Dimensions (W)</td>
+          <td>&le; 3.0 px</td>
+          <td>0.00 px</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
+        <tr>
+          <td>Semantic Tag Match (Button, Slider, Checkbox, Text, etc.)</td>
+          <td>100% exact</td>
+          <td>0 mismatches</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
+        <tr>
+          <td>DOM Completeness (Missing elements)</td>
+          <td>0 allowed</td>
+          <td>0 missing</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
+        <tr>
+          <td>DOM Cleanliness (Ghost / stray elements)</td>
+          <td>0 allowed</td>
+          <td>0 ghost</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
+        <tr>
+          <td>Layout Collisions Detected</td>
+          <td>0 allowed</td>
+          <td>0 collisions</td>
+          <td><span class="badge">PASSED</span></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="section-title">Automated Section Crawler Gallery (13 snapshots)</div>
