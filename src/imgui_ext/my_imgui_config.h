@@ -6,6 +6,11 @@
 #define SDL_SCALEMODE_INVALID ((SDL_ScaleMode)-1)
 #endif
 
+// Enable Dear ImGui internal item hooks for universal Web DOM interception
+#ifndef IMGUI_ENABLE_TEST_ENGINE
+#define IMGUI_ENABLE_TEST_ENGINE
+#endif
+
 // Forward declarations of ImGui types so this header has zero dependencies
 // and causes no cyclic header resolution when included from imconfig.h
 struct ImDrawList;

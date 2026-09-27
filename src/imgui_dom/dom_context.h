@@ -56,6 +56,11 @@ public:
     bool ConsumeSlider(uint32_t id, float& out_val);
     bool ConsumeCheckbox(uint32_t id, bool& out_checked);
 
+    // Internal ImGui Hook callbacks
+    void OnHookItemAdd(uint32_t id, float x, float y, float w, float h, uint32_t status_flags);
+    void OnHookItemInfo(uint32_t id, const char* label, uint32_t status_flags);
+    const char* GetItemLabel(uint32_t id);
+
     // Sync input events into ImGuiIO if needed
     void ProcessInputEvents(ImGuiIO& io);
 
@@ -72,6 +77,17 @@ private:
     Document m_doc;
     Window m_current_window;
     bool m_has_active_window = false;
+
+    // Automatic item capture via ItemAdd/ItemInfo hooks
+    struct HookItem {
+        uint32_t id = 0;
+        float x = 0, y = 0, w = 0, h = 0;
+        uint32_t flags = 0;
+        std::string label;
+    };
+    std::unordered_map<uint32_t, HookItem> m_hooked_items;
+    std::vector<uint32_t> m_hooked_order;
+    std::unordered_map<uint32_t, std::string> m_item_labels;
 
     // Concurrency protection for JSON snapshot & events
     mutable std::mutex m_mutex;

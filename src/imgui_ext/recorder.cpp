@@ -290,6 +290,9 @@ bool Recorder::RecordRectFilled(ImDrawList* dl, const ImVec2& p_min, const ImVec
     cmd.bbox = ImVec4(p_min.x, p_min.y, p_max.x, p_max.y);
 
     stream.GetCurrentCmdList().push_back(cmd);
+    if (dl->CmdBuffer.Size > 0) {
+        dl->CmdBuffer.back().ElemCount += 6;
+    }
     stream.last_recorded_vtx_count = (size_t)dl->VtxBuffer.Size;
     stream.last_recorded_idx_count = (size_t)dl->IdxBuffer.Size;
     return true;

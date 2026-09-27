@@ -58,15 +58,16 @@ int main() {
     uint32_t btn_id = 0;
     uint32_t slider_id = 0;
 
-    ImGuiDom::Begin("Signal Controls", nullptr);
+    ImGui::SetNextWindowSize(ImVec2(400, 300));
+    ImGui::Begin("Signal Controls", nullptr);
     btn_id = static_cast<uint32_t>(ImGui::GetID("Reset Calibration"));
     slider_id = static_cast<uint32_t>(ImGui::GetID("Frequency"));
-    ImGuiDom::Text("Status: Active 60 FPS");
-    if (ImGuiDom::Button("Reset Calibration")) {
+    ImGui::Text("Status: Active 60 FPS");
+    if (ImGui::Button("Reset Calibration")) {
         test_clicked = true;
     }
-    ImGuiDom::SliderFloat("Frequency", &test_freq, 1.0f, 100.0f);
-    ImGuiDom::End();
+    ImGui::SliderFloat("Frequency", &test_freq, 1.0f, 100.0f);
+    ImGui::End();
 
     ImGui::Render();
     ImGuiDom::EndFrame();
@@ -137,12 +138,16 @@ int main() {
     ImGui::NewFrame();
 
     bool frame2_clicked = false;
-    ImGuiDom::Begin("Signal Controls", nullptr);
-    if (ImGuiDom::Button("Reset Calibration")) {
+    ImGui::Begin("Signal Controls", nullptr);
+    if (ImGui::Button("Reset Calibration")) {
         frame2_clicked = true;
     }
-    ImGuiDom::SliderFloat("Frequency", &test_freq, 1.0f, 100.0f);
-    ImGuiDom::End();
+    float browser_val = 0.0f;
+    if (ImGuiDom::DomContext::Instance().ConsumeSlider(slider_id, browser_val)) {
+        test_freq = browser_val;
+    }
+    ImGui::SliderFloat("Frequency", &test_freq, 1.0f, 100.0f);
+    ImGui::End();
 
     ImGui::Render();
     ImGuiDom::EndFrame();

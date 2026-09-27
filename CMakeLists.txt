@@ -50,6 +50,7 @@ add_library(imthorgui STATIC
     src/imgui_ext/renderer_thorvg.cpp
     src/imgui_dom/dom_context.cpp
     src/imgui_dom/dom_server.cpp
+    src/imgui_dom/dom_hook.cpp
 )
 target_include_directories(imthorgui PUBLIC
     src
