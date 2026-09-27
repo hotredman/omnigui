@@ -4,9 +4,14 @@
 #include <thread>
 #include <atomic>
 #include <memory>
+#include <mutex>
+#include <vector>
 
 namespace httplib {
     class Server;
+    namespace ws {
+        class WebSocket;
+    }
 }
 
 namespace ImGuiDom {
@@ -23,6 +28,8 @@ public:
     bool IsRunning() const { return m_running; }
     int GetPort() const { return m_port; }
 
+    void BroadcastWebSocket(const std::string& json);
+
 private:
     DomServer();
     ~DomServer();
@@ -32,6 +39,9 @@ private:
     std::string m_host = "0.0.0.0";
     std::thread m_thread;
     std::unique_ptr<httplib::Server> m_server;
+
+    std::mutex m_ws_mutex;
+    std::vector<httplib::ws::WebSocket*> m_ws_clients;
 };
 
 } // namespace ImGuiDom

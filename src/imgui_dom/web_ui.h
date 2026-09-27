@@ -177,12 +177,19 @@ inline const char* GetWebClientHtml() {
         let frameCount = 0;
         let activeSliders = new Set();
 
+        let ws = null;
+        let useWs = false;
+
         function postEvent(data) {
-            fetch('/api/event', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).catch(e => console.error("Event post error:", e));
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            } else {
+                fetch('/api/event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                }).catch(e => console.error("Event post error:", e));
+            }
         }
 
         function renderCanvasWave(canvas, points) {
@@ -353,12 +360,54 @@ inline const char* GetWebClientHtml() {
             }
         }
 
-        // Connect to C++ SSE stream
+        function connectWS() {
+            if (!window.WebSocket) {
+                connectSSE();
+                return;
+            }
+            const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProto}//${location.host}/ws`;
+            try {
+                ws = new WebSocket(wsUrl);
+                ws.onopen = () => {
+                    useWs = true;
+                    statusDot.className = 'dot';
+                    statusText.textContent = 'Connected (WebSocket Full-Duplex)';
+                };
+                ws.onmessage = (e) => {
+                    try {
+                        const doc = JSON.parse(e.data);
+                        updateDom(doc);
+                    } catch(err) {
+                        console.error("DOM Parse error", err);
+                    }
+                };
+                ws.onerror = (e) => {
+                    if (!useWs) {
+                        connectSSE();
+                    }
+                };
+                ws.onclose = () => {
+                    if (useWs) {
+                        statusDot.className = 'dot disconnected';
+                        statusText.textContent = 'Disconnected. Reconnecting...';
+                        useWs = false;
+                        setTimeout(connectWS, 1500);
+                    }
+                };
+            } catch(err) {
+                console.warn("WebSocket failed, falling back to SSE", err);
+                connectSSE();
+            }
+        }
+
+        // Connect to C++ SSE stream (fallback)
         function connectSSE() {
+            if (useWs) return;
             const es = new EventSource('/api/stream');
             es.onopen = () => {
                 statusDot.className = 'dot';
-                statusText.textContent = 'Connected (HTTP/SSE DOM)';
+                statusText.textContent = 'Connected (HTTP/SSE DOM Fallback)';
             };
             es.onmessage = (e) => {
                 try {
@@ -372,11 +421,11 @@ inline const char* GetWebClientHtml() {
                 statusDot.className = 'dot disconnected';
                 statusText.textContent = 'Disconnected. Reconnecting...';
                 es.close();
-                setTimeout(connectSSE, 1500);
+                setTimeout(connectWS, 1500);
             };
         }
 
-        connectSSE();
+        connectWS();
     </script>
 </body>
 </html>

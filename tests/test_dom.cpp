@@ -107,37 +107,55 @@ int main() {
     std::cout << ">>> [PASS] HTTP GET / served native HTML5 web client (" << res->body.size() << " bytes)\n";
 
     // -----------------------------------------------------------------
-    // Browser Event Simulation: User clicks button in browser!
+    // Step 4: WebSocket Full-Duplex Test
     // -----------------------------------------------------------------
-    std::cout << "[Step 4] Simulating browser POST /api/event (Button Click & Slider Drag)...\n";
-    std::string click_payload = "{\"type\":\"click\",\"id\":" + std::to_string(btn_id) + "}";
-    std::cout << "Posting click to /api/event: " << click_payload << "\n";
-    auto click_res = cli.Post("/api/event", click_payload, "application/json");
-    if (!click_res) {
-        std::cerr << "[FAIL] HTTP POST click failed with error code: " << (int)click_res.error() << "\n";
+    std::cout << "[Step 4] Connecting via WebSocket ws://127.0.0.1:" << test_port << "/ws...\n";
+    httplib::ws::WebSocketClient ws_cli("ws://127.0.0.1:" + std::to_string(test_port) + "/ws");
+    ws_cli.set_read_timeout(std::chrono::seconds(2));
+    auto ws_conn = ws_cli.connect();
+    if (!ws_conn) {
+        std::cerr << "[FAIL] WebSocket connect failed: " << (int)ws_conn.error() << "\n";
         return 1;
     }
-    std::cout << "HTTP POST click status: " << click_res->status << "\n";
+    std::cout << ">>> [PASS] WebSocket connection established successfully!\n";
 
-    std::string slider_payload = "{\"type\":\"slider\",\"id\":" + std::to_string(slider_id) + ",\"val\":77.5}";
-    std::cout << "Posting slider to /api/event: " << slider_payload << "\n";
-    auto slider_res = cli.Post("/api/event", slider_payload, "application/json");
-    if (!slider_res) {
-        std::cerr << "[FAIL] HTTP POST slider failed with error code: " << (int)slider_res.error() << "\n";
+    // Read initial snapshot delivered over WebSocket
+    std::string ws_msg;
+    auto read_res = ws_cli.read(ws_msg);
+    if (read_res != httplib::ws::ReadResult::Text) {
+        std::cerr << "[FAIL] Failed to read initial snapshot from WebSocket\n";
         return 1;
     }
-    std::cout << "HTTP POST slider status: " << slider_res->status << "\n";
+    std::cout << "Received initial snapshot over WebSocket (" << ws_msg.size() << " bytes)\n";
+    if (ws_msg.find("Signal Controls") == std::string::npos) {
+        std::cerr << "[FAIL] Initial WebSocket snapshot does not contain window title\n";
+        return 1;
+    }
+    std::cout << ">>> [PASS] Initial DOM snapshot verified over WebSocket!\n";
 
-
+    // Send click and slider events over WebSocket
+    std::cout << "[Step 5] Sending Button Click and Slider Drag over WebSocket...\n";
+    std::string ws_click = "{\"type\":\"click\",\"id\":" + std::to_string(btn_id) + "}";
+    if (!ws_cli.send(ws_click)) {
+        std::cerr << "[FAIL] Failed to send click over WebSocket\n";
+        return 1;
+    }
+    std::string ws_slider = "{\"type\":\"slider\",\"id\":" + std::to_string(slider_id) + ",\"val\":77.5}";
+    if (!ws_cli.send(ws_slider)) {
+        std::cerr << "[FAIL] Failed to send slider over WebSocket\n";
+        return 1;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     // -----------------------------------------------------------------
     // Frame 2: Process browser events in ImGui
     // -----------------------------------------------------------------
-    std::cout << "[Step 5] Rendering Frame 2 (Consuming Browser Events)...\n";
+    std::cout << "[Step 6] Rendering Frame 2 (Consuming WebSocket Events)...\n";
     ImGuiDom::BeginFrame(2);
     ImGui::NewFrame();
 
     bool frame2_clicked = false;
+    ImGui::SetNextWindowSize(ImVec2(400, 300));
     ImGui::Begin("Signal Controls", nullptr);
     if (ImGui::Button("Reset Calibration")) {
         frame2_clicked = true;
@@ -152,19 +170,26 @@ int main() {
     ImGui::Render();
     ImGuiDom::EndFrame();
 
+    // Verify WebSocket receives the updated Frame 2 snapshot broadcast
+    auto read_frame2 = ws_cli.read(ws_msg);
+    if (read_frame2 == httplib::ws::ReadResult::Text && ws_msg.find("\"frame\":2") != std::string::npos) {
+        std::cout << ">>> [PASS] Real-time Frame 2 snapshot received over WebSocket broadcast!\n";
+    }
+    ws_cli.close();
+
     std::cout << "Button clicked result in C++: " << (frame2_clicked ? "true" : "false") << "\n";
     std::cout << "Slider value in C++: " << test_freq << " (Expected: 77.5)\n";
 
     if (!frame2_clicked) {
-        std::cerr << "[FAIL] Browser click event was not consumed by ImGuiDom::Button!\n";
+        std::cerr << "[FAIL] WebSocket click event was not consumed by ImGui::Button!\n";
         return 1;
     }
     if (std::abs(test_freq - 77.5f) > 0.1f) {
-        std::cerr << "[FAIL] Browser slider event was not applied to C++ variable!\n";
+        std::cerr << "[FAIL] WebSocket slider event was not applied to C++ variable!\n";
         return 1;
     }
 
-    std::cout << "\n>>> [PASS] Two-way synchronization verified between Browser DOM and C++ ImGui!\n";
+    std::cout << "\n>>> [PASS] Full-Duplex WebSocket verified between Browser client and C++ ImGui!\n";
 
     ImGuiDom::StopServer();
     ImGui::DestroyContext();

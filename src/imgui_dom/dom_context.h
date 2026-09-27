@@ -64,9 +64,12 @@ public:
     // Sync input events into ImGuiIO if needed
     void ProcessInputEvents(ImGuiIO& io);
 
-    // Latest JSON for SSE broadcast to web clients
+    // Latest JSON for broadcast to web clients
     std::string GetLatestJson();
     bool HasNewSnapshot(uint64_t& inout_last_sent_frame);
+
+    using SnapshotCallback = std::function<void(const std::string&)>;
+    void SetSnapshotCallback(SnapshotCallback cb);
 
 private:
     DomContext() = default;
@@ -99,6 +102,7 @@ private:
     std::unordered_map<uint32_t, bool> m_checkbox_values;
     std::queue<BrowserEvent> m_pending_events;
     EventCallback m_event_callback;
+    SnapshotCallback m_snapshot_callback;
 };
 
 } // namespace ImGuiDom

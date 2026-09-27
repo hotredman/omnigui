@@ -51,10 +51,15 @@ void DomContext::EndFrame() {
     }
 
     std::string json = m_doc.ToJson();
+    SnapshotCallback cb;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_latest_json = std::move(json);
         m_latest_ready_frame = m_current_frame;
+        cb = m_snapshot_callback;
+    }
+    if (cb) {
+        cb(m_latest_json);
     }
 }
 
@@ -224,6 +229,11 @@ void DomContext::RecordCanvas(uint32_t id, const char* stream_name, const float*
 void DomContext::SetEventCallback(EventCallback cb) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_event_callback = std::move(cb);
+}
+
+void DomContext::SetSnapshotCallback(SnapshotCallback cb) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_snapshot_callback = std::move(cb);
 }
 
 void DomContext::PushBrowserEvent(const BrowserEvent& evt) {
