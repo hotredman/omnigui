@@ -41,9 +41,36 @@
 
 * **Non-Invasive Vector Interception:** Powered by [`imgui-hooked`](https://github.com/hotredman/imgui-hooked) with `IMGUI_DRAWLIST_HOOK_*` macros, intercepting geometry before tessellation.
 * **True Native HTML5 DOM Backend:** Generates actual semantic HTML elements (`<button>`, `<input>`, `<progress>`, `<svg>`) synchronized with full-duplex WebSocket or in-browser WASM bridge.
+* **OmniKit Component Suite & Design System:** 50+ modern immediate-mode components (cards, semantic buttons, badges, indicators, toggles, virtual tables, responsive flow/grid layouts, telemetry charts).
+* **Procedural Vector Iconography:** 30+ built-in resolution-independent vector icons rendered via `ImDrawList` primitives.
 * **Reactive Event Loop (Zero-CPU Idle):** Eliminates 100% busy-loop spinning; only updates when input events arrive or timers trigger.
 * **LTTB (Largest Triangle Three Buckets) Decimation:** High-performance real-time oscilloscope downsampling 100k+ points to 800 px in under 0.15 ms.
 * **100.00% Coordinate & Style Parity:** Automated CDP test suite auditing coordinate bounds and computed CSS colors matching Dear ImGui `StyleColorsDark`.
+
+---
+
+## 🎨 OmniKit — Modern UI Component Library & Design System
+
+OmniGUI ships with **OmniKit** (`src/omnikit.hpp`), a complete, theme-driven immediate-mode widget library:
+
+```cpp
+#include "omnikit.hpp"
+
+// Inside your UI loop:
+if (Card card("test_cfg", "Machine Configuration"); card) {
+    InputField::Text("##name", "Specimen Identifier", specimenName);
+    Toggle::Render("tog_stream", isStreaming, "Telemetry Streaming", "Sends real-time high-rate samples");
+    
+    if (card.Button("Start Testing Cycle", Icon(Icon::Play), UiVariant::Primary)) {
+        machineState = DeviceState::Running;
+    }
+}
+```
+
+* **Design Tokens & Theming:** Switch instantly between Dark and Light mode via `UiTheme::Get().SetMode(ThemeMode::Dark / Light)`.
+* **Semantic Variants:** Full system color scaling for `Primary`, `Success`, `Warning`, `Danger`, `Secondary`, `Info`.
+* **High-Speed Telemetry Charts:** Dedicated `RealtimeChart` and `AnalysisChart` with LTTB decimation.
+* **Vector Icons:** `Icon(Icon::Play)`, `Icon(Icon::Refresh)`, `Icon(Icon::Database)`, `Icon(Icon::Sun)`, `Icon(Icon::Moon)`, `Icon(Icon::Target)`, etc.
 
 ---
 
