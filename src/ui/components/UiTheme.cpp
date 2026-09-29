@@ -463,6 +463,15 @@ void UiTheme::ApplyToImGui() {
     set(ImGuiCol_TableBorderStrong, table.colBorderOuter);
     set(ImGuiCol_TableBorderLight, table.colBorderInner);
 
+    // Вкладки (Tabs)
+    set(ImGuiCol_Tab, p.bgControl);
+    set(ImGuiCol_TabHovered, p.fillHover);
+    set(ImGuiCol_TabSelected, p.accentBg);
+    set(ImGuiCol_TabSelectedOverline, p.accent);
+    set(ImGuiCol_TabDimmed, p.bgControl);
+    set(ImGuiCol_TabDimmedSelected, p.accentBg);
+    set(ImGuiCol_TabDimmedSelectedOverline, p.accent);
+
     // Навигация и ресайз (контур фокуса скрыт — без паразитного двойного контура)
     set(ImGuiCol_NavCursor, 0);
     set(ImGuiCol_ResizeGrip, 0);
