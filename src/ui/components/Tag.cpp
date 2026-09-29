@@ -67,7 +67,7 @@ bool Tag::Render(const char* label, const char* prefix, bool clickable, const ch
         if (tooltip && tooltip[0] != '\0') {
             ImGui::SetTooltip("%s", tooltip);
         } else {
-            ImGui::SetTooltip("Искать по тегу #%s", label);
+            ImGui::SetTooltip("Filter by tag #%s", label);
         }
     }
 

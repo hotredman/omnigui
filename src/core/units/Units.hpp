@@ -11,7 +11,7 @@
 
 enum class UnitCategory {
     Force,
-    Stress,         // Напряжение и давление
+    Stress,         // Stress and pressure
     Strain,
     Length,
     Area,
@@ -23,33 +23,33 @@ enum class UnitCategory {
 };
 
 enum class PhysicalUnit {
-    // Сила (база: Н)
+    // Force (base: N)
     N, KN, Kgf, Lbf,
-    // Напряжение / давление (база: МПа)
+    // Stress / pressure (base: MPa)
     MPa, NMm2, GPa, KPa, Bar, KgfMm2, KgfCm2, Psi,
-    // Деформация (база: %)
+    // Strain (base: %)
     Percent, Ratio, Permille,
-    // Длина / перемещение (база: мм)
+    // Length / displacement (base: mm)
     Mm, Um, Cm, M,
-    // Площадь (база: мм²)
+    // Area (base: mm²)
     Mm2, Cm2, M2,
-    // Энергия / работа (база: Дж)
+    // Energy / work (base: J)
     J, KJ, NM,
-    // Скорость перемещения (база: мм/мин)
+    // Speed (base: mm/min)
     MmMin, MmS, MS,
-    // Время (база: с)
+    // Time (base: s)
     S, Min, Ms, H,
-    // Температура (база: °C)
+    // Temperature (base: °C)
     C,
-    // Безразмерная величина
+    // Dimensionless quantity
     None
 };
 
 namespace Units {
 
 const char* Key(PhysicalUnit unit);                         // "kN"
-std::optional<PhysicalUnit> FromKey(std::string_view key);  // только канонический ключ
-const char* Label(PhysicalUnit unit);                       // "кН"
+std::optional<PhysicalUnit> FromKey(std::string_view key);  // canonical key only
+const char* Label(PhysicalUnit unit);                       // "kN"
 
 UnitCategory CategoryOf(PhysicalUnit unit);
 bool SameCategory(PhysicalUnit a, PhysicalUnit b);
@@ -58,9 +58,9 @@ const char* CategoryLabel(UnitCategory category);
 const std::vector<UnitCategory>& Categories();
 const std::vector<PhysicalUnit>& UnitsOf(UnitCategory category);
 
-// Значение в единице unit -> в базовой единице её категории
+// Value in unit -> in base unit of its category
 double ToBase(double value, PhysicalUnit unit);
-// Перевод между единицами одной категории; разные категории — nullopt
+// Convert between units of the same category; different categories return nullopt
 std::optional<double> Convert(double value, PhysicalUnit from, PhysicalUnit to);
 
 #ifdef OMNIGUI_HAS_NLOHMANN_JSON

@@ -8,7 +8,7 @@ class SearchInput {
 public:
     static bool Render(const char* id,
                        std::string& query,
-                       const char* hint = "Поиск...",
+                       const char* hint = "Search...",
                        float baseWidth = 0.0f,
                        UiSize size = UiSize::Small);
 };

@@ -307,16 +307,16 @@ private:
 
         ImGui::Dummy(ImVec2(0.0f, iconSize + 12.0f * scale));
 
-        // Заголовок
+        // Title
         std::string title = !m_emptyTitle.empty() ? m_emptyTitle :
-            (m_searchQuery.empty() ? "Архив пуст" : "Ничего не найдено");
+            (m_searchQuery.empty() ? "No records" : "No results found");
         ImVec2 titleSz = ImGui::CalcTextSize(title.c_str());
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - titleSz.x) * 0.5f);
         ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", title.c_str());
 
-        // Подзаголовок
+        // Subtitle
         std::string sub = !m_emptySubtitle.empty() ? m_emptySubtitle :
-            (m_searchQuery.empty() ? "В каталоге пока нет сохранённых проектов" : "Попробуйте изменить поисковый запрос");
+            (m_searchQuery.empty() ? "No items available in the dataset" : "Try adjusting your search filter");
         ImVec2 subSz = ImGui::CalcTextSize(sub.c_str());
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - subSz.x) * 0.5f);
         ImGui::TextColored(ImColor(ts.colEmptyText).Value, "%s", sub.c_str());

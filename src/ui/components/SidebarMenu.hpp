@@ -49,8 +49,8 @@ public:
                 ImU32 statusColor = 0,
                 bool isSelected = false);
 
-    // 5. Заглушка пустого списка
-    void Empty(const char* message = "Список пуст", const char* detail = nullptr);
+    // 5. Empty list placeholder
+    void Empty(const char* message = "List is empty", const char* detail = nullptr);
 
 private:
     float Scale(float val) const { return UiTheme::Get().Scale(val); }

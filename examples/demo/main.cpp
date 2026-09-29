@@ -277,16 +277,16 @@ struct BenchmarkSession {
     void PrintSummaryMarkdown() {
         if (all_results.empty()) return;
         std::cout << "\n### Comparative Benchmark Summary\n\n";
-        std::cout << "| Режим / Сценарий | Кадров за 5с | FPS | CPU Work (мс/кадр) | Время потока CPU | Загрузка 1 ядра | Render/Present | RAM |\n";
+        std::cout << "| Mode / Scenario | Frames (5s) | FPS | CPU Work (ms/frame) | CPU Thread Time | 1 Core Load | Render/Present | RAM |\n";
         std::cout << "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n";
         for (const auto& r : all_results) {
             std::cout << "| " << r.name << " | **" << r.frames_rendered << "** | "
                       << std::fixed << std::setprecision(1) << r.avg_fps << " | "
-                      << std::fixed << std::setprecision(2) << r.avg_worktime_ms << " мс | "
-                      << std::fixed << std::setprecision(1) << r.thread_cpu_time_ms << " мс | "
+                      << std::fixed << std::setprecision(2) << r.avg_worktime_ms << " ms | "
+                      << std::fixed << std::setprecision(1) << r.thread_cpu_time_ms << " ms | "
                       << std::fixed << std::setprecision(2) << r.thread_cpu_percent << " % | "
-                      << std::fixed << std::setprecision(2) << r.avg_gpu_time_ms << " мс | "
-                      << std::fixed << std::setprecision(1) << r.ram_mb << " МБ |\n";
+                      << std::fixed << std::setprecision(2) << r.avg_gpu_time_ms << " ms | "
+                      << std::fixed << std::setprecision(1) << r.ram_mb << " MB |\n";
         }
         std::cout << "\n" << std::endl;
     }

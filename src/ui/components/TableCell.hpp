@@ -112,24 +112,24 @@ public:
         ::Badge::Render(text, variant, offset, 0.0f, tooltip);
     }
 
-    // Семантический статус показателя испытания (бейдж статуса с тултипом + опциональный бейдж «Образец»)
+    // Semantic metric status badge (status badge with tooltip + optional "Custom" badge)
     static void MetricStatus(const std::string& status, const std::string& errorTooltip = "", bool isOverridden = false) {
-        const char* label = "Норма";
+        const char* label = "Normal";
         UiVariant variant = UiVariant::Success;
         if (status == "ok") {
-            label = "Норма";
+            label = "Normal";
             variant = UiVariant::Success;
         } else if (status == "manual_needed") {
-            label = "Нет данных";
+            label = "No Data";
             variant = UiVariant::Warning;
         } else if (status == "cyclic_dependency") {
-            label = "Цикл формул";
+            label = "Cyclic Reference";
             variant = UiVariant::Danger;
         } else if (status == "empty") {
-            label = "Нет формулы";
+            label = "No Formula";
             variant = UiVariant::Warning;
         } else {
-            label = "Ошибка";
+            label = "Error";
             variant = UiVariant::Danger;
         }
 
@@ -137,7 +137,7 @@ public:
 
         if (isOverridden) {
             ImGui::SameLine(0.0f, 4.0f);
-            BadgeText("Образец", UiVariant::Info, 0.0f, "Параметры расчёта подобраны для этого образца");
+            BadgeText("Custom", UiVariant::Info, 0.0f, "Calculation parameters configured for this sample");
         }
     }
 

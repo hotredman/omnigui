@@ -18,24 +18,24 @@ static auto s_lastSampleTime = std::chrono::steady_clock::now();
 static DeviceState s_deviceState = DeviceState::Idle;
 static bool s_autoTare = false;
 static bool s_liveFeed = true;
-static bool s_highPrecision = true;
-static float s_speedValue = 10.0f;
+static bool s_hardwareAcc = true;
+static float s_sampleInterval = 250.0f; // ms
 static std::string s_searchQuery = "";
-static std::string s_sampleName = "Specimen-Titanium-A4";
-static float s_targetLoad = 75.0f;
+static std::string s_nodeIdentifier = "worker-node-cluster-07";
+static float s_throughputLimit = 120.0f; // MB/s
 static bool s_confirmModalOpen = false;
 
-struct TestItem {
+struct JobRecord {
     int id;
-    std::string name;
-    std::string standard;
-    double maxForce;
-    double elongation;
+    std::string taskName;
+    std::string engine;
+    double executionTimeMs;
+    double memoryUsageMb;
     UiVariant status;
     const char* statusText;
 };
 
-static std::vector<TestItem> s_testItems;
+static std::vector<JobRecord> s_jobRecords;
 
 void Init() {
     if (s_initialized) return;
@@ -45,17 +45,19 @@ void Init() {
     theme.LoadFonts();
     theme.SetMode(ThemeMode::Dark);
 
-    s_realtimeChart.SetAxisPair(RealtimeAxisPair::Force_Displacement);
+    s_realtimeChart.SetXAxis("Elapsed Time", "s");
+    s_realtimeChart.SetYAxis("Throughput", "MB/s");
     s_realtimeChart.SetLineThickness(2.2f);
     s_realtimeChart.SetHeadMarker(true);
 
-    s_testItems = {
-        { 101, "Specimen-Ti-01", "ASTM E8", 124.5, 14.2, UiVariant::Success, "PASSED" },
-        { 102, "Specimen-Ti-02", "ASTM E8", 126.1, 13.9, UiVariant::Success, "PASSED" },
-        { 103, "Specimen-Al-7075", "ISO 6892-1", 88.4, 8.5, UiVariant::Warning, "MARGINAL" },
-        { 104, "Specimen-CFRP-01", "ISO 527-4", 210.8, 2.1, UiVariant::Primary, "TESTING" },
-        { 105, "Specimen-Steel-316L", "EN 10002", 95.2, 22.0, UiVariant::Success, "PASSED" },
-        { 106, "Specimen-Polymer-09", "ASTM D638", 12.3, 45.0, UiVariant::Danger, "FAILED" },
+    s_jobRecords = {
+        { 1001, "Telemetry Ingestion Pipeline", "ThorEngine v4", 12.4, 256.0, UiVariant::Success, "COMPLETED" },
+        { 1002, "Vector Matrix Transformation", "SIMD-AVX512",   48.2, 512.5, UiVariant::Success, "COMPLETED" },
+        { 1003, "Neural Weight Quantization",  "CoreCompute",   118.0, 1024.0, UiVariant::Primary, "PROCESSING" },
+        { 1004, "Cache Index Rebalancing",     "LSM-Store",       6.5, 128.2, UiVariant::Success, "COMPLETED" },
+        { 1005, "Distributed Lock Heartbeat",  "Raft-Cluster",    2.1,  64.0, UiVariant::Warning, "LATENCY SPIKE" },
+        { 1006, "TLS Key Exchange Handshake",  "CryptoLib",       4.8,  32.0, UiVariant::Success, "COMPLETED" },
+        { 1007, "Batch Data Compaction",       "ZSTD-Parallel", 230.1, 780.0, UiVariant::Danger,  "FAILED" },
     };
 }
 
@@ -68,16 +70,22 @@ void RenderUI(float main_scale) {
     auto now = std::chrono::steady_clock::now();
     double elapsed = std::chrono::duration<double>(now - s_startTime).count();
 
-    // Stream real-time curve data
+    // Stream synthetic real-time telemetry curve data (e.g. Throughput vs Time)
     if (s_liveFeed) {
         double dt = std::chrono::duration<double>(now - s_lastSampleTime).count();
-        if (dt >= 0.03) { // ~30 Hz telemetry
+        if (dt >= 0.033) { // ~30 Hz telemetry stream
             s_lastSampleTime = now;
-            double d = fmod(elapsed * 2.5, 30.0);
-            // Non-linear stress-strain curve
-            double f = 140.0 * (1.0 - std::exp(-d / 4.0)) + 8.0 * std::sin(d * 1.5);
-            if (d < 0.1) s_realtimeChart.Clear();
-            s_realtimeChart.AppendSample(elapsed, f, d);
+            // Synthetic wave: Baseline + Harmonic oscillation + Gaussian noise burst
+            double t = elapsed;
+            double baseline = 65.0;
+            double harmonics = 25.0 * std::sin(t * 1.8) + 12.0 * std::cos(t * 3.4);
+            double burst = 15.0 * std::sin(t * 0.4);
+            double throughput = std::max(5.0, baseline + harmonics + burst);
+
+            if (s_realtimeChart.SampleCount() > 250) {
+                s_realtimeChart.Clear();
+            }
+            s_realtimeChart.AppendSample(elapsed, throughput, 0.0);
         }
     }
 
@@ -88,7 +96,7 @@ void RenderUI(float main_scale) {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 32.0f * main_scale);
         ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "OmniKit");
         ImGui::SameLine();
-        ImGui::TextColored(ImColor(theme.palette.accent).Value, "Design System & Widget Kit");
+        ImGui::TextColored(ImColor(theme.palette.accent).Value, "UI Design System & Widget Kit");
         ImGui::SameLine();
         Badge::Render("v2.0", UiVariant::Primary);
 
@@ -113,10 +121,10 @@ void RenderUI(float main_scale) {
 
     ImGui::Spacing();
 
-    // 2. DEVICE TELEMETRY STRIP & REALTIME INDICATORS
+    // 2. SYSTEM STATUS STRIP & REAL-TIME INDICATORS
     {
-        // Device status banner
-        DeviceStatus::Render("Tension Tester Pro 50kN",
+        // Compute service status banner
+        DeviceStatus::Render("Data Pipeline Node 07",
                              s_deviceState,
                              s_deviceState == DeviceState::Running ? "STREAMING (100 Hz)" : "STANDBY",
                              s_deviceState == DeviceState::Running ? "Pause" : "Start",
@@ -133,19 +141,19 @@ void RenderUI(float main_scale) {
         ImGui::SameLine();
 
         // High-precision live digital indicators
-        double liveForce = s_liveFeed ? (82.4 + 3.2 * std::sin(elapsed * 2.0)) : 0.0;
-        double liveDisp = s_liveFeed ? fmod(elapsed * 2.5, 30.0) : 0.0;
+        double liveThroughput = s_liveFeed ? (84.6 + 4.8 * std::sin(elapsed * 2.2)) : 0.0;
+        double liveLatency = s_liveFeed ? (14.2 + 2.1 * std::cos(elapsed * 1.5)) : 0.0;
 
-        Indicator indForce("LOAD CELL", liveForce, 2, "kN", 5, true);
-        indForce.Render();
-
-        ImGui::SameLine();
-        Indicator indDisp("CROSSHEAD", liveDisp, 3, "mm", 6, true);
-        indDisp.Render();
+        Indicator indThroughput("THROUGHPUT", liveThroughput, 1, "MB/s", 5, true);
+        indThroughput.Render();
 
         ImGui::SameLine();
-        Indicator indTime("TEST DURATION", elapsed, 1, "s", 4, false);
-        indTime.Render();
+        Indicator indLatency("AVG LATENCY", liveLatency, 2, "ms", 5, true);
+        indLatency.Render();
+
+        ImGui::SameLine();
+        Indicator indUptime("UPTIME", elapsed, 1, "s", 4, false);
+        indUptime.Render();
     }
 
     ImGui::Spacing();
@@ -157,30 +165,29 @@ void RenderUI(float main_scale) {
     float colLeftW = (availW - 16.0f * main_scale) * 0.44f;
     float colRightW = availW - colLeftW - 16.0f * main_scale;
 
-    // LEFT COLUMN: Cards & Controls
+    // LEFT COLUMN: Configuration Cards & Semantic Controls
     ImGui::BeginChild("LeftCol", ImVec2(colLeftW, 0), false, ImGuiWindowFlags_None);
     {
-        // Card 1: Machine Settings & Test Configuration
-        if (Card card("cfg_card", "Test Configuration"); card) {
-            // Sample name input
-            InputField::Text("##spec_name", "Specimen Identifier", s_sampleName);
+        // Card 1: Pipeline Configuration
+        if (Card card("cfg_card", "Pipeline Configuration"); card) {
+            InputField::Text("##node_name", "Cluster Node Identifier", s_nodeIdentifier);
 
             ImGui::Spacing();
-            InputField::Float("##target_load", "Target Load Limit", s_targetLoad, "kN");
+            InputField::Float("##throughput_limit", "Throughput Ceiling", s_throughputLimit, "MB/s");
 
             ImGui::Spacing();
             // Toggle controls
-            Toggle::Render("tog_tare", s_autoTare, "Automatic Tare on Start", "Zeros displacement before grip tensioning");
-            Toggle::Render("tog_stream", s_liveFeed, "Telemetry Streaming", "Sends real-time high-rate samples to chart");
-            Toggle::Render("tog_prec", s_highPrecision, "High Precision ADC Filter", "Enables 24-bit oversampling pipeline");
+            Toggle::Render("tog_tare", s_autoTare, "Auto-Zero Telemetry Baseline", "Zeros relative baseline counter on cycle start");
+            Toggle::Render("tog_stream", s_liveFeed, "Real-Time Telemetry Feed", "Streams continuous high-frequency metrics");
+            Toggle::Render("tog_acc", s_hardwareAcc, "Hardware Acceleration (AVX-512)", "Enables vectorized math operations");
 
             ImGui::Spacing();
-            ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Testing Speed Preset:");
-            static const std::vector<float> speedOptions = { 1.0f, 5.0f, 10.0f, 50.0f };
-            PresetGrid::Render(s_speedValue, speedOptions, "mm/min", 0.0f, 4);
+            ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Sampling Interval Preset:");
+            static const std::vector<float> sampleOptions = { 50.0f, 100.0f, 250.0f, 500.0f };
+            PresetGrid::Render(s_sampleInterval, sampleOptions, "ms", 0.0f, 4);
 
             ImGui::Spacing();
-            if (card.Button("Execute Pre-Flight Check", Icon(Icon::Check), UiVariant::Primary)) {
+            if (card.Button("Deploy Pipeline Configuration", Icon(Icon::Check), UiVariant::Primary)) {
                 s_deviceState = DeviceState::Running;
                 s_liveFeed = true;
             }
@@ -190,7 +197,7 @@ void RenderUI(float main_scale) {
 
         // Card 2: Semantic Design Tokens & Button Gallery
         if (Card card2("tokens_card", "Semantic Design Tokens"); card2) {
-            ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Color Variants (UiVariant):");
+            ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Interactive Variants (UiVariant):");
             
             // FlowLayout: 12-column responsive layout (3 columns per row)
             FlowLayout flow(colLeftW - 32.0f * main_scale);
@@ -214,18 +221,18 @@ void RenderUI(float main_scale) {
             }
 
             ImGui::Spacing();
-            ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Badges & Metadata Tags:");
-            Badge::Render("ACTIVE", UiVariant::Success);
+            ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Status Badges & Metadata Tags:");
+            Badge::Render("ONLINE", UiVariant::Success);
             ImGui::SameLine();
-            Badge::Render("CALIBRATED", UiVariant::Primary);
+            Badge::Render("READY", UiVariant::Primary);
             ImGui::SameLine();
-            Badge::Render("OFFLINE", UiVariant::Secondary);
+            Badge::Render("STANDBY", UiVariant::Secondary);
             ImGui::SameLine();
-            Badge::Render("OVERLOAD", UiVariant::Danger);
+            Badge::Render("ALERT", UiVariant::Danger);
             ImGui::SameLine();
-            Tag::Render("ISO-6892");
+            Tag::Render("HTTP/3");
             ImGui::SameLine();
-            Tag::Render("ASTM-E8");
+            Tag::Render("AVX-512");
         }
     }
     ImGui::EndChild();
@@ -236,7 +243,7 @@ void RenderUI(float main_scale) {
     ImGui::BeginChild("RightCol", ImVec2(colRightW, 0), false, ImGuiWindowFlags_None);
     {
         // 1. High-Performance Realtime Chart
-        if (Card chartCard("chart_card", "Real-Time Telemetry Curve (Force vs Displacement)"); chartCard) {
+        if (Card chartCard("chart_card", "Real-Time Telemetry Stream (Throughput vs Elapsed Time)"); chartCard) {
             float chartH = 260.0f * main_scale;
             s_realtimeChart.Render("realtime_chart_view", ImVec2(colRightW - 32.0f * main_scale, chartH));
         }
@@ -244,33 +251,35 @@ void RenderUI(float main_scale) {
         ImGui::Spacing();
 
         // 2. Data Records Table
-        if (Card tableCard("records_card", "Archived Test Batches"); tableCard) {
-            SearchInput::Render("tbl_search", s_searchQuery, "Search tests...");
+        if (Card tableCard("records_card", "Distributed Job Execution Queue"); tableCard) {
+            SearchInput::Render("tbl_search", s_searchQuery, "Filter jobs...");
             ImGui::Spacing();
 
-            if (ImGui::BeginTable("TestDataTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
-                ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 50.0f * main_scale);
-                ImGui::TableSetupColumn("Specimen Name");
-                ImGui::TableSetupColumn("Standard");
-                ImGui::TableSetupColumn("Max Force (kN)");
+            if (ImGui::BeginTable("JobDataTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+                ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 60.0f * main_scale);
+                ImGui::TableSetupColumn("Task Identifier");
+                ImGui::TableSetupColumn("Execution Engine");
+                ImGui::TableSetupColumn("Latency (ms)");
                 ImGui::TableSetupColumn("Status");
                 ImGui::TableHeadersRow();
 
-                for (const auto& item : s_testItems) {
-                    if (!s_searchQuery.empty() && item.name.find(s_searchQuery) == std::string::npos) {
+                for (const auto& job : s_jobRecords) {
+                    if (!s_searchQuery.empty() && 
+                        job.taskName.find(s_searchQuery) == std::string::npos &&
+                        job.engine.find(s_searchQuery) == std::string::npos) {
                         continue;
                     }
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::Text("%d", item.id);
+                    ImGui::Text("#%d", job.id);
                     ImGui::TableNextColumn();
-                    ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", item.name.c_str());
+                    ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", job.taskName.c_str());
                     ImGui::TableNextColumn();
-                    ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "%s", item.standard.c_str());
+                    ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "%s", job.engine.c_str());
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.1f kN", item.maxForce);
+                    ImGui::Text("%.1f ms", job.executionTimeMs);
                     ImGui::TableNextColumn();
-                    Badge::Render(item.statusText, item.status);
+                    Badge::Render(job.statusText, job.status);
                 }
                 ImGui::EndTable();
             }
@@ -282,9 +291,11 @@ void RenderUI(float main_scale) {
     if (s_confirmModalOpen) {
         if (ConfirmDialog::Render("ConfirmResetModal",
                                   s_confirmModalOpen,
-                                  "Reset Telemetry and Session Data",
-                                  "Are you sure you want to clear all active telemetry points and buffer history?",
-                                  "Current curve data will be discarded.")) {
+                                  "Reset Pipeline Buffer",
+                                  "Are you sure you want to flush the active queue buffer?",
+                                  "All active telemetry points and cache buffers will be cleared.",
+                                  "Flush Buffer",
+                                  UiVariant::Danger)) {
             s_realtimeChart.Clear();
             s_startTime = std::chrono::steady_clock::now();
         }

@@ -6,13 +6,13 @@
 
 const char* DeviceStatus::GetDefaultStateText(DeviceState state) {
     switch (state) {
-        case DeviceState::Disconnected: return "ОТКЛЮЧЕН";
-        case DeviceState::Connecting:   return "ПОДКЛЮЧЕНИЕ";
-        case DeviceState::Idle:         return "ОЖИДАНИЕ";
-        case DeviceState::Running:      return "В РАБОТЕ";
-        case DeviceState::Paused:       return "ПАУЗА";
-        case DeviceState::Fault:        return "АВАРИЯ";
-        default:                        return "НЕИЗВЕСТНО";
+        case DeviceState::Disconnected: return "DISCONNECTED";
+        case DeviceState::Connecting:   return "CONNECTING";
+        case DeviceState::Idle:         return "READY";
+        case DeviceState::Running:      return "ONLINE";
+        case DeviceState::Paused:       return "PAUSED";
+        case DeviceState::Fault:        return "FAULT";
+        default:                        return "UNKNOWN";
     }
 }
 
@@ -159,13 +159,13 @@ bool DeviceStatus::Render(const char* deviceName,
         bool clicked = false;
         if (std::strcmp(buttonLabel, "[P]") == 0) {
             bool isConnected = (state != DeviceState::Disconnected);
-            const char* tooltip = "Подключить к прибору";
+            const char* tooltip = "Connect to device";
             ImU32 iconColor = theme.palette.accent;
             if (state == DeviceState::Connecting) {
-                tooltip = "Идёт подключение...";
+                tooltip = "Connecting...";
                 iconColor = style.colLedConnecting;
             } else if (isConnected) {
-                tooltip = "Отключить от прибора";
+                tooltip = "Disconnect from device";
                 iconColor = style.colLedFault;
             }
             clicked = ToolButton::Render("##DevPowerAction", Icon::Power, tooltip, UiVariant::Default, false, style.actionBtnSize, iconColor);

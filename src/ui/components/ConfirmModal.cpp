@@ -25,7 +25,7 @@ bool ConfirmModal::Render() {
         Label::Wrapped(m_text.c_str());
     }
     if (auto footer = modal.Footer()) {
-        if (footer.Actions(m_confirmLabel.c_str(), "Отмена", true, m_variant, Icon::None)) {
+        if (footer.Actions(m_confirmLabel.c_str(), "Cancel", true, m_variant, Icon::None)) {
             return true;
         }
     }

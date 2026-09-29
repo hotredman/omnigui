@@ -223,8 +223,8 @@ public:
             }
         }
 
-        // Стандартные кнопки «Отмена» и «Готово»
-        bool Actions(const char* confirmText = "Готово", const char* cancelText = "Отмена",
+        // Standard "Cancel" and "Done" action buttons
+        bool Actions(const char* confirmText = "Done", const char* cancelText = "Cancel",
                      bool confirmEnabled = true, UiVariant confirmVariant = UiVariant::Primary,
                      Icon::Id confirmIcon = Icon::Check) {
             if (!m_open || !m_parent) return false;

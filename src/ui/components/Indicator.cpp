@@ -7,12 +7,12 @@
 
 static const char* GetPrecisionLabel(int p) {
     switch (p) {
-        case 0: return "0 знаков (0)";
-        case 1: return "1 знак (0.0)";
-        case 2: return "2 знака (0.00)";
-        case 3: return "3 знака (0.000)";
-        case 4: return "4 знака (0.0000)";
-        case 5: return "5 знаков (0.00000)";
+        case 0: return "0 decimals (0)";
+        case 1: return "1 decimal (0.0)";
+        case 2: return "2 decimals (0.00)";
+        case 3: return "3 decimals (0.000)";
+        case 4: return "4 decimals (0.0000)";
+        case 5: return "5 decimals (0.00000)";
         default: return "";
     }
 }
@@ -293,11 +293,11 @@ void Indicator::Render(const IndicatorStyle& style) {
 
     if (m_onRenderTitleMenu) {
         RenderMenuZone("title", {labelPos, titleSize, titleFontSize, style.colTitle, 1.0f},
-                       "Нажмите ЛКМ для выбора канала", m_onRenderTitleMenu);
+                       "Click to select channel", m_onRenderTitleMenu);
     }
     drawList->AddText(titleFont, titleFontSize, labelPos, style.colTitle, m_title.c_str());
 
-    // 3. Нижняя строка: Значение (меню точности) + Единица измерения (меню единиц)
+    // 3. Bottom Row: Value (precision menu) + Unit (units menu)
     ImVec2 valPos(pos.x + padX, pos.y + padY + theme.Scale(14.0f));
     ImFont* valueFont = style.valueFont ? style.valueFont : theme.defaultFont;
     float valFontSize = theme.Scale(style.valueFontSize);
@@ -308,8 +308,8 @@ void Indicator::Render(const IndicatorStyle& style) {
 
     if (m_allowPrecisionChange) {
         RenderMenuZone("prec", {valPos, valSize, valFontSize, style.colValue, 1.5f},
-                       "Нажмите ЛКМ, чтобы выбрать число знаков", [this](ContextMenu& menu) {
-            menu.Header("ТОЧНОСТЬ (ЗНАКОВ)");
+                       "Click to select precision", [this](ContextMenu& menu) {
+            menu.Header("PRECISION (DECIMALS)");
             for (int p = 0; p <= 5; ++p) {
                 if (menu.Item(GetPrecisionLabel(p), m_precision == p) && p != m_precision) {
                     SetPrecision(p);
@@ -320,7 +320,7 @@ void Indicator::Render(const IndicatorStyle& style) {
     }
     drawList->AddText(valueFont, valFontSize, valPos, style.colValue, m_value.c_str());
 
-    // Единица измерения сразу за значением
+    // Units right after value
     ImVec2 unitPos(valPos.x + valSize.x + theme.Scale(6.0f), valPos.y + theme.Scale(16.0f));
     ImFont* unitFont = style.unitFont ? style.unitFont : theme.defaultFont;
     float unitFontSize = theme.Scale(style.unitFontSize);
@@ -329,14 +329,13 @@ void Indicator::Render(const IndicatorStyle& style) {
             unitFont->CalcTextSizeA(unitFontSize, FLT_MAX, 0.0f, m_unit.c_str()) :
             ImGui::CalcTextSize(m_unit.c_str());
         RenderMenuZone("unit", {unitPos, unitSize, unitFontSize, style.colUnit, 1.0f},
-                       "Нажмите ЛКМ для выбора единиц измерения", m_onRenderUnitMenu);
+                       "Click to select measurement units", m_onRenderUnitMenu);
     }
     drawList->AddText(unitFont, unitFontSize, unitPos, style.colUnit, m_unit.c_str());
 
-    // 4. Опциональная интерактивная квадратная кнопка тарирования/обнуления на уровне цифр
+    // 4. Optional interactive tare/zero button
     if (m_showTare) {
         float btnSize = theme.Scale(style.tareBtnSize);
-        // Размещаем кнопку на уровне цифр (нижняя строка карточки)
         float btnPosY = pos.y + height - padY - btnSize - theme.Scale(3.0f);
         ImVec2 btnPos(pos.x + width - padX - btnSize, btnPosY);
 
@@ -352,7 +351,7 @@ void Indicator::Render(const IndicatorStyle& style) {
         bool active  = ImGui::IsItemActive();
 
         if (hovered) {
-            ImGui::SetTooltip("Обнулить / Тарировать");
+            ImGui::SetTooltip("Tare / Zero Reset");
         }
 
         // 4.1. Фон квадратной кнопки

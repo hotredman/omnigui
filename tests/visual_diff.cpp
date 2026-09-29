@@ -225,55 +225,55 @@ int main(int argc, char* argv[]) {
     std::cout << " - diff_map.bmp\n\n";
 
     std::cout << "--------------------------------------------------------\n";
-    std::cout << "Результаты визуального сравнения:\n";
-    std::cout << " Всего пикселей:         " << total_pixels << " (" << width << "x" << height << ")\n";
-    std::cout << " Точные совпадения:      " << exact_match << " (" << std::fixed << std::setprecision(2) << exact_pct << "%)\n";
-    std::cout << " В пределах сглаживания: " << aa_tolerance_match << " (" << std::fixed << std::setprecision(2) << (100.0 * (double)aa_tolerance_match / (double)total_pixels) << "%)\n";
-    std::cout << " Общее соответствие:     " << (exact_match + aa_tolerance_match) << " (" << std::fixed << std::setprecision(2) << match_pct << "%)\n";
-    std::cout << " Заметные расхождения:   " << perceptible_diff << " (" << std::fixed << std::setprecision(2) << (100.0 * (double)perceptible_diff / (double)total_pixels) << "%)\n";
-    std::cout << " Среднее расхождение:    " << std::fixed << std::setprecision(2) << avg_diff << " / 255\n";
-    std::cout << " Макс. расхождение:      " << max_channel_diff << " / 255\n";
+    std::cout << "Visual Comparison Results:\n";
+    std::cout << " Total pixels:         " << total_pixels << " (" << width << "x" << height << ")\n";
+    std::cout << " Exact matches:        " << exact_match << " (" << std::fixed << std::setprecision(2) << exact_pct << "%)\n";
+    std::cout << " Within AA tolerance:  " << aa_tolerance_match << " (" << std::fixed << std::setprecision(2) << (100.0 * (double)aa_tolerance_match / (double)total_pixels) << "%)\n";
+    std::cout << " Total match score:    " << (exact_match + aa_tolerance_match) << " (" << std::fixed << std::setprecision(2) << match_pct << "%)\n";
+    std::cout << " Noticeable diffs:     " << perceptible_diff << " (" << std::fixed << std::setprecision(2) << (100.0 * (double)perceptible_diff / (double)total_pixels) << "%)\n";
+    std::cout << " Average discrepancy:  " << std::fixed << std::setprecision(2) << avg_diff << " / 255\n";
+    std::cout << " Max discrepancy:      " << max_channel_diff << " / 255\n";
     std::cout << "--------------------------------------------------------\n";
 
     // Write report to docs/discrepancies.md
     {
         std::ofstream report("docs/discrepancies.md");
         if (report) {
-            report << "# Отчёт о визуальном сравнении (Stock SDL_Renderer vs ThorVG Vector Backend)\n\n";
-            report << "## 1. Методика сравнения\n";
-            report << "- Тестовое окно: `ImGui::ShowDemoWindow()` в разрешении 1280x720.\n";
-            report << "- Захват двух кадров:\n";
-            report << "  1. Стоковый рендер ImGui (`ImGui_ImplSDLRenderer3_RenderDrawData`) через `SDL_Renderer`;\n";
-            report << "  2. Векторный рендер ThorVG (`ThorVGRenderer::RenderDrawData`) через перехват примитивов `ImDrawList`.\n";
-            report << "- Попиксельный расчёт различий по каналам RGB с допуском на разницу антиалиасинга (сглаживание контуров).\n\n";
+            report << "# Visual Comparison Report (Stock SDL_Renderer vs ThorVG Vector Backend)\n\n";
+            report << "## 1. Methodology\n";
+            report << "- Test window: `ImGui::ShowDemoWindow()` at 1280x720 resolution.\n";
+            report << "- Two-frame capture:\n";
+            report << "  1. Stock ImGui renderer (`ImGui_ImplSDLRenderer3_RenderDrawData`) via `SDL_Renderer`;\n";
+            report << "  2. Vector ThorVG renderer (`ThorVGRenderer::RenderDrawData`) via `ImDrawList` command interception.\n";
+            report << "- Per-pixel RGB delta calculation with tolerance for anti-aliasing edge softening.\n\n";
 
-            report << "## 2. Количественные результаты\n\n";
-            report << "| Метрика | Значение |\n";
+            report << "## 2. Quantitative Results\n\n";
+            report << "| Metric | Value |\n";
             report << "| :--- | :---: |\n";
-            report << "| Разрешение кадра | **" << width << " x " << height << "** (" << total_pixels << " пикс.) |\n";
-            report << "| Точное совпадение (RGB diff = 0) | **" << exact_match << "** (" << std::fixed << std::setprecision(2) << exact_pct << "%) |\n";
-            report << "| В пределах допуска сглаживания (diff <= 32) | **" << aa_tolerance_match << "** (" << std::fixed << std::setprecision(2) << (100.0 * (double)aa_tolerance_match / (double)total_pixels) << "%) |\n";
-            report << "| **Итоговое визуальное соответствие** | **" << (exact_match + aa_tolerance_match) << "** (**" << std::fixed << std::setprecision(2) << match_pct << "%**) |\n";
-            report << "| Различия за пределами допуска | **" << perceptible_diff << "** (" << std::fixed << std::setprecision(2) << (100.0 * (double)perceptible_diff / (double)total_pixels) << "%) |\n";
-            report << "| Среднее расхождение по каналам | **" << std::fixed << std::setprecision(2) << avg_diff << " / 255** |\n";
-            report << "| Максимальное расхождение | **" << max_channel_diff << " / 255** |\n\n";
+            report << "| Frame Resolution | **" << width << " x " << height << "** (" << total_pixels << " px) |\n";
+            report << "| Exact Match (RGB diff = 0) | **" << exact_match << "** (" << std::fixed << std::setprecision(2) << exact_pct << "%) |\n";
+            report << "| Within AA Tolerance (diff <= 32) | **" << aa_tolerance_match << "** (" << std::fixed << std::setprecision(2) << (100.0 * (double)aa_tolerance_match / (double)total_pixels) << "%) |\n";
+            report << "| **Total Visual Match** | **" << (exact_match + aa_tolerance_match) << "** (**" << std::fixed << std::setprecision(2) << match_pct << "%**) |\n";
+            report << "| Beyond AA Tolerance | **" << perceptible_diff << "** (" << std::fixed << std::setprecision(2) << (100.0 * (double)perceptible_diff / (double)total_pixels) << "%) |\n";
+            report << "| Average Channel Discrepancy | **" << std::fixed << std::setprecision(2) << avg_diff << " / 255** |\n";
+            report << "| Maximum Channel Discrepancy | **" << max_channel_diff << " / 255** |\n\n";
 
-            report << "## 3. Анализ расхождений\n\n";
-            report << "1. **Сглаживание контуров (Anti-Aliasing):**\n";
-            report << "   - Стоковый ImGui использует грубую 1-пиксельную триангуляционную окантовку (`_FringeScale`).\n";
-            report << "   - ThorVG выполняет качественное аналитическое векторное сглаживание контуров (sub-pixel coverage), поэтому на краях скруглённых углов окон, кнопок и кругов значения альфа-переходов заметно более плавные и визуально качественные.\n\n";
-            report << "2. **Рендеринг шрифтов:**\n";
-            report << "   - Стоковый ImGui растрирует глифы в текстурный атлас при старте с фиксированным шагом пикселей.\n";
-            report << "   - ThorVG выполняет векторный рендеринг шрифта из TrueType кривых, обеспечивая чёткие векторные контуры символов.\n\n";
-            report << "3. **Порядок отрисовки и Z-order:**\n";
-            report << "   - Все окна, таблицы, сплиттеры каналов и выпадающие списки сохраняют строгий порядок отрисовки.\n";
-            report << "   - Артефактов наложения или утери элементов интерфейса не обнаружено.\n\n";
+            report << "## 3. Discrepancy Analysis\n\n";
+            report << "1. **Anti-Aliasing:**\n";
+            report << "   - Stock ImGui uses 1-pixel triangulation fringe outlines (`_FringeScale`).\n";
+            report << "   - ThorVG performs analytical vector sub-pixel anti-aliasing coverage, producing smoother alpha gradients on rounded corners and circles.\n\n";
+            report << "2. **Font Rendering:**\n";
+            report << "   - Stock ImGui rasterizes glyphs into a texture atlas at startup with discrete pixel stepping.\n";
+            report << "   - ThorVG performs vector TrueType path rendering, preserving clean vector outlines.\n\n";
+            report << "3. **Draw Order and Z-order:**\n";
+            report << "   - All windows, tables, channel splitters, and popups preserve strict rendering order.\n";
+            report << "   - No layering or clipping artifacts detected.\n\n";
 
-            report << "## 4. Сгенерированные файлы артефактов\n";
-            report << "- `stock_render.bmp` — скриншот стокового рендерера SDL_Renderer.\n";
-            report << "- `thorvg_render.bmp` — скриншот векторного рендерера ThorVG.\n";
-            report << "- `diff_map.bmp` — цветовая карта различий (зелёный = зона AA, красный = расхождения).\n";
-            std::cout << "Отчёт успешно записан в docs/discrepancies.md\n";
+            report << "## 4. Generated Artifacts\n";
+            report << "- `stock_render.bmp` — Stock SDL_Renderer snapshot.\n";
+            report << "- `thorvg_render.bmp` — ThorVG vector renderer snapshot.\n";
+            report << "- `diff_map.bmp` — Difference color map (green = AA zone, red = discrepancy).\n";
+            std::cout << "Report successfully written to docs/discrepancies.md\n";
         }
     }
 
@@ -290,10 +290,10 @@ int main(int argc, char* argv[]) {
     SDL_Quit();
 
     if (match_pct >= 90.0) {
-        std::cout << "\n>>> [PASS] Визуальное соответствие подтверждено (" << match_pct << "% >= 90%)!\n\n";
+        std::cout << "\n>>> [PASS] Visual match confirmed (" << match_pct << "% >= 90%)!\n\n";
         return 0;
     } else {
-        std::cout << "\n>>> [WARNING] Визуальное соответствие ниже ожидаемого (" << match_pct << "% < 90%)\n\n";
+        std::cout << "\n>>> [WARNING] Visual match lower than expected (" << match_pct << "% < 90%)\n\n";
         return 1;
     }
 }

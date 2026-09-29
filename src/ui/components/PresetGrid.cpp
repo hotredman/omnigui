@@ -46,14 +46,14 @@ static bool RenderInternal(
         // Интерактивность табло: ввод пользовательского значения по клику
         ImGui::PushID(&value);
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Кликните для ввода точного значения");
+            ImGui::SetTooltip("Click to enter custom value");
         }
         if (ImGui::IsItemClicked()) {
             ImGui::OpenPopup("##CustomPresetInput");
         }
 
         if (ImGui::BeginPopup("##CustomPresetInput")) {
-            ImGui::Text("Пользовательское значение:");
+            ImGui::Text("Custom Value:");
             static float inputBuf = 0.0f;
             if (ImGui::IsWindowAppearing()) {
                 inputBuf = static_cast<float>(value);

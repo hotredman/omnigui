@@ -14,7 +14,7 @@ public:
                        const std::string& title,
                        const std::string& message,
                        const std::string& detail = "",
-                       const char* confirmBtnText = "Подтвердить",
+                       const char* confirmBtnText = "Confirm",
                        UiVariant confirmVariant = UiVariant::Danger,
                        Icon::Id confirmIcon = Icon::None)
     {
@@ -36,16 +36,16 @@ public:
                 ImGui::CloseCurrentPopup();
             }
 
-            // Заголовок
+            // Title
             ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", title.c_str());
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
 
-            // Сообщение
+            // Message
             ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "%s", message.c_str());
 
-            // Выделенная деталь (например, имя удаляемого проекта)
+            // Details
             if (!detail.empty()) {
                 ImGui::Spacing();
                 ImGui::PushStyleColor(ImGuiCol_Text, ImColor(theme.palette.accent).Value);
@@ -57,12 +57,12 @@ public:
             ImGui::Separator();
             ImGui::Spacing();
 
-            // Кнопки действий
+            // Actions
             float btnW = 110.0f * scale;
             float totalBtnsW = btnW * 2.0f + 10.0f * scale;
             ImGui::SetCursorPosX(ImGui::GetWindowWidth() - totalBtnsW - 18.0f * scale);
 
-            if (Button::Secondary("Отмена", Icon::None, UiSize::Medium, btnW / scale)) {
+            if (Button::Secondary("Cancel", Icon::None, UiSize::Medium, btnW / scale)) {
                 isOpen = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -91,7 +91,7 @@ public:
                        const std::string& title,
                        const std::string& prompt,
                        std::string& value,
-                       const char* confirmBtnText = "Подтвердить",
+                       const char* confirmBtnText = "Confirm",
                        UiVariant confirmVariant = UiVariant::Primary,
                        Icon::Id confirmIcon = Icon::None)
     {
@@ -113,17 +113,17 @@ public:
                 ImGui::CloseCurrentPopup();
             }
 
-            // Заголовок
+            // Title
             ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", title.c_str());
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
 
-            // Подсказка к полю
+            // Prompt
             ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "%s", prompt.c_str());
             ImGui::Spacing();
 
-            // Поле ввода
+            // Input field
             static char buf[256];
             if (ImGui::IsWindowAppearing()) {
                 strncpy_s(buf, sizeof(buf), value.c_str(), _TRUNCATE);
@@ -143,12 +143,12 @@ public:
             ImGui::Separator();
             ImGui::Spacing();
 
-            // Кнопки действий
+            // Actions
             float btnW = 120.0f * scale;
             float totalBtnsW = btnW * 2.0f + 10.0f * scale;
             ImGui::SetCursorPosX(ImGui::GetWindowWidth() - totalBtnsW - 18.0f * scale);
 
-            if (Button::Secondary("Отмена", Icon::None, UiSize::Medium, btnW / scale)) {
+            if (Button::Secondary("Cancel", Icon::None, UiSize::Medium, btnW / scale)) {
                 isOpen = false;
                 ImGui::CloseCurrentPopup();
             }

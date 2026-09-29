@@ -116,7 +116,7 @@ int main() {
     const float ABS_TOLERANCE_PX = 2.0f;
     const float REL_TOLERANCE_PCT = 0.03f; // 3%
 
-    std::cout << "| № | Категория / Строка | ImGui (px) | ThorVG (px) | Разница | Статус |\n";
+    std::cout << "| # | Category / String  | ImGui (px) | ThorVG (px) |  Diff   | Status |\n";
     std::cout << "|---|--------------------|:----------:|:-----------:|:-------:|:------:|\n";
 
     for (size_t i = 0; i < test_categories.size(); ++i) {
@@ -149,12 +149,12 @@ int main() {
     }
 
     std::cout << "\n--------------------------------------------------------\n";
-    std::cout << "Результаты валидации:\n";
-    std::cout << " Успешных тестов:   " << pass_count << " / " << test_categories.size()
+    std::cout << "Validation Results:\n";
+    std::cout << " Passed tests:       " << pass_count << " / " << test_categories.size()
               << " (" << (pass_count * 100 / test_categories.size()) << "%)\n";
-    std::cout << " Макс. расхождение: " << std::fixed << std::setprecision(2) << max_diff << " px\n";
-    std::cout << " Среднее расхождение: " << (sum_diff / (float)test_categories.size()) << " px\n";
-    std::cout << " Допуск:            <= " << ABS_TOLERANCE_PX << " px или <= " << (REL_TOLERANCE_PCT * 100.0f) << "%\n";
+    std::cout << " Max discrepancy:    " << std::fixed << std::setprecision(2) << max_diff << " px\n";
+    std::cout << " Avg discrepancy:    " << (sum_diff / (float)test_categories.size()) << " px\n";
+    std::cout << " Tolerance:          <= " << ABS_TOLERANCE_PX << " px or <= " << (REL_TOLERANCE_PCT * 100.0f) << "%\n";
     std::cout << "--------------------------------------------------------\n";
 
     // Clean up
@@ -164,10 +164,10 @@ int main() {
 
     bool all_passed = (pass_count == (int)test_categories.size());
     if (all_passed) {
-        std::cout << "\n>>> [PASS] Единый источник метрик подтверждён! Текстовые метрики согласованы.\n\n";
+        std::cout << "\n>>> [PASS] Single source of text metrics confirmed! Font metrics aligned.\n\n";
         return 0;
     } else {
-        std::cout << "\n>>> [WARNING] Имеются небольшие расхождения метрик (> допуска).\n\n";
+        std::cout << "\n>>> [WARNING] Minor text metric discrepancy detected (> tolerance).\n\n";
         return 1;
     }
 }

@@ -28,27 +28,27 @@ void RealtimeChart::SetAxisPair(RealtimeAxisPair pair) {
 void RealtimeChart::UpdateAxisLabels() {
     switch (m_axisPair) {
         case RealtimeAxisPair::Force_Displacement:
-            m_xLabel = "Перемещение траверсы ΔL";
+            m_xLabel = "Displacement ΔL";
             m_xUnit  = Units::Label(PhysicalUnit::Mm);
-            m_yLabel = "Нагрузка F";
+            m_yLabel = "Load F";
             m_yUnit  = Units::Label(PhysicalUnit::KN);
             break;
         case RealtimeAxisPair::Force_Time:
-            m_xLabel = "Время испытания t";
+            m_xLabel = "Elapsed Time t";
             m_xUnit  = Units::Label(PhysicalUnit::S);
-            m_yLabel = "Нагрузка F";
+            m_yLabel = "Load F";
             m_yUnit  = Units::Label(PhysicalUnit::KN);
             break;
         case RealtimeAxisPair::Displacement_Time:
-            m_xLabel = "Время испытания t";
+            m_xLabel = "Elapsed Time t";
             m_xUnit  = Units::Label(PhysicalUnit::S);
-            m_yLabel = "Перемещение траверсы ΔL";
+            m_yLabel = "Displacement ΔL";
             m_yUnit  = Units::Label(PhysicalUnit::Mm);
             break;
         case RealtimeAxisPair::Force_Extensometer:
-            m_xLabel = "Экстензометр ΔL_ext";
+            m_xLabel = "Extensometer ΔL_ext";
             m_xUnit  = Units::Label(PhysicalUnit::Mm);
-            m_yLabel = "Нагрузка F";
+            m_yLabel = "Load F";
             m_yUnit  = Units::Label(PhysicalUnit::KN);
             break;
     }
@@ -230,7 +230,7 @@ void RealtimeChart::Render(const char* strId, ImVec2 size) {
     dl->PushClipRect(proj.plotMin, proj.plotMax, true);
 
     if (m_points.empty()) {
-        const char* emptyMsg = "Ожидание запуска испытания...";
+        const char* emptyMsg = "Waiting for telemetry stream...";
         ImVec2 msgSz = ImGui::CalcTextSize(emptyMsg);
         ImVec2 msgPos(proj.plotMin.x + (proj.plotWidth - msgSz.x) * 0.5f,
                       proj.plotMin.y + (proj.plotHeight - msgSz.y) * 0.5f);

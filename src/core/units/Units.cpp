@@ -18,47 +18,47 @@ struct UnitInfo {
     double scaleToBase;  // value_base = value * scaleToBase
 };
 
-// Порядок строк — порядок PhysicalUnit
+// Unit table — ordered by PhysicalUnit
 constexpr UnitInfo kUnits[] = {
-    {PhysicalUnit::N, "N", "Н", UnitCategory::Force, 1.0},
-    {PhysicalUnit::KN, "kN", "кН", UnitCategory::Force, 1000.0},
-    {PhysicalUnit::Kgf, "kgf", "кгс", UnitCategory::Force, 9.80665},
+    {PhysicalUnit::N, "N", "N", UnitCategory::Force, 1.0},
+    {PhysicalUnit::KN, "kN", "kN", UnitCategory::Force, 1000.0},
+    {PhysicalUnit::Kgf, "kgf", "kgf", UnitCategory::Force, 9.80665},
     {PhysicalUnit::Lbf, "lbf", "lbf", UnitCategory::Force, 4.44822},
 
-    {PhysicalUnit::MPa, "MPa", "МПа", UnitCategory::Stress, 1.0},
-    {PhysicalUnit::NMm2, "N_mm2", "Н/мм²", UnitCategory::Stress, 1.0},
-    {PhysicalUnit::GPa, "GPa", "ГПа", UnitCategory::Stress, 1000.0},
-    {PhysicalUnit::KPa, "kPa", "кПа", UnitCategory::Stress, 0.001},
-    {PhysicalUnit::Bar, "bar", "бар", UnitCategory::Stress, 0.1},
-    {PhysicalUnit::KgfMm2, "kgf_mm2", "кгс/мм²", UnitCategory::Stress, 9.80665},
-    {PhysicalUnit::KgfCm2, "kgf_cm2", "кгс/см²", UnitCategory::Stress, 0.0980665},
+    {PhysicalUnit::MPa, "MPa", "MPa", UnitCategory::Stress, 1.0},
+    {PhysicalUnit::NMm2, "N_mm2", "N/mm²", UnitCategory::Stress, 1.0},
+    {PhysicalUnit::GPa, "GPa", "GPa", UnitCategory::Stress, 1000.0},
+    {PhysicalUnit::KPa, "kPa", "kPa", UnitCategory::Stress, 0.001},
+    {PhysicalUnit::Bar, "bar", "bar", UnitCategory::Stress, 0.1},
+    {PhysicalUnit::KgfMm2, "kgf_mm2", "kgf/mm²", UnitCategory::Stress, 9.80665},
+    {PhysicalUnit::KgfCm2, "kgf_cm2", "kgf/cm²", UnitCategory::Stress, 0.0980665},
     {PhysicalUnit::Psi, "psi", "psi", UnitCategory::Stress, 0.00689476},
 
     {PhysicalUnit::Percent, "percent", "%", UnitCategory::Strain, 1.0},
-    {PhysicalUnit::Ratio, "ratio", "доли", UnitCategory::Strain, 100.0},
+    {PhysicalUnit::Ratio, "ratio", "ratio", UnitCategory::Strain, 100.0},
     {PhysicalUnit::Permille, "permille", "‰", UnitCategory::Strain, 0.1},
 
-    {PhysicalUnit::Mm, "mm", "мм", UnitCategory::Length, 1.0},
-    {PhysicalUnit::Um, "um", "мкм", UnitCategory::Length, 0.001},
-    {PhysicalUnit::Cm, "cm", "см", UnitCategory::Length, 10.0},
-    {PhysicalUnit::M, "m", "м", UnitCategory::Length, 1000.0},
+    {PhysicalUnit::Mm, "mm", "mm", UnitCategory::Length, 1.0},
+    {PhysicalUnit::Um, "um", "µm", UnitCategory::Length, 0.001},
+    {PhysicalUnit::Cm, "cm", "cm", UnitCategory::Length, 10.0},
+    {PhysicalUnit::M, "m", "m", UnitCategory::Length, 1000.0},
 
-    {PhysicalUnit::Mm2, "mm2", "мм²", UnitCategory::Area, 1.0},
-    {PhysicalUnit::Cm2, "cm2", "см²", UnitCategory::Area, 100.0},
-    {PhysicalUnit::M2, "m2", "м²", UnitCategory::Area, 1000000.0},
+    {PhysicalUnit::Mm2, "mm2", "mm²", UnitCategory::Area, 1.0},
+    {PhysicalUnit::Cm2, "cm2", "cm²", UnitCategory::Area, 100.0},
+    {PhysicalUnit::M2, "m2", "m²", UnitCategory::Area, 1000000.0},
 
-    {PhysicalUnit::J, "J", "Дж", UnitCategory::Energy, 1.0},
-    {PhysicalUnit::KJ, "kJ", "кДж", UnitCategory::Energy, 1000.0},
-    {PhysicalUnit::NM, "N_m", "Н·м", UnitCategory::Energy, 1.0},
+    {PhysicalUnit::J, "J", "J", UnitCategory::Energy, 1.0},
+    {PhysicalUnit::KJ, "kJ", "kJ", UnitCategory::Energy, 1000.0},
+    {PhysicalUnit::NM, "N_m", "N·m", UnitCategory::Energy, 1.0},
 
-    {PhysicalUnit::MmMin, "mm_min", "мм/мин", UnitCategory::Speed, 1.0},
-    {PhysicalUnit::MmS, "mm_s", "мм/с", UnitCategory::Speed, 60.0},
-    {PhysicalUnit::MS, "m_s", "м/с", UnitCategory::Speed, 60000.0},
+    {PhysicalUnit::MmMin, "mm_min", "mm/min", UnitCategory::Speed, 1.0},
+    {PhysicalUnit::MmS, "mm_s", "mm/s", UnitCategory::Speed, 60.0},
+    {PhysicalUnit::MS, "m_s", "m/s", UnitCategory::Speed, 60000.0},
 
-    {PhysicalUnit::S, "s", "с", UnitCategory::Time, 1.0},
-    {PhysicalUnit::Min, "min", "мин", UnitCategory::Time, 60.0},
-    {PhysicalUnit::Ms, "ms", "мс", UnitCategory::Time, 0.001},
-    {PhysicalUnit::H, "h", "ч", UnitCategory::Time, 3600.0},
+    {PhysicalUnit::S, "s", "s", UnitCategory::Time, 1.0},
+    {PhysicalUnit::Min, "min", "min", UnitCategory::Time, 60.0},
+    {PhysicalUnit::Ms, "ms", "ms", UnitCategory::Time, 0.001},
+    {PhysicalUnit::H, "h", "h", UnitCategory::Time, 3600.0},
 
     {PhysicalUnit::C, "C", "°C", UnitCategory::Temperature, 1.0},
 
@@ -66,7 +66,7 @@ constexpr UnitInfo kUnits[] = {
 };
 constexpr size_t kUnitCount = sizeof(kUnits) / sizeof(kUnits[0]);
 static_assert(kUnitCount == static_cast<size_t>(PhysicalUnit::None) + 1,
-              "kUnits: размер не равен числу элементов PhysicalUnit");
+              "kUnits: size mismatch with PhysicalUnit");
 
 struct CategoryInfo {
     UnitCategory category;
@@ -75,20 +75,20 @@ struct CategoryInfo {
 };
 
 constexpr CategoryInfo kCategories[] = {
-    {UnitCategory::Force, "Сила / Нагрузка", PhysicalUnit::N},
-    {UnitCategory::Stress, "Напряжение / Давление", PhysicalUnit::MPa},
-    {UnitCategory::Strain, "Деформация / Удлинение", PhysicalUnit::Percent},
-    {UnitCategory::Length, "Длина / Перемещение", PhysicalUnit::Mm},
-    {UnitCategory::Area, "Площадь сечения", PhysicalUnit::Mm2},
-    {UnitCategory::Energy, "Энергия / Работа", PhysicalUnit::J},
-    {UnitCategory::Speed, "Скорость перемещения", PhysicalUnit::MmMin},
-    {UnitCategory::Time, "Время", PhysicalUnit::S},
-    {UnitCategory::Temperature, "Температура", PhysicalUnit::C},
-    {UnitCategory::Dimensionless, "Безразмерная величина", PhysicalUnit::None},
+    {UnitCategory::Force, "Force / Load", PhysicalUnit::N},
+    {UnitCategory::Stress, "Stress / Pressure", PhysicalUnit::MPa},
+    {UnitCategory::Strain, "Strain / Elongation", PhysicalUnit::Percent},
+    {UnitCategory::Length, "Length / Displacement", PhysicalUnit::Mm},
+    {UnitCategory::Area, "Cross-Section Area", PhysicalUnit::Mm2},
+    {UnitCategory::Energy, "Energy / Work", PhysicalUnit::J},
+    {UnitCategory::Speed, "Velocity / Speed", PhysicalUnit::MmMin},
+    {UnitCategory::Time, "Time", PhysicalUnit::S},
+    {UnitCategory::Temperature, "Temperature", PhysicalUnit::C},
+    {UnitCategory::Dimensionless, "Dimensionless", PhysicalUnit::None},
 };
 constexpr size_t kCategoryCount = sizeof(kCategories) / sizeof(kCategories[0]);
 static_assert(kCategoryCount == static_cast<size_t>(UnitCategory::Dimensionless) + 1,
-              "kCategories: размер не равен числу элементов UnitCategory");
+              "kCategories: size mismatch with UnitCategory");
 
 constexpr bool TablesInEnumOrder() {
     for (size_t i = 0; i < kUnitCount; ++i)
@@ -97,7 +97,7 @@ constexpr bool TablesInEnumOrder() {
         if (static_cast<size_t>(kCategories[i].category) != i) return false;
     return true;
 }
-static_assert(TablesInEnumOrder(), "Таблицы единиц и категорий должны следовать в порядке перечислений");
+static_assert(TablesInEnumOrder(), "Tables must follow enum sequence");
 
 const UnitInfo& Info(PhysicalUnit unit) { return kUnits[static_cast<size_t>(unit)]; }
 const CategoryInfo& Info(UnitCategory category) { return kCategories[static_cast<size_t>(category)]; }
@@ -166,7 +166,7 @@ void to_json(nlohmann::json& j, PhysicalUnit unit) { j = Units::Key(unit); }
 void from_json(const nlohmann::json& j, PhysicalUnit& unit) {
     const std::optional<PhysicalUnit> parsed =
         j.is_string() ? Units::FromKey(j.get_ref<const std::string&>()) : std::nullopt;
-    if (!parsed) throw std::invalid_argument("Неизвестная единица измерения: " + j.dump());
+    if (!parsed) throw std::invalid_argument("Unknown physical unit: " + j.dump());
     unit = *parsed;
 }
 #endif

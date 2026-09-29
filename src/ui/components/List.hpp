@@ -40,8 +40,8 @@ public:
                 ImU32 iconColor = 0,
                 float height = 0.0f);
 
-    // Отображение пустого состояния
-    void Empty(const char* message = "Список пуст", const char* detail = nullptr);
+    // Empty state display
+    void Empty(const char* message = "List is empty", const char* detail = nullptr);
 
     // Тонкий горизонтальный разделитель
     void Separator();

@@ -123,7 +123,7 @@ bool EditableLabel::Render(const char* id, std::string& value, float width, ImFo
         bool btnHovered = ImGui::IsMouseHoveringRect(btnMin, btnMax);
         if (btnHovered) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetTooltip(onDefaultValue ? "Подставить имя по умолчанию" : "Сохранить");
+            ImGui::SetTooltip(onDefaultValue ? "Reset to default name" : "Save");
         }
 
         bool btnClicked = btnHovered && ImGui::IsMouseClicked(0);

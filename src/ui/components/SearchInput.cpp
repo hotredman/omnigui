@@ -36,7 +36,7 @@ bool SearchInput::Render(const char* id, std::string& query, const char* hint, f
     strncpy_s(buf, sizeof(buf), query.c_str(), _TRUNCATE);
 
     bool changed = false;
-    if (ImGui::InputTextWithHint("##input", hint ? hint : "Поиск...", buf, sizeof(buf))) {
+    if (ImGui::InputTextWithHint("##input", hint ? hint : "Search...", buf, sizeof(buf))) {
         query = buf;
         changed = true;
     }
@@ -46,10 +46,10 @@ bool SearchInput::Render(const char* id, std::string& query, const char* hint, f
     ImGui::PopStyleVar(2);
     ImGui::PopItemWidth();
 
-    // 2. Кнопка быстрой очистки запроса
+    // 2. Clear query toolbutton
     if (hasClearBtn) {
         ImGui::SameLine(0.0f, theme.Scale(4.0f));
-        if (ToolButton::Render("##clear", Icon::Close, size, UiVariant::Default, "Очистить поиск")) {
+        if (ToolButton::Render("##clear", Icon::Close, size, UiVariant::Default, "Clear search")) {
             query.clear();
             changed = true;
         }
