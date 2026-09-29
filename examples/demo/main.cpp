@@ -29,6 +29,7 @@
 #include "imgui_ext/renderer.h"
 #include "imgui_ext/oscilloscope.h"
 #include "imgui_dom/imgui_dom.h"
+#include "OmniKitShowcase.hpp"
 
 struct PerformanceMetrics {
     double cpu_usage_percent = 0.0;
@@ -742,18 +743,36 @@ int main(int argc, char* argv[]) {
         float demo_w = total_w - demo_x - pad;
         float demo_h = total_h - pad * 2.0f;
 
-        // 1. Show standard ImGui Demo (top-right)
+        static bool show_omnikit_showcase = true;
+        static bool show_standard_demo = false;
+        static bool show_oscilloscope = false;
+
         float half_h = (demo_h - pad) * 0.48f;
         float osc_h = demo_h - half_h - pad;
 
-        ImGui::SetNextWindowPos(ImVec2(demo_x, pad), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(demo_w, half_h), ImGuiCond_FirstUseEver);
-        ImGui::ShowDemoWindow();
+        // 1. OmniKit Component Library Showcase
+        if (show_omnikit_showcase) {
+            ImGui::SetNextWindowPos(ImVec2(demo_x, pad), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(demo_w, demo_h), ImGuiCond_FirstUseEver);
+            if (ImGui::Begin("OmniKit Component Suite (Design System & Widgets)", &show_omnikit_showcase)) {
+                OmniKitShowcase::RenderUI(main_scale);
+            }
+            ImGui::End();
+        }
 
-        // 2. Real-Time Oscilloscope Widget with LTTB (bottom-right)
-        ImGui::SetNextWindowPos(ImVec2(demo_x, pad + half_h + pad), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(demo_w, osc_h), ImGuiCond_FirstUseEver);
-        oscilloscope.RenderUI();
+        // 2. Standard ImGui Demo
+        if (show_standard_demo) {
+            ImGui::SetNextWindowPos(ImVec2(demo_x, pad), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(demo_w * 0.6f, half_h), ImGuiCond_FirstUseEver);
+            ImGui::ShowDemoWindow(&show_standard_demo);
+        }
+
+        // 3. Real-Time Oscilloscope Widget with LTTB
+        if (show_oscilloscope) {
+            ImGui::SetNextWindowPos(ImVec2(demo_x, pad + half_h + pad), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(demo_w * 0.6f, osc_h), ImGuiCond_FirstUseEver);
+            oscilloscope.RenderUI();
+        }
 
         // 2. Metrics & Benchmark HUD
         {
@@ -827,6 +846,12 @@ int main(int argc, char* argv[]) {
                         ImGuiExt::NotifyTextureUpdated();
                     }
                     ImGuiDom::SetItemTooltip("Forces texture cache invalidation and redraw");
+
+                    ImGuiDom::Separator();
+                    ImGuiDom::Text("Showcase Windows:");
+                    ImGuiDom::Checkbox("OmniKit Component Suite", &show_omnikit_showcase);
+                    ImGuiDom::Checkbox("Standard Dear ImGui Demo", &show_standard_demo);
+                    ImGuiDom::Checkbox("Hardware Oscilloscope", &show_oscilloscope);
 
                     ImGuiDom::EndTabItem();
                 }

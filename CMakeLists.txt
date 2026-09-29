@@ -27,6 +27,7 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui_widgets.cpp
     ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
     ${IMGUI_DIR}/backends/imgui_impl_sdlrenderer3.cpp
+    ${IMGUI_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 
 add_library(imgui STATIC ${IMGUI_SOURCES})
@@ -46,7 +47,56 @@ if (NOT EMSCRIPTEN)
     find_package(Threads REQUIRED)
 endif()
 
-# --- OmniGUI Library (Recorder + Renderer + DOM Backend) ---
+# --- OmniKit: Modern High-Level UI Component Library & Design System ---
+set(OMNIKIT_SOURCES
+    src/core/Assets.cpp
+    src/core/units/Units.cpp
+    src/ui/components/Badge.cpp
+    src/ui/components/Button.cpp
+    src/ui/components/Card.cpp
+    src/ui/components/Carousel.cpp
+    src/ui/components/Combo.cpp
+    src/ui/components/ConfirmModal.cpp
+    src/ui/components/ContentArea.cpp
+    src/ui/components/ContextMenu.cpp
+    src/ui/components/DeviceStatus.cpp
+    src/ui/components/DisabledScope.cpp
+    src/ui/components/EditableLabel.cpp
+    src/ui/components/FilterBar.cpp
+    src/ui/components/FlowLayout.cpp
+    src/ui/components/GridLayout.cpp
+    src/ui/components/Header.cpp
+    src/ui/components/Icon.cpp
+    src/ui/components/Indicator.cpp
+    src/ui/components/InputField.cpp
+    src/ui/components/ItemRow.cpp
+    src/ui/components/Label.cpp
+    src/ui/components/List.cpp
+    src/ui/components/PresetGrid.cpp
+    src/ui/components/SearchInput.cpp
+    src/ui/components/Sidebar.cpp
+    src/ui/components/SidebarMenu.cpp
+    src/ui/components/SidePanel.cpp
+    src/ui/components/StatusBar.cpp
+    src/ui/components/TabBar.cpp
+    src/ui/components/Tag.cpp
+    src/ui/components/ThemePalette.cpp
+    src/ui/components/Toggle.cpp
+    src/ui/components/Toolbar.cpp
+    src/ui/components/ToolButton.cpp
+    src/ui/components/UiTheme.cpp
+    src/ui/components/ValueDisplay.cpp
+    src/ui/components/charts/AnalysisChart.cpp
+    src/ui/components/charts/ChartCore.cpp
+    src/ui/components/charts/Decimate.cpp
+    src/ui/components/charts/RealtimeChart.cpp
+)
+
+add_library(omnikit STATIC ${OMNIKIT_SOURCES})
+target_include_directories(omnikit PUBLIC src)
+target_link_libraries(omnikit PUBLIC imgui)
+
+# --- OmniGUI Library (Recorder + Renderer + DOM Backend + OmniKit) ---
 add_library(omnigui STATIC
     src/imgui_ext/recorder.cpp
     src/imgui_ext/renderer_thorvg.cpp
@@ -60,7 +110,7 @@ target_include_directories(omnigui PUBLIC
     src
     third_party/httplib
 )
-target_link_libraries(omnigui PUBLIC imgui thorvg)
+target_link_libraries(omnigui PUBLIC imgui thorvg omnikit)
 if (NOT EMSCRIPTEN)
     target_link_libraries(omnigui PUBLIC Threads::Threads)
 endif()
@@ -75,6 +125,7 @@ if (NOT EMSCRIPTEN)
     # --- Desktop Demo Executable ---
     add_executable(demo
         examples/demo/main.cpp
+        examples/demo/OmniKitShowcase.cpp
     )
     target_link_libraries(demo PRIVATE imthorgui)
 
@@ -139,7 +190,10 @@ else()
     )
 
     # 1. Target: demo_thorvg.html (ImGui + ThorVG Vector in WebGL Canvas)
-    add_executable(demo_thorvg examples/demo/main.cpp)
+    add_executable(demo_thorvg
+        examples/demo/main.cpp
+        examples/demo/OmniKitShowcase.cpp
+    )
     target_compile_definitions(demo_thorvg PRIVATE OMNI_BUILD_WASM_THORVG=1)
     target_link_libraries(demo_thorvg PRIVATE imthorgui)
     set_target_properties(demo_thorvg PROPERTIES
@@ -148,7 +202,10 @@ else()
     )
 
     # 2. Target: demo_sdl.html (ImGui + Standard SDL3 in WebGL Canvas)
-    add_executable(demo_sdl examples/demo/main.cpp)
+    add_executable(demo_sdl
+        examples/demo/main.cpp
+        examples/demo/OmniKitShowcase.cpp
+    )
     target_compile_definitions(demo_sdl PRIVATE OMNI_BUILD_WASM_SDL=1)
     target_link_libraries(demo_sdl PRIVATE imthorgui)
     set_target_properties(demo_sdl PROPERTIES
@@ -161,7 +218,10 @@ else()
         ${COMMON_WASM_FLAGS}
         "--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/web/shell_dom.html"
     )
-    add_executable(demo_dom examples/demo/main.cpp)
+    add_executable(demo_dom
+        examples/demo/main.cpp
+        examples/demo/OmniKitShowcase.cpp
+    )
     target_compile_definitions(demo_dom PRIVATE OMNI_BUILD_WASM_DOM=1)
     target_link_libraries(demo_dom PRIVATE imthorgui)
     set_target_properties(demo_dom PROPERTIES
