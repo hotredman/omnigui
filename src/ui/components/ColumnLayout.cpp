@@ -1,36 +1,37 @@
-#include "ui/components/FlowLayout.hpp"
+#include "ui/components/ColumnLayout.hpp"
 #include "ui/components/UiTheme.hpp"
 #include <imgui.h>
 #include <cmath>
 #include <algorithm>
 
-thread_local float FlowLayout::s_currentColumnWidth = 0.0f;
+thread_local float ColumnLayout::s_currentColumnWidth = 0.0f;
 
-FlowLayout::ColumnScope::~ColumnScope() {
-    if (m_parent && m_active) {
+ColumnLayout::ColumnScope::~ColumnScope() {
+    if (m_parent && m_open) {
         m_parent->EndCol();
     }
 }
 
-void FlowLayout::ColumnScope::AlignWithInput() {
+void ColumnLayout::ColumnScope::AlignWithInput() {
     const UiTheme& theme = UiTheme::Get();
     float labelH = ImGui::GetTextLineHeight() + theme.Scale(theme.input.labelSpacing);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + labelH);
 }
 
-void FlowLayout::ColumnScope::RightAlign(float itemWidth) {
+void ColumnLayout::ColumnScope::RightAlign(float itemWidth) {
     if (m_width > itemWidth) {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (m_width - itemWidth));
     }
 }
 
-FlowLayout::FlowLayout(float availableWidth, float columnSpacing, float rowSpacing) {
+ColumnLayout::ColumnLayout(const ColumnLayoutOptions& options) {
+    m_open = true;
     const UiTheme& theme = UiTheme::Get();
-    m_columnSpacing = (columnSpacing >= 0.0f) ? columnSpacing : theme.SpacingLarge();
-    m_rowSpacing = (rowSpacing >= 0.0f) ? rowSpacing : theme.CardRowSpacing();
+    m_columnSpacing = (options.columnGap >= 0.0f) ? theme.Scale(options.columnGap) : theme.SpacingLarge();
+    m_rowSpacing = (options.rowGap >= 0.0f) ? theme.Scale(options.rowGap) : theme.CardRowSpacing();
 
-    if (availableWidth > 0.0f) {
-        m_totalAvailWidth = availableWidth;
+    if (options.widthPx > 0.0f) {
+        m_totalAvailWidth = options.widthPx;
     } else {
         float avail = ImGui::GetContentRegionAvail().x;
         m_totalAvailWidth = (avail > 0.0f) ? avail : 100.0f;
@@ -38,52 +39,13 @@ FlowLayout::FlowLayout(float availableWidth, float columnSpacing, float rowSpaci
     m_rowAvailWidth = m_totalAvailWidth;
 }
 
-FlowLayout::~FlowLayout() {
+ColumnLayout::~ColumnLayout() {
     if (m_colOpen) {
         EndCol();
     }
 }
 
-FlowLayout::FlowLayout(FlowLayout&& other) noexcept
-    : m_totalAvailWidth(other.m_totalAvailWidth)
-    , m_rowAvailWidth(other.m_rowAvailWidth)
-    , m_columnSpacing(other.m_columnSpacing)
-    , m_rowSpacing(other.m_rowSpacing)
-    , m_rowSpanUsed(other.m_rowSpanUsed)
-    , m_colIndexInRow(other.m_colIndexInRow)
-    , m_accumulatedWidth(other.m_accumulatedWidth)
-    , m_activeSpan(other.m_activeSpan)
-    , m_activeWidth(other.m_activeWidth)
-    , m_colOpen(other.m_colOpen)
-    , m_needsNewRowSpacing(other.m_needsNewRowSpacing)
-    , m_presetSpans(std::move(other.m_presetSpans))
-{
-    other.m_colOpen = false;
-}
-
-FlowLayout& FlowLayout::operator=(FlowLayout&& other) noexcept {
-    if (this != &other) {
-        if (m_colOpen) {
-            EndCol();
-        }
-        m_totalAvailWidth = other.m_totalAvailWidth;
-        m_rowAvailWidth = other.m_rowAvailWidth;
-        m_columnSpacing = other.m_columnSpacing;
-        m_rowSpacing = other.m_rowSpacing;
-        m_rowSpanUsed = other.m_rowSpanUsed;
-        m_colIndexInRow = other.m_colIndexInRow;
-        m_accumulatedWidth = other.m_accumulatedWidth;
-        m_activeSpan = other.m_activeSpan;
-        m_activeWidth = other.m_activeWidth;
-        m_colOpen = other.m_colOpen;
-        m_needsNewRowSpacing = other.m_needsNewRowSpacing;
-        m_presetSpans = std::move(other.m_presetSpans);
-        other.m_colOpen = false;
-    }
-    return *this;
-}
-
-float FlowLayout::CalculateSpanWidth(int span) const {
+float ColumnLayout::CalculateSpanWidth(int span) const {
     span = std::clamp(span, 1, 12);
     if (span == 12) {
         return m_rowAvailWidth;
@@ -93,16 +55,16 @@ float FlowLayout::CalculateSpanWidth(int span) const {
     return std::max(20.0f, static_cast<float>(std::floor(width)));
 }
 
-float FlowLayout::CurrentColumnWidth() {
+float ColumnLayout::CurrentColumnWidth() {
     return s_currentColumnWidth;
 }
 
-FlowLayout::ColumnScope FlowLayout::Col(::Col col) {
+ColumnLayout::ColumnScope ColumnLayout::Col(::Col col) {
     bool ok = BeginCol(col);
     return ColumnScope(this, s_currentColumnWidth, ok);
 }
 
-bool FlowLayout::BeginCol(::Col col) {
+bool ColumnLayout::BeginCol(::Col col) {
     int span = std::clamp(col.span, 1, 12);
 
     if (m_colOpen) {
@@ -154,7 +116,7 @@ bool FlowLayout::BeginCol(::Col col) {
     return true;
 }
 
-void FlowLayout::EndCol() {
+void ColumnLayout::EndCol() {
     if (!m_colOpen) {
         return;
     }
@@ -176,11 +138,7 @@ void FlowLayout::EndCol() {
     }
 }
 
-void FlowLayout::VerticalGap() {
-    ImGui::Spacing();
-}
-
-void FlowLayout::NextRow() {
+void ColumnLayout::NextRow() {
     if (m_colOpen) {
         EndCol();
     }
@@ -188,35 +146,4 @@ void FlowLayout::NextRow() {
     m_accumulatedWidth = 0.0f;
     m_colIndexInRow = 0;
     m_needsNewRowSpacing = true;
-}
-
-FlowLayout FlowLayout::Columns2(float spacing) {
-    FlowLayout layout(0.0f, spacing);
-    layout.m_presetSpans = { 6, 6 };
-    return layout;
-}
-
-FlowLayout FlowLayout::Columns3(float spacing) {
-    FlowLayout layout(0.0f, spacing);
-    layout.m_presetSpans = { 4, 4, 4 };
-    return layout;
-}
-
-FlowLayout FlowLayout::Columns4(float spacing) {
-    FlowLayout layout(0.0f, spacing);
-    layout.m_presetSpans = { 3, 3, 3, 3 };
-    return layout;
-}
-
-FlowLayout FlowLayout::Split(int spanLeft, int spanRight, float spacing) {
-    FlowLayout layout(0.0f, spacing);
-    layout.m_presetSpans = { spanLeft, spanRight };
-    return layout;
-}
-
-bool FlowLayout::BeginColumn(int columnIndex) {
-    if (columnIndex < 0 || columnIndex >= static_cast<int>(m_presetSpans.size())) {
-        return false;
-    }
-    return BeginCol(::Col(m_presetSpans[columnIndex]));
 }

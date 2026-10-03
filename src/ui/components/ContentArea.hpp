@@ -10,15 +10,22 @@
 // и StatusBar:
 //
 //     if (auto content = ContentArea()) { ... }
+// Геометрия области содержимого (итоговые px); значение < 0 берётся по умолчанию:
+//
+//     ContentArea({.posXPx = 200, .widthPx = 800});
+struct ContentAreaOptions {
+    float                   posXPx   = -1.0f;
+    float                   posYPx   = -1.0f;
+    float                   widthPx  = -1.0f;
+    float                   heightPx = -1.0f;
+    const ContentAreaStyle* style    = nullptr;   // оверрайд стиля; nullptr — из темы
+};
+
 class ContentArea : public Scope {
 public:
     // Геометрия каркаса: posX = SidebarWidth, posY = HeaderHeight + TopBarHeight,
     // размер до нижнего правого угла (над строкой состояния)
-    explicit ContentArea(const ContentAreaStyle* customStyle = nullptr);
-
-    // Произвольная геометрия; значения < 0 берутся из каркаса
-    ContentArea(float posX, float posY, float width, float height,
-                const ContentAreaStyle* customStyle = nullptr);
+    explicit ContentArea(const ContentAreaOptions& options = {});
 
     ~ContentArea();
 

@@ -10,7 +10,7 @@
 #include <type_traits>
 
 #include "ui/components/Scope.hpp"
-#include "ui/components/FlowLayout.hpp"
+#include "ui/components/ColumnLayout.hpp"
 #include "ui/components/UiTheme.hpp"
 #include "ui/components/Icon.hpp"
 #include "ui/components/PresetGrid.hpp"

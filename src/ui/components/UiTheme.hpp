@@ -64,7 +64,6 @@ struct SemanticStyle {
 struct TabBarStyle {
     ImFont* font           = nullptr; // Шрифт вкладок
     float fontSize         = 20.0f;   // Базовый размер шрифта вкладок (20pt Medium)
-    float height           = 38.0f;   // Базовая высота вкладки (компактная, без лишнего воздуха)
     float itemSpacing      = 6.0f;    // Базовый зазор между вкладками по горизонтали
     float separatorGapTop  = 4.0f;    // Зазор от низа табов до линии разделителя
     float separatorGapBottom = 6.0f;  // Зазор от линии разделителя до контента
@@ -371,11 +370,9 @@ struct ContextMenuStyle {
 // Стиль селектора пресетов со встроенным табло (PresetGrid)
 struct PresetGridStyle {
     // Геометрия и компоновка
-    float displayHeight       = 38.0f;  // Базовая высота информационного табло
     float displaySpacing      = 0.0f;   // Дополнительный отступ от табло до матрицы кнопок (по умолчанию 0, единый зазор rowSpacing)
     float displayRounding     = 8.0f;   // Радиус скругления табло (гармонирует с Card)
 
-    float btnHeight           = 34.0f;  // Высота кнопок пресетов (аккуратные, соразмерные клавиши)
     float btnRounding         = 6.0f;   // Радиус скругления кнопок пресетов
     float colSpacing          = 6.0f;   // Горизонтальный зазор между кнопками в ряду
     float rowSpacing          = 6.0f;   // Вертикальный зазор между рядами кнопок
@@ -716,8 +713,6 @@ public:
     float CornerRadius() const { return Scale(card.cornerRadius); }
     float IndicatorWidth() const { return Scale(indicator.width); }
     float IndicatorHeight() const { return Scale(indicator.height); }
-    float TabHeight() const { return Scale(tab.height); }
-    void SetTabHeight(float h) { tab.height = h; }
     float CardRowSpacing() const { return Scale(card.rowSpacing); }
     void SetCardRowSpacing(float s) { card.rowSpacing = s; }
     float FieldLabelSpacing() const { return Scale(input.labelSpacing); }

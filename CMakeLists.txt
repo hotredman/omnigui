@@ -63,7 +63,7 @@ set(OMNIKIT_SOURCES
     src/ui/components/DisabledScope.cpp
     src/ui/components/EditableLabel.cpp
     src/ui/components/FilterBar.cpp
-    src/ui/components/FlowLayout.cpp
+    src/ui/components/ColumnLayout.cpp
     src/ui/components/GridLayout.cpp
     src/ui/components/Bar.cpp
     src/ui/components/Header.cpp

@@ -10,7 +10,7 @@
 #include "ui/components/Icon.hpp"
 
 // Layout Containers
-#include "ui/components/FlowLayout.hpp"
+#include "ui/components/ColumnLayout.hpp"
 #include "ui/components/GridLayout.hpp"
 #include "ui/components/ContentArea.hpp"
 #include "ui/components/Layout.hpp"

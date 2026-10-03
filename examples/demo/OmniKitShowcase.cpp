@@ -904,16 +904,16 @@ static void RenderContent() {
 // ----------------------------------------------------------------------------
 static void RenderStatusBar() {
     if (auto status = StatusBar()) {
-        status.Text("Uplink: 10.0.4.12:9050 (Active • 1.2 ms)", UiVariant::Success);
+        status.Text("Uplink: 10.0.4.12:9050 (Active • 1.2 ms)", {.variant = UiVariant::Success});
         status.Separator();
 
         std::string curMsg = (s_deviceState == DeviceState::Running)
                            ? "System nominal • Real-time pipeline active and streaming"
                            : "Standby • Stream paused by operator";
-        status.Text(curMsg, s_deviceState == DeviceState::Running ? UiVariant::Default : UiVariant::Warning);
+        status.Text(curMsg, {.variant = s_deviceState == DeviceState::Running ? UiVariant::Default : UiVariant::Warning});
 
         status.Separator();
-        status.Text("OmniGUI v1.0.7 | " + FormatCurrentClock(), UiVariant::Secondary);
+        status.Text("OmniGUI v1.0.7 | " + FormatCurrentClock(), {.variant = UiVariant::Secondary});
     }
 }
 

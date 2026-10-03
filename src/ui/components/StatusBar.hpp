@@ -17,15 +17,26 @@
 // RAII-область: конструктор открывает окно, деструктор закрывает.
 //
 //     if (auto status = StatusBar()) { status.Text("Ready"); }
+struct StatusBarOptions {
+    const StatusBarStyle* style = nullptr;   // оверрайд стиля; nullptr — из темы
+};
+
+// Параметры текста строки состояния:
+//
+//     status.Text("Uplink: active", {.variant = UiVariant::Success});
+struct StatusBarTextOptions {
+    UiVariant variant  = UiVariant::Default;   // цвет текста (Default — стандартный цвет статуса)
+    float     maxWidth = 0.0f;                 // базовые px; 0 — по ширине текста
+};
+
 class StatusBar : public Scope {
 public:
-    explicit StatusBar(const StatusBarStyle* customStyle = nullptr);
+    explicit StatusBar(const StatusBarOptions& options = {});
     ~StatusBar();
 
     // Текст в одну строку. variant задаёт цвет (Default — вторичный текст
     // полосы); maxWidth = 0 — до правого края полосы
-    void Text(const std::string& text, UiVariant variant = UiVariant::Default,
-              float maxWidth = 0.0f);
+    void Text(const std::string& text, const StatusBarTextOptions& options = {});
 
     // Вертикальный разделитель между элементами
     void Separator();

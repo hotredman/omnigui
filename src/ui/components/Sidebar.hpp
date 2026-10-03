@@ -60,11 +60,18 @@ private:
 //         }
 //     }
 // ============================================================================
+// Геометрия боковой панели (итоговые px; по умолчанию — из темы):
+//
+//     Sidebar({.posYPx = 80, .heightPx = 600});
+struct SidebarOptions {
+    float posYPx   = -1.0f;   // < 0 — под Header и Toolbar
+    float heightPx = -1.0f;   // < 0 — до строки состояния
+};
+
 class Sidebar : public Scope {
 public:
-    // По умолчанию геометрия рассчитывается из UiTheme::Get():
-    // posY < 0 — под Header и TopBar, height < 0 — до строки состояния
-    explicit Sidebar(float posY = -1.0f, float height = -1.0f);
+    // По умолчанию геометрия рассчитывается из UiTheme::Get()
+    explicit Sidebar(const SidebarOptions& options = {});
     ~Sidebar();
 
     // 1. Однострочный пункт меню с векторной иконкой; true — по нему кликнули

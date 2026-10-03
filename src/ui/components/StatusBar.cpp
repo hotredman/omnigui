@@ -2,8 +2,8 @@
 #include <imgui_internal.h>
 #include <algorithm>
 
-StatusBar::StatusBar(const StatusBarStyle* customStyle)
-    : m_customStyle(customStyle)
+StatusBar::StatusBar(const StatusBarOptions& options)
+    : m_customStyle(options.style)
 {
     const UiTheme& theme = UiTheme::Get();
     ImGuiIO& io = ImGui::GetIO();
@@ -46,7 +46,8 @@ void StatusBar::NextItem() {
     m_hasItems = true;
 }
 
-void StatusBar::Text(const std::string& text, UiVariant variant, float maxWidth) {
+void StatusBar::Text(const std::string& text, const StatusBarTextOptions& options) {
+    const UiVariant variant = options.variant;
     if (!m_open) return;
     NextItem();
 
@@ -58,7 +59,7 @@ void StatusBar::Text(const std::string& text, UiVariant variant, float maxWidth)
                        ImGui::GetWindowPos().y + (m_height - lineHeight) * 0.5f);
     const float available = std::max(0.0f, rightEdge - start.x);
     const ImVec2 textSize = ImGui::CalcTextSize(text.c_str());
-    const float width = std::min(maxWidth > 0.0f ? maxWidth : available, available);
+    const float width = std::min(options.maxWidth > 0.0f ? theme.Scale(options.maxWidth) : available, available);
     const float itemWidth = std::min(textSize.x, width);
 
     // Элемент под текстом: место в строке и зона подсказки

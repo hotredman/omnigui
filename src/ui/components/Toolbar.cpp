@@ -1,8 +1,8 @@
 #include "ui/components/Toolbar.hpp"
 
-Toolbar::Toolbar(float posY, float height, const ToolbarStyle* customStyle)
-    : Bar(MakeBarMetrics(customStyle ? *customStyle : UiTheme::Get().toolbar),
+Toolbar::Toolbar(const ToolbarOptions& options)
+    : Bar(MakeBarMetrics(options.style ? *options.style : UiTheme::Get().toolbar),
           "##ToolbarWindow", "##ToolbarZones",
-          (posY >= 0.0f) ? posY : UiTheme::Get().HeaderHeight(), height)
+          (options.posYPx >= 0.0f) ? options.posYPx : UiTheme::Get().HeaderHeight(), options.heightPx)
 {
 }

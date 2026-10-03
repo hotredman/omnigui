@@ -1,14 +1,8 @@
 #include "ui/components/ContentArea.hpp"
 #include <algorithm>
 
-ContentArea::ContentArea(const ContentAreaStyle* customStyle) {
-    Open(-1.0f, -1.0f, -1.0f, -1.0f, customStyle);
-}
-
-ContentArea::ContentArea(float posX, float posY, float width, float height,
-                         const ContentAreaStyle* customStyle)
-{
-    Open(posX, posY, width, height, customStyle);
+ContentArea::ContentArea(const ContentAreaOptions& options) {
+    Open(options.posXPx, options.posYPx, options.widthPx, options.heightPx, options.style);
 }
 
 ContentArea::~ContentArea() {

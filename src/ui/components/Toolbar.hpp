@@ -8,12 +8,18 @@
 //     if (auto toolbar = Toolbar()) {
 //         if (auto left = toolbar.Left()) { left.Label("Session:"); }
 //     }
+// Параметры панели инструментов (designated initializers):
+//
+//     Toolbar({.heightPx = 48});
+struct ToolbarOptions {
+    float               posYPx   = -1.0f;    // итоговые px; < 0 — сразу под Header
+    float               heightPx = 0.0f;     // итоговые px; <= 0 — высота из стиля темы
+    const ToolbarStyle* style    = nullptr;  // оверрайд стиля; nullptr — из темы
+};
+
 class Toolbar : public Bar {
 public:
-    // posY < 0 — сразу под Header (theme.HeaderHeight());
-    // height <= 0 — высота из стиля темы; customStyle == nullptr — стиль текущей темы
-    explicit Toolbar(float posY = -1.0f, float height = 0.0f,
-                     const ToolbarStyle* customStyle = nullptr);
+    explicit Toolbar(const ToolbarOptions& options = {});
 
     // Центральная зона, занимающая остаток ширины (синоним Center)
     CenterZone Fill() { return Center(); }

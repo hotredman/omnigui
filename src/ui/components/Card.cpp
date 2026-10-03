@@ -5,7 +5,7 @@
 #include "ui/components/Combo.hpp"
 #include "ui/components/Toggle.hpp"
 #include "ui/components/ValueDisplay.hpp"
-#include "ui/components/FlowLayout.hpp"
+#include "ui/components/ColumnLayout.hpp"
 #include "ui/components/GridLayout.hpp"
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -74,7 +74,7 @@ Card::Card(const CardOptions& options)
 
     if (size.x <= 0.0f) {
         float gridW = GridLayout::CurrentCellWidth();
-        float flowW = FlowLayout::CurrentColumnWidth();
+        float flowW = ColumnLayout::CurrentColumnWidth();
         if (gridW > 0.0f) {
             size.x = gridW;
         } else if (flowW > 0.0f) {

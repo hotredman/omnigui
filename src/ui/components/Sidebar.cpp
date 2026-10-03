@@ -4,7 +4,9 @@
 #include <cmath>
 #include <algorithm>
 
-Sidebar::Sidebar(float posY, float height) {
+Sidebar::Sidebar(const SidebarOptions& options) {
+    const float posY = options.posYPx;
+    const float height = options.heightPx;
     const UiTheme& theme = UiTheme::Get();
     const SidebarStyle& style = theme.sidebar;
 
