@@ -4,6 +4,59 @@
 #include <cmath>
 #include <algorithm>
 
+SidebarWrappedLabel SidebarWrapLabel(const char* text, float maxWidth) {
+    SidebarWrappedLabel out;
+    const std::string full = text ? text : "";
+    const char* begin = full.c_str();
+    const char* end = begin + full.size();
+    ImFont* font = ImGui::GetFont();
+    const float size = ImGui::GetFontSize();
+
+    const char* cut = font->CalcWordWrapPosition(size, begin, end, maxWidth);
+    if (cut >= end) {
+        out.line1 = full;
+        return out;
+    }
+    if (cut <= begin)   // окно уже слова: хотя бы один символ в строке
+        cut = begin + 1;
+    while (cut < end && (static_cast<unsigned char>(*cut) & 0xC0) == 0x80)   // не резать UTF-8 посреди символа
+        ++cut;
+
+    std::string first(begin, cut);
+    while (!first.empty() && first.back() == ' ')
+        first.pop_back();
+    out.line1 = first;
+
+    while (cut < end && *cut == ' ')
+        ++cut;
+    std::string rest(cut, end);
+    if (rest.empty())
+        return out;
+    if (ImGui::CalcTextSize(rest.c_str()).x <= maxWidth) {
+        out.line2 = rest;
+        return out;
+    }
+
+    // Остаток длиннее строки: самый длинный префикс, с которым помещается «…»
+    const std::string ellipsis = "\xE2\x80\xA6";
+    const float room = maxWidth - ImGui::CalcTextSize(ellipsis.c_str()).x;
+    size_t keep = 0;
+    for (size_t i = 0; i < rest.size();) {
+        size_t next = i + 1;
+        while (next < rest.size() && (static_cast<unsigned char>(rest[next]) & 0xC0) == 0x80)
+            ++next;
+        if (ImGui::CalcTextSize(rest.substr(0, next).c_str()).x > room)
+            break;
+        keep = next;
+        i = next;
+    }
+    std::string head = rest.substr(0, keep);
+    while (!head.empty() && head.back() == ' ')
+        head.pop_back();
+    out.line2 = head + ellipsis;
+    return out;
+}
+
 Sidebar::Sidebar(const SidebarOptions& options) {
     const float posY = options.posYPx;
     const float height = options.heightPx;
@@ -244,14 +297,15 @@ bool SidebarList::Entry(const SidebarEntryOptions& o) {
     }
 
     // 3. Опциональный статусный светодиод (LED dot)
+    const float indent = theme.Scale(kSidebarTreeIndent) * static_cast<float>(o.level);
     const ImU32 statusColor = o.statusColor;
     if (statusColor != 0) {
         float dotRadius = theme.Scale(3.5f);
-        ImVec2 dotCenter(cursor.x + theme.Scale(18.0f), cursor.y + itemHeight * 0.5f);
+        ImVec2 dotCenter(cursor.x + indent + theme.Scale(18.0f), cursor.y + itemHeight * 0.5f);
         dl->AddCircleFilled(dotCenter, dotRadius, statusColor);
     }
 
-    float textX = cursor.x + (statusColor != 0 ? theme.Scale(30.0f) : theme.Scale(12.0f));
+    float textX = cursor.x + indent + (statusColor != 0 ? theme.Scale(30.0f) : theme.Scale(12.0f));
     float maxTextW = itemWidth - (textX - cursor.x) - (isSelected ? theme.Scale(style.activeBarWidth + 6.0f) : theme.Scale(4.0f));
     if (maxTextW < 10.0f) maxTextW = 10.0f;
 
@@ -284,6 +338,93 @@ bool SidebarList::Entry(const SidebarEntryOptions& o) {
     }
 
     return pressed;
+}
+
+SidebarTreeClick SidebarList::TreeNode(const SidebarTreeNodeOptions& o) {
+    if (!m_open) return SidebarTreeClick::None;
+
+    const UiTheme& theme = UiTheme::Get();
+    const SidebarStyle& style = theme.sidebar;
+    const ListStyle& listStyle = theme.list;
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImVec2 cursor = ImGui::GetCursorScreenPos();
+    const float itemWidth = ImGui::GetContentRegionAvail().x;
+    const float cornerRadius = theme.Scale(style.cornerRadius);
+    const float indent = theme.Scale(kSidebarTreeIndent) * static_cast<float>(o.level);
+    const float arrowZoneRight = cursor.x + indent + theme.Scale(28.0f);   // стрелка раскрытия: клик = Toggle
+
+    // Справа: счётчик и индикатор статуса — их ширина нужна до названия
+    float countW = 0.0f;
+    ImFont* subFont = listStyle.subFont ? listStyle.subFont : theme.fontRegular;
+    if (!o.count.empty()) {
+        theme.PushFont(subFont, listStyle.subFontSize);
+        countW = ImGui::CalcTextSize(o.count.c_str()).x;
+        theme.PopFont();
+    }
+    float rightEdge = cursor.x + itemWidth - theme.Scale(10.0f);
+    const float countRight = rightEdge;
+    rightEdge -= countW > 0.0f ? countW + theme.Scale(8.0f) : 0.0f;
+    const float dotCenterX = rightEdge - theme.Scale(3.5f);
+    if (o.statusColor != 0)
+        rightEdge -= theme.Scale(14.0f);
+
+    // Название переносится на вторую строку, вторая при нехватке места оканчивается многоточием
+    const float textX = cursor.x + indent + theme.Scale(28.0f);
+    const float maxTextW = std::max(10.0f, rightEdge - textX);
+    ImFont* font = listStyle.itemFont ? listStyle.itemFont : theme.fontMedium;
+    theme.PushFont(font, listStyle.itemFontSize);
+    const SidebarWrappedLabel text = SidebarWrapLabel(o.label.c_str(), maxTextW);
+    const float lineH = ImGui::GetTextLineHeight();
+    const float textH = text.line2.empty() ? lineH : lineH * 2.0f + theme.Scale(2.0f);
+    const float itemHeight = std::max(theme.Scale(36.0f), textH + theme.Scale(18.0f));
+    const float textY = cursor.y + (itemHeight - textH) * 0.5f;
+    const float firstLineMidY = textY + lineH * 0.5f;
+
+    if (o.selected)
+        dl->AddRectFilled(cursor, ImVec2(cursor.x + itemWidth, cursor.y + itemHeight), style.colActiveBg, cornerRadius);
+
+    ImGui::PushID(o.key ? o.key : o.label.c_str());
+    const bool pressed = ImGui::InvisibleButton("##tree_node", ImVec2(itemWidth, itemHeight));
+    ImGui::PopID();
+    const bool isHovered = ImGui::IsItemHovered();
+    if (isHovered && !o.selected)
+        dl->AddRectFilled(cursor, ImVec2(cursor.x + itemWidth, cursor.y + itemHeight), style.colHoverBg, cornerRadius);
+
+    const ImU32 textCol = o.selected ? style.colActiveText : (isHovered ? style.colHoverText : style.colInactiveText);
+
+    // Стрелка раскрытия: вправо — свёрнут, вниз — раскрыт; по первой строке названия
+    {
+        const float cx = cursor.x + indent + theme.Scale(14.0f);
+        const float r = theme.Scale(4.0f);
+        if (o.expanded) {
+            dl->AddTriangleFilled(ImVec2(cx - r, firstLineMidY - r * 0.55f), ImVec2(cx + r, firstLineMidY - r * 0.55f),
+                                  ImVec2(cx, firstLineMidY + r * 0.75f), textCol);
+        } else {
+            dl->AddTriangleFilled(ImVec2(cx - r * 0.55f, firstLineMidY - r), ImVec2(cx - r * 0.55f, firstLineMidY + r),
+                                  ImVec2(cx + r * 0.75f, firstLineMidY), textCol);
+        }
+    }
+
+    dl->PushClipRect(ImVec2(textX, cursor.y), ImVec2(textX + maxTextW, cursor.y + itemHeight), true);
+    dl->AddText(ImVec2(textX, textY), textCol, text.line1.c_str());
+    if (!text.line2.empty())
+        dl->AddText(ImVec2(textX, textY + lineH + theme.Scale(2.0f)), textCol, text.line2.c_str());
+    dl->PopClipRect();
+    theme.PopFont();
+
+    // Счётчик и индикатор — на уровне первой строки
+    if (countW > 0.0f) {
+        theme.PushFont(subFont, listStyle.subFontSize);
+        dl->AddText(ImVec2(countRight - countW, firstLineMidY - ImGui::GetTextLineHeight() * 0.5f),
+                    style.colInactiveText, o.count.c_str());
+        theme.PopFont();
+    }
+    if (o.statusColor != 0)
+        dl->AddCircleFilled(ImVec2(dotCenterX, firstLineMidY), theme.Scale(3.5f), o.statusColor);
+
+    if (!pressed) return SidebarTreeClick::None;
+    return ImGui::GetMousePos().x < arrowZoneRight ? SidebarTreeClick::Toggle : SidebarTreeClick::Activate;
 }
 
 void SidebarList::Empty(const std::string& message, const std::string& detail) {

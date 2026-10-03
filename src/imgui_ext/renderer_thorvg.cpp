@@ -21,6 +21,10 @@ public:
     bool Init(int width, int height) override;
     void Shutdown() override;
     void Resize(int width, int height) override;
+    void SetClearColor(Color col) override {
+        // Пиксели хранятся как ABGR8888 в little-endian слове: 0xAABBGGRR
+        m_clear_col = (uint32_t(col.a) << 24) | (uint32_t(col.b) << 16) | (uint32_t(col.g) << 8) | uint32_t(col.r);
+    }
 
     void BeginFrame() override;
     void EndFrame() override;
@@ -67,6 +71,7 @@ private:
     int m_width = 0;
     int m_height = 0;
     std::vector<uint32_t> m_pixels;
+    uint32_t m_clear_col = 0xFF241F1F; // по умолчанию совпадает с OpenGL glClearColor(0.12f, 0.12f, 0.14f, 1.0f)
     tvg::SwCanvas* m_canvas = nullptr;
     std::vector<ImVec4> m_clip_stack;
     std::string m_default_font_name = "default";
@@ -146,8 +151,7 @@ void ThorVGRenderer::Resize(int width, int height) {
 
 void ThorVGRenderer::BeginFrame() {
     m_clip_stack.clear();
-    uint32_t clear_col = 0xFF241F1F; // Matches OpenGL glClearColor(0.12f, 0.12f, 0.14f, 1.0f) rounded to UNORM8
-    std::fill(m_pixels.begin(), m_pixels.end(), clear_col);
+    std::fill(m_pixels.begin(), m_pixels.end(), m_clear_col);
 }
 
 void ThorVGRenderer::EndFrame() {

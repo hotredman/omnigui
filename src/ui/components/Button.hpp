@@ -2,7 +2,9 @@
 
 #include "ui/components/UiTheme.hpp"
 #include "ui/components/Icon.hpp"
+#include "ui/components/UiKey.hpp"
 #include <imgui.h>
+#include <source_location>
 
 // Параметры кнопки. Агрегат: поля задаются по именам (designated initializers),
 // порядок — как в объявлении, пропущенные поля берут значения по умолчанию.
@@ -12,8 +14,8 @@
 //     Button({.icon = Icon::Cog, .tooltip = "Settings"});
 //     Button("OK");   // короткая форма: только подпись
 //
-// Идентичность кнопки (ImGui ID) выводится из подписи и иконки; одинаковые
-// кнопки в цикле различаются областью IdScope, при необходимости — полем key.
+// Идентичность кнопки (ImGui ID) автоматически выводится из места вызова (source_location)
+// и подписи/иконки; при необходимости задаётся явный ключ key (строка, int или указатель).
 struct ButtonOptions {
     const char* label    = nullptr;           // подпись; nullptr — кнопка без текста
     UiVariant   variant  = UiVariant::Default;
@@ -22,12 +24,14 @@ struct ButtonOptions {
     float       width    = 0.0f;              // базовые px (до масштаба); 0 — по содержимому; Fill — на всю ширину
     const char* tooltip  = nullptr;           // подсказка при наведении
     bool        disabled = false;
-    const char* key      = nullptr;           // явная идентичность, когда подписи и иконки недостаточно
+    UiKey       key      = {};                // явная идентичность: строка, int или ptr
 };
 
 // Кнопка дизайн-системы. Возвращает true в кадре клика.
-bool Button(const ButtonOptions& options);
-bool Button(const char* label);
+bool Button(const ButtonOptions& options = {},
+            std::source_location loc = std::source_location::current());
+bool Button(const char* label,
+            std::source_location loc = std::source_location::current());
 
 // Естественная ширина кнопки по содержимому (подпись, иконка, отступы темы), px
 float ButtonWidth(const ButtonOptions& options);
@@ -36,7 +40,8 @@ float ButtonWidth(const ButtonOptions& options);
 // размер в итоговых пикселях (с учётом масштаба); ось, заданная нулём,
 // берётся из options (ширина — width, высота — size).
 // Приложению нужны Button/ButtonWidth.
-bool ButtonPx(ImVec2 sizePx, const ButtonOptions& options);
+bool ButtonPx(ImVec2 sizePx, const ButtonOptions& options = {},
+              std::source_location loc = std::source_location::current());
 
 // Ширина по содержимому для кнопки заданной высоты в итоговых px (0 — высота Medium)
 float ButtonWidthPx(const ButtonOptions& options, float heightPx);

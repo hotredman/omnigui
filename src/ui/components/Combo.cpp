@@ -53,7 +53,8 @@ void RenderComboLabel(const char* label, float width, const ComboStyle& style) {
 
 } // namespace
 
-bool Combo(int& currentItem, const char* const items[], int itemsCount, const ComboOptions& o)
+bool Combo(int& currentItem, const char* const items[], int itemsCount, const ComboOptions& o,
+           std::source_location loc)
 {
     const UiTheme& theme = UiTheme::Get();
     const ComboStyle& style = o.style ? *o.style : theme.combo;
@@ -91,8 +92,8 @@ bool Combo(int& currentItem, const char* const items[], int itemsCount, const Co
         }
     }
 
-    // Идентичность: явный key, иначе подпись
-    ImGui::PushID(o.key ? o.key : (label ? label : "combo"));
+    // Идентичность: явный key, иначе loc + label
+    AutoIdScope idScope(o.key, label, loc);
     ImGui::BeginGroup();
 
     RenderComboLabel(label, w, style);
@@ -165,16 +166,16 @@ bool Combo(int& currentItem, const char* const items[], int itemsCount, const Co
     }
 
     ImGui::EndGroup();
-    ImGui::PopID();
     return changed;
 }
 
-bool Combo(int& currentItem, const std::vector<std::string>& items, const ComboOptions& options)
+bool Combo(int& currentItem, const std::vector<std::string>& items, const ComboOptions& options,
+           std::source_location loc)
 {
     std::vector<const char*> cstrings;
     cstrings.reserve(items.size());
     for (const auto& item : items) {
         cstrings.push_back(item.c_str());
     }
-    return Combo(currentItem, cstrings.data(), static_cast<int>(cstrings.size()), options);
+    return Combo(currentItem, cstrings.data(), static_cast<int>(cstrings.size()), options, loc);
 }

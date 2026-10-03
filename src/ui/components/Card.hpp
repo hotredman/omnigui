@@ -12,6 +12,9 @@
 #include "ui/components/Scope.hpp"
 #include "ui/components/ColumnLayout.hpp"
 #include "ui/components/UiTheme.hpp"
+#include "ui/components/TextSuggest.hpp"
+#include "ui/components/UiKey.hpp"
+#include <source_location>
 #include "ui/components/Icon.hpp"
 #include "ui/components/PresetGrid.hpp"
 #include "ui/components/Toggle.hpp"
@@ -29,7 +32,7 @@ enum class FieldState { Normal, Modified, NoValue };
 // title и без key в одном окне конфликтуют — задайте key.
 struct CardOptions {
     const char* title    = nullptr;
-    const char* key      = nullptr;     // идентичность; по умолчанию — title
+    UiKey       key      = {};          // идентичность; по умолчанию — title
     float       width    = 0.0f;        // базовые px (масштабируются); 0 — ширина колонки/ячейки раскладки
     float       height   = 0.0f;        // базовые px (масштабируются); 0 — по содержимому
     bool        stretchY = false;       // растянуть по вертикали на всю оставшуюся высоту
@@ -54,9 +57,10 @@ struct FieldOptions {
     std::optional< ::Col> col;         // доля строки; по умолчанию Half (табло и пресеты — Full)
     std::optional<UiSize>  size;        // высота; по умолчанию — высота текущей Row()
     bool        disabled = false;
-    const char* key      = nullptr;     // идентичность; по умолчанию — label
+    UiKey       key      = {};          // идентичность; по умолчанию — label
     std::optional<bool> alignBottom;    // Toggle: выровнять по нижней кромке соседних полей
     int         columns  = 5;           // PresetGrid: число колонок сетки пресетов
+    const TextSuggest* suggest = nullptr;  // Text: подсказки под полем (список строит вызывающий)
 };
 
 class Card : public Scope {
@@ -105,21 +109,28 @@ public:
 
     // Кнопки с семантическими стилями; disabled — кнопка видна, но неактивна.
     // Col::Auto() даёт ширину по содержимому (не привязана к 12-колоночной сетке)
-    bool Button(const FieldOptions& options);
+    bool Button(const FieldOptions& options,
+                std::source_location loc = std::source_location::current());
 
     // Кнопка удержания: true, пока её держат нажатой (движение «пока держат»). Неактивная — всегда false
-    bool HoldButton(const FieldOptions& options);
+    bool HoldButton(const FieldOptions& options,
+                    std::source_location loc = std::source_location::current());
 
     // Информационное/расчётное табло (ValueDisplay); label — подпись над табло.
     // Без размера высота — 80 базовых px; std::nullopt вместо числа — прочерк
-    void Value(double value, const FieldOptions& options = {});
-    void Value(const char* text, const FieldOptions& options = {});
-    void Value(std::optional<double> value, const FieldOptions& options = {});
+    void Value(double value, const FieldOptions& options = {},
+               std::source_location loc = std::source_location::current());
+    void Value(const char* text, const FieldOptions& options = {},
+               std::source_location loc = std::source_location::current());
+    void Value(std::optional<double> value, const FieldOptions& options = {},
+               std::source_location loc = std::source_location::current());
 
     // Селектор пресетов со встроенным табло (PresetGrid); unit — единица на табло,
     // columns — число колонок сетки пресетов, format — формат значения на табло
-    bool PresetGrid(float& value, const std::vector<float>& presets, const FieldOptions& options = {});
-    bool PresetGrid(double& value, const std::vector<double>& presets, const FieldOptions& options = {});
+    bool PresetGrid(float& value, const std::vector<float>& presets, const FieldOptions& options = {},
+                    std::source_location loc = std::source_location::current());
+    bool PresetGrid(double& value, const std::vector<double>& presets, const FieldOptions& options = {},
+                    std::source_location loc = std::source_location::current());
 
     // Состояние полей карточки по адресу поля (float/int/bool/enum): без провайдера
     // все поля обычные. Провайдер живёт не дольше карточки
@@ -127,33 +138,45 @@ public:
     void SetFieldStates(FieldStateProvider provider) { m_fieldStates = std::move(provider); }
 
     // Поля ввода в 12-колоночной сетке
-    bool Float(float& value, const FieldOptions& options);
-    bool Float(std::optional<float>& value, const FieldOptions& options);
-    bool Double(double& value, const FieldOptions& options);
-    bool Double(std::optional<double>& value, const FieldOptions& options);
-    bool Int(int& value, const FieldOptions& options);
-    bool Text(std::string& value, const FieldOptions& options);
-    bool Toggle(bool& value, const FieldOptions& options);
+    bool Float(float& value, const FieldOptions& options,
+               std::source_location loc = std::source_location::current());
+    bool Float(std::optional<float>& value, const FieldOptions& options,
+               std::source_location loc = std::source_location::current());
+    bool Double(double& value, const FieldOptions& options,
+                std::source_location loc = std::source_location::current());
+    bool Double(std::optional<double>& value, const FieldOptions& options,
+                std::source_location loc = std::source_location::current());
+    bool Int(int& value, const FieldOptions& options,
+             std::source_location loc = std::source_location::current());
+    bool Text(std::string& value, const FieldOptions& options,
+              std::source_location loc = std::source_location::current());
+    bool Toggle(bool& value, const FieldOptions& options,
+                std::source_location loc = std::source_location::current());
 
     // Поле только для чтения: подпись над значением
-    void Display(const std::string& value, const FieldOptions& options);
+    void Display(const std::string& value, const FieldOptions& options,
+                 std::source_location loc = std::source_location::current());
 
-    bool Combo(int& currentItem, const char* const items[], int itemsCount, const FieldOptions& options);
-    bool Combo(int& currentItem, const std::vector<std::string>& items, const FieldOptions& options);
+    bool Combo(int& currentItem, const char* const items[], int itemsCount, const FieldOptions& options,
+               std::source_location loc = std::source_location::current());
+    bool Combo(int& currentItem, const std::vector<std::string>& items, const FieldOptions& options,
+               std::source_location loc = std::source_location::current());
 
     // Массив с автовыводом размера
     template<std::size_t N>
-    bool Combo(int& currentItem, const char* const (&items)[N], const FieldOptions& options) {
-        return Combo(currentItem, items, static_cast<int>(N), options);
+    bool Combo(int& currentItem, const char* const (&items)[N], const FieldOptions& options,
+               std::source_location loc = std::source_location::current()) {
+        return Combo(currentItem, items, static_cast<int>(N), options, loc);
     }
 
     // Строго типизированные Enum и массивы с автовыводом размера
     template<typename EnumT, std::size_t N, std::enable_if_t<std::is_enum_v<EnumT>, int> = 0>
-    bool Combo(EnumT& currentItem, const char* const (&items)[N], const FieldOptions& options)
+    bool Combo(EnumT& currentItem, const char* const (&items)[N], const FieldOptions& options,
+               std::source_location loc = std::source_location::current())
     {
         int current = static_cast<int>(currentItem);
         if (ComboImpl(StateOf(&currentItem, sizeof(currentItem)), current, items,
-                      static_cast<int>(N), options)) {
+                      static_cast<int>(N), options, loc)) {
             currentItem = static_cast<EnumT>(current);
             return true;
         }
@@ -201,12 +224,14 @@ private:
 
     FieldState StateOf(const void* field, std::size_t size) const;
     // Прочерк на месте поля: та же подпись и ширина, ввода нет
-    void RenderNoValue(const FieldOptions& options, float width, float height);
+    void RenderNoValue(const FieldOptions& options, float width, float height,
+                       std::source_location loc = std::source_location::current());
     bool ComboImpl(FieldState state, int& currentItem, const char* const items[], int itemsCount,
-                   const FieldOptions& options);
-    void ValueImpl(const char* text, const FieldOptions& options);
+                   const FieldOptions& options, std::source_location loc = std::source_location::current());
+    void ValueImpl(const char* text, const FieldOptions& options, std::source_location loc = std::source_location::current());
     template<typename T>
-    bool PresetGridImpl(T& value, const std::vector<T>& presets, int columns, const FieldOptions& options);
+    bool PresetGridImpl(T& value, const std::vector<T>& presets, int columns, const FieldOptions& options,
+                        std::source_location loc = std::source_location::current());
     void PrepareField(::Col col, float& outWidth);
     void FinishField(::Col col);
     // Высота элемента в финальных px: явный size, иначе высота строки, иначе fallback; 0 — авто

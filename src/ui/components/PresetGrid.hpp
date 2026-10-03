@@ -1,8 +1,10 @@
 #pragma once
 
 #include "ui/components/UiTheme.hpp"
+#include "ui/components/UiKey.hpp"
 #include <string>
 #include <vector>
+#include <source_location>
 
 // Параметры сетки пресетов (designated initializers):
 //
@@ -14,7 +16,7 @@ struct PresetGridOptions {
     bool        showDisplay   = true;      // табло текущего значения над сеткой
     const char* displayFormat = "%.1f";    // формат значения на табло
     const char* buttonFormat  = "%.4g";    // формат подписи кнопки пресета
-    const char* key           = nullptr;   // идентичность; по умолчанию — адрес значения
+    UiKey       key           = {};        // идентичность; по умолчанию — место вызова (loc)
     const PresetGridStyle* style = nullptr;  // оверрайд стиля; nullptr — из темы
 
     // Внутренний механизм для контейнеров (Card), которые сами считают геометрию:
@@ -23,5 +25,7 @@ struct PresetGridOptions {
 };
 
 // Селектор пресетов: табло значения + сетка кнопок. Возвращает true, если значение изменилось
-bool PresetGrid(float& value, const std::vector<float>& presets, const PresetGridOptions& options = {});
-bool PresetGrid(double& value, const std::vector<double>& presets, const PresetGridOptions& options = {});
+bool PresetGrid(float& value, const std::vector<float>& presets, const PresetGridOptions& options = {},
+                std::source_location loc = std::source_location::current());
+bool PresetGrid(double& value, const std::vector<double>& presets, const PresetGridOptions& options = {},
+                std::source_location loc = std::source_location::current());

@@ -3,7 +3,7 @@
 #include "imgui.h"
 #include <algorithm>
 
-bool Toggle(bool& value, const ToggleOptions& options)
+bool Toggle(bool& value, const ToggleOptions& options, std::source_location loc)
 {
     const char* label = options.label;
     const char* sublabel = options.sublabel;
@@ -67,10 +67,11 @@ bool Toggle(bool& value, const ToggleOptions& options)
 
     // 3. Интерактивная область (InvisibleButton)
     ImVec2 cursorPos = ImGui::GetCursorScreenPos();
-    // Идентичность: явный key, иначе подпись
-    ImGui::PushID(options.key ? options.key : (label ? label : "toggle"));
-    ImGui::InvisibleButton("##toggle", ImVec2(finalW, finalH));
-    ImGui::PopID();
+    // Идентичность: явный key, иначе loc + label
+    {
+        AutoIdScope idScope(options.key, label, loc);
+        ImGui::InvisibleButton("##toggle", ImVec2(finalW, finalH));
+    }
 
     bool isHovered = ImGui::IsItemHovered();
     bool isClicked = ImGui::IsItemClicked();

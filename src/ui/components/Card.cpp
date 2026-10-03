@@ -60,7 +60,16 @@ Card::Card(const CardOptions& options)
 {
     const UiTheme& theme = UiTheme::Get();
     const char* title = options.title;
-    const char* id = options.key ? options.key : ((title && title[0] != '\0') ? title : "##card");
+    ImGuiID childId = 0;
+    if (options.key) {
+        if (options.key.type == UiKey::Type::String) childId = ImHashStr(options.key.str);
+        else if (options.key.type == UiKey::Type::Int) childId = ImHashData(&options.key.index, sizeof(int));
+        else if (options.key.type == UiKey::Type::Ptr) childId = ImHashData(&options.key.ptr, sizeof(void*));
+    } else if (title && title[0] != '\0') {
+        childId = ImHashStr(title);
+    } else {
+        childId = ImHashStr("##card");
+    }
     ImVec2 size(theme.Scale(options.width), theme.Scale(options.height));
 
     if (size.x <= 0.0f) {
@@ -98,7 +107,7 @@ Card::Card(const CardOptions& options)
 
     ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 
-    m_open = ImGui::BeginChild(id, size, childFlags, windowFlags);
+    m_open = ImGui::BeginChild(childId, size, childFlags, windowFlags);
     // Фон, рамка, скругление и отступы применены к окну карточки; дальше —
     // содержимое, которое их не наследует (вложенный список не перекрашивает фон)
     ImGui::PopStyleColor(2);

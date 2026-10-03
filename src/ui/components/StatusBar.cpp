@@ -46,7 +46,7 @@ void StatusBar::NextItem() {
     m_hasItems = true;
 }
 
-void StatusBar::Text(const std::string& text, const StatusBarTextOptions& options) {
+void StatusBar::Text(const std::string& text, const StatusBarTextOptions& options, std::source_location loc) {
     const UiVariant variant = options.variant;
     if (!m_open) return;
     NextItem();
@@ -64,7 +64,10 @@ void StatusBar::Text(const std::string& text, const StatusBarTextOptions& option
 
     // Элемент под текстом: место в строке и зона подсказки
     ImGui::SetCursorScreenPos(start);
-    ImGui::InvisibleButton("##StatusBarText", ImVec2(std::max(1.0f, itemWidth), lineHeight));
+    {
+        AutoIdScope idScope(options.key, text.c_str(), loc, m_textCount++);
+        ImGui::InvisibleButton("##StatusBarText", ImVec2(std::max(1.0f, itemWidth), lineHeight));
+    }
     const bool truncated = textSize.x > width;
     if (truncated && ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", text.c_str());

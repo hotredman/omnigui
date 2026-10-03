@@ -93,7 +93,8 @@ float DeviceStatusWidth(const std::vector<std::string>& titleCandidates,
     return std::max(totalW, theme.Scale(style.width));
 }
 
-bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusOptions& options)
+bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusOptions& options,
+                  std::source_location loc)
 {
     const DeviceStatusStyle* customStyle = options.style;
     const char* statusText = options.status;
@@ -108,6 +109,8 @@ bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusO
         w = theme.Scale(options.width);
     }
     float h = theme.Scale(style.height);
+
+    ApplyToolbarVerticalCentering(h, true);
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -141,7 +144,7 @@ bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusO
 
     // 4. Кнопка действия (опционально)
     bool actionClicked = false;
-    ImGui::PushID(deviceName ? deviceName : "device");
+    AutoIdScope idScope(options.key, deviceName ? deviceName : "device", loc);
     if (options.showAction && buttonLabel[0] != '\0') {
         DisabledScope actionScope(options.actionDisabled);
         float btnSize = theme.Scale(style.actionBtnSize);
@@ -167,7 +170,6 @@ bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusO
             actionClicked = true;
         }
     }
-    ImGui::PopID();
 
     // 5. Продвижение позиции курсора в потоке ImGui
     ImGui::SetCursorScreenPos(pos);

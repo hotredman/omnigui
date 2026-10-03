@@ -732,6 +732,7 @@ int main(int argc, char* argv[]) {
         SDL_RenderClear(renderer);
 
         if (use_vector_backend) {
+            vector_renderer->SetClearColor(ImGuiExt::Color::FromImU32(UiTheme::Get().palette.bgApp));
             vector_renderer->Resize(display_w, display_h);
             vector_renderer->RenderDrawData(draw_data);
             const uint32_t* pixels = vector_renderer->GetPixelBuffer();

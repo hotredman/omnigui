@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.20)
 project(omnigui CXX C)
 
+# Исходники приложения-демо: каркас и страницы (общие для desktop и WASM целей)
+set(DEMO_APP_SOURCES
+    examples/demo/OmniKitShowcase.cpp
+    examples/demo/pages/TestRunPage.cpp
+)
+
 # Единый стандарт C++20 для всего проекта (designated initializers в опциях компонентов)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -66,6 +72,7 @@ set(OMNIKIT_SOURCES
     src/ui/components/Badge.cpp
     src/ui/components/Button.cpp
     src/ui/components/Card.cpp
+    src/ui/components/TextSuggest.cpp
     src/ui/components/CardFields.cpp
     src/ui/components/Carousel.cpp
     src/ui/components/Combo.cpp
@@ -141,7 +148,7 @@ if (NOT EMSCRIPTEN)
     # --- Desktop Demo Executable ---
     add_executable(demo
         examples/demo/main.cpp
-        examples/demo/OmniKitShowcase.cpp
+        ${DEMO_APP_SOURCES}
     )
     target_link_libraries(demo PRIVATE imthorgui)
 
@@ -222,7 +229,7 @@ else()
     # 1. Target: demo_thorvg.html (ImGui + ThorVG Vector in WebGL Canvas)
     add_executable(demo_thorvg
         examples/demo/main.cpp
-        examples/demo/OmniKitShowcase.cpp
+        ${DEMO_APP_SOURCES}
     )
     target_compile_definitions(demo_thorvg PRIVATE OMNI_BUILD_WASM_THORVG=1)
     target_link_libraries(demo_thorvg PRIVATE imthorgui)
@@ -234,7 +241,7 @@ else()
     # 2. Target: demo_sdl.html (ImGui + Standard SDL3 in WebGL Canvas)
     add_executable(demo_sdl
         examples/demo/main.cpp
-        examples/demo/OmniKitShowcase.cpp
+        ${DEMO_APP_SOURCES}
     )
     target_compile_definitions(demo_sdl PRIVATE OMNI_BUILD_WASM_SDL=1)
     target_link_libraries(demo_sdl PRIVATE imthorgui)
@@ -250,7 +257,7 @@ else()
     )
     add_executable(demo_dom
         examples/demo/main.cpp
-        examples/demo/OmniKitShowcase.cpp
+        ${DEMO_APP_SOURCES}
     )
     target_compile_definitions(demo_dom PRIVATE OMNI_BUILD_WASM_DOM=1)
     target_link_libraries(demo_dom PRIVATE imthorgui)

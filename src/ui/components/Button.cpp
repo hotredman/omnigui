@@ -30,15 +30,15 @@ static ImFont* PickButtonFont(const UiTheme& theme, float h, float& fontPt) {
     return theme.fontMedium ? theme.fontMedium : theme.buttonFont;
 }
 
-bool Button(const ButtonOptions& o) {
-    return ButtonPx(ImVec2(0.0f, 0.0f), o);
+bool Button(const ButtonOptions& o, std::source_location loc) {
+    return ButtonPx(ImVec2(0.0f, 0.0f), o, loc);
 }
 
-bool Button(const char* label) {
-    return ButtonPx(ImVec2(0.0f, 0.0f), {.label = label});
+bool Button(const char* label, std::source_location loc) {
+    return ButtonPx(ImVec2(0.0f, 0.0f), {.label = label}, loc);
 }
 
-bool ButtonPx(ImVec2 size, const ButtonOptions& o) {
+bool ButtonPx(ImVec2 size, const ButtonOptions& o, std::source_location loc) {
     const char* label = o.label;
     {
         // Незаданные оси берутся из options: ширина — width, высота — size
@@ -89,12 +89,12 @@ bool ButtonPx(ImVec2 size, const ButtonOptions& o) {
     float w = (size.x > 0.0f) ? std::max(size.x, minW) : minW;
 
     ImVec2 screenPos = ImGui::GetCursorScreenPos();
-    // Идентичность: явный key, иначе подпись, иначе иконка
-    if (o.key)         ImGui::PushID(o.key);
-    else if (label)    ImGui::PushID(label);
-    else               ImGui::PushID(static_cast<int>(icon.GetId()));
-    bool clicked = ImGui::Button("##btn", ImVec2(w, h));
-    ImGui::PopID();
+    // Идентичность: явный key, иначе compile-time source_location + подпись/иконка
+    bool clicked = false;
+    {
+        AutoIdScope idScope(o.key, label, loc, static_cast<int>(icon.GetId()));
+        clicked = ImGui::Button("##btn", ImVec2(w, h));
+    }
     if (o.tooltip && o.tooltip[0] != '\0' && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
         ImGui::SetTooltip("%s", o.tooltip);
 

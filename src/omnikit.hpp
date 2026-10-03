@@ -35,6 +35,7 @@
 // Navigation & Structure
 #include "ui/components/Scope.hpp"
 #include "ui/components/IdScope.hpp"
+#include "ui/components/UiKey.hpp"
 #include "ui/components/Bar.hpp"
 #include "ui/components/Header.hpp"
 #include "ui/components/Toolbar.hpp"
@@ -52,6 +53,7 @@
 #include "ui/components/Table.hpp"
 #include "ui/components/TableCell.hpp"
 #include "ui/components/FilterBar.hpp"
+#include "ui/components/TextSuggest.hpp"
 
 // Popups & Scopes
 #include "ui/components/ContextMenu.hpp"

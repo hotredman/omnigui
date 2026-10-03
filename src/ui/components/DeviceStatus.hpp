@@ -1,8 +1,10 @@
 #pragma once
 
 #include "ui/components/UiTheme.hpp"
+#include "ui/components/UiKey.hpp"
 #include <string>
 #include <vector>
+#include <source_location>
 
 enum class DeviceState {
     Disconnected, // Серый: прибор обесточен / оффлайн
@@ -15,14 +17,15 @@ enum class DeviceState {
 
 // Параметры плашки статуса устройства (designated initializers):
 //
-//     if (DeviceStatus("Cluster 07", state, {.status = "STANDBY", .action = "Start"})) { ... }
+//     if (DeviceStatus("Cluster 07", state, {.status = "STANDBY", .action = "S"})) { ... }
 //     if (DeviceStatus("Cluster 07", state)) { ... }   // кнопка питания (Connect / Disconnect)
 struct DeviceStatusOptions {
     const char* status = nullptr;       // текст статуса; nullptr — стандартный для состояния
-    const char* action = nullptr;       // подпись кнопки действия; nullptr — иконка питания
+    const char* action = nullptr;       // короткий глиф (1–2 символа) в квадратной кнопке; nullptr — иконка питания
     bool        showAction = true;      // показывать кнопку действия
     bool        actionDisabled = false; // кнопка видна, но выключена
     float       width = 0.0f;           // базовые px (масштабируются внутри); 0 — по стилю темы
+    UiKey       key = {};               // идентичность; по умолчанию — deviceName
 
     // Кандидаты на имя устройства: если не пусто, ширина подбирается автоматически под самое
     // длинное имя / статус (плашка не «прыгает» при смене имени); width тогда игнорируется
@@ -33,7 +36,8 @@ struct DeviceStatusOptions {
 
 // Плашка статуса устройства с кнопкой действия.
 // Возвращает true, если кнопка действия была нажата
-bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusOptions& options = {});
+bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusOptions& options = {},
+                  std::source_location loc = std::source_location::current());
 
 // Предварительный расчет требуемой ширины плашки с учетом полной геометрии (в финальных px):
 // замеряет список кандидатов на имя устройства (titleCandidates), текущее имя (currentTitle),

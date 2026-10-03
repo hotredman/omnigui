@@ -29,7 +29,7 @@ UiVariant VariantOf(FieldState state) {
 // Interactive Widgets: Buttons & Display
 // ============================================================================
 
-bool Card::Button(const FieldOptions& o) {
+bool Card::Button(const FieldOptions& o, std::source_location loc) {
     const ::Col col = o.col.value_or(::Col::Half());
     float h = ResolveHeight(o.size, UiSize::Medium);
     float w = 0.0f;
@@ -39,36 +39,37 @@ bool Card::Button(const FieldOptions& o) {
     PrepareField(col, w);
 
     bool clicked = ::ButtonPx(ImVec2(w, h), {.label = o.label, .variant = o.variant, .icon = o.icon,
-                                             .tooltip = o.tooltip, .disabled = o.disabled, .key = o.key});
+                                             .tooltip = o.tooltip, .disabled = o.disabled, .key = o.key}, loc);
 
     FinishField(col);
     return clicked;
 }
 
-bool Card::HoldButton(const FieldOptions& o) {
-    Button(o);
+bool Card::HoldButton(const FieldOptions& o, std::source_location loc) {
+    Button(o, loc);
     return !o.disabled && ImGui::IsItemActive();
 }
 
-void Card::Value(double value, const FieldOptions& o) {
+void Card::Value(double value, const FieldOptions& o, std::source_location loc) {
     char buf[64];
     snprintf(buf, sizeof(buf), o.format ? o.format : "%.2f", value);
-    ValueImpl(buf, o);
+    ValueImpl(buf, o, loc);
 }
 
-void Card::Value(const char* text, const FieldOptions& o) {
-    ValueImpl(text, o);
+void Card::Value(const char* text, const FieldOptions& o, std::source_location loc) {
+    ValueImpl(text, o, loc);
 }
 
-void Card::Value(std::optional<double> value, const FieldOptions& o) {
+void Card::Value(std::optional<double> value, const FieldOptions& o, std::source_location loc) {
     if (value.has_value()) {
-        Value(*value, o);
+        Value(*value, o, loc);
     } else {
-        ValueImpl("—", o);
+        ValueImpl("—", o, loc);
     }
 }
 
-void Card::ValueImpl(const char* text, const FieldOptions& o) {
+void Card::ValueImpl(const char* text, const FieldOptions& o, std::source_location loc) {
+    (void)loc;
     const ::Col col = o.col.value_or(::Col::Full());
     float w = 0.0f;
     PrepareField(col, w);
@@ -119,7 +120,8 @@ void Card::ValueImpl(const char* text, const FieldOptions& o) {
 }
 
 template<typename T>
-bool Card::PresetGridImpl(T& value, const std::vector<T>& presets, int columns, const FieldOptions& o)
+bool Card::PresetGridImpl(T& value, const std::vector<T>& presets, int columns, const FieldOptions& o,
+                          std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Full());
     float w = 0.0f;
@@ -129,24 +131,26 @@ bool Card::PresetGridImpl(T& value, const std::vector<T>& presets, int columns, 
     bool changed = ::PresetGrid(value, presets, {.unit = o.unit, .columns = columns,
                                                  .size = o.size.value_or(UiSize::Medium),
                                                  .displayFormat = o.format ? o.format : "%.1f",
-                                                 .key = o.key, .sizePx = ImVec2(w, dispH)});
+                                                 .key = o.key, .sizePx = ImVec2(w, dispH)}, loc);
     FinishField(col);
     return changed;
 }
 
-bool Card::PresetGrid(float& value, const std::vector<float>& presets, const FieldOptions& options) {
-    return PresetGridImpl<float>(value, presets, options.columns, options);
+bool Card::PresetGrid(float& value, const std::vector<float>& presets, const FieldOptions& options,
+                      std::source_location loc) {
+    return PresetGridImpl<float>(value, presets, options.columns, options, loc);
 }
 
-bool Card::PresetGrid(double& value, const std::vector<double>& presets, const FieldOptions& options) {
-    return PresetGridImpl<double>(value, presets, options.columns, options);
+bool Card::PresetGrid(double& value, const std::vector<double>& presets, const FieldOptions& options,
+                      std::source_location loc) {
+    return PresetGridImpl<double>(value, presets, options.columns, options, loc);
 }
 
 // ============================================================================
 // Form Fields
 // ============================================================================
 
-bool Card::Float(float& value, const FieldOptions& o)
+bool Card::Float(float& value, const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
@@ -155,17 +159,17 @@ bool Card::Float(float& value, const FieldOptions& o)
     bool changed = false;
     const FieldState state = StateOf(&value, sizeof(value));
     if (state == FieldState::NoValue) {
-        RenderNoValue(o, w, h);
+        RenderNoValue(o, w, h, loc);
     } else {
         DisabledScope disabledScope(o.disabled);
         changed = InputField(value, {.label = o.label, .unit = o.unit, .format = o.format ? o.format : "%.2f",
-                                     .variant = VariantOf(state), .key = o.key, .sizePx = {w, h}});
+                                     .variant = VariantOf(state), .key = o.key, .sizePx = {w, h}}, loc);
     }
     FinishField(col);
     return changed;
 }
 
-bool Card::Float(std::optional<float>& value, const FieldOptions& o)
+bool Card::Float(std::optional<float>& value, const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
@@ -175,13 +179,13 @@ bool Card::Float(std::optional<float>& value, const FieldOptions& o)
     {
         DisabledScope disabledScope(o.disabled);
         changed = InputField(value, {.label = o.label, .unit = o.unit, .format = o.format ? o.format : "%.2f",
-                                     .key = o.key, .sizePx = {w, h}});
+                                     .key = o.key, .sizePx = {w, h}}, loc);
     }
     FinishField(col);
     return changed;
 }
 
-bool Card::Double(double& value, const FieldOptions& o)
+bool Card::Double(double& value, const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
@@ -191,13 +195,13 @@ bool Card::Double(double& value, const FieldOptions& o)
     {
         DisabledScope disabledScope(o.disabled);
         changed = InputField(value, {.label = o.label, .unit = o.unit, .format = o.format ? o.format : "%.2f",
-                                     .key = o.key, .sizePx = {w, h}});
+                                     .key = o.key, .sizePx = {w, h}}, loc);
     }
     FinishField(col);
     return changed;
 }
 
-bool Card::Double(std::optional<double>& value, const FieldOptions& o)
+bool Card::Double(std::optional<double>& value, const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
@@ -207,13 +211,13 @@ bool Card::Double(std::optional<double>& value, const FieldOptions& o)
     {
         DisabledScope disabledScope(o.disabled);
         changed = InputField(value, {.label = o.label, .unit = o.unit, .format = o.format ? o.format : "%.2f",
-                                     .key = o.key, .sizePx = {w, h}});
+                                     .key = o.key, .sizePx = {w, h}}, loc);
     }
     FinishField(col);
     return changed;
 }
 
-bool Card::Toggle(bool& value, const FieldOptions& o)
+bool Card::Toggle(bool& value, const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
@@ -221,7 +225,7 @@ bool Card::Toggle(bool& value, const FieldOptions& o)
 
     const FieldState state = StateOf(&value, sizeof(value));
     if (state == FieldState::NoValue) {
-        RenderNoValue(o, w, ResolveHeight(std::nullopt));
+        RenderNoValue(o, w, ResolveHeight(std::nullopt), loc);
         FinishField(col);
         return false;
     }
@@ -247,7 +251,7 @@ bool Card::Toggle(bool& value, const FieldOptions& o)
     float frameHeight = ResolveHeight(o.size, UiSize::Medium);
 
     bool changed = ::Toggle(value, {.label = o.label, .sublabel = o.sublabel, .disabled = o.disabled,
-                                    .key = o.key, .sizePx = {w, frameHeight}});
+                                    .key = o.key, .sizePx = {w, frameHeight}}, loc);
     if (state == FieldState::Modified) {
         // У переключателя нет рамки-варианта: изменённое отмечаем контуром вокруг него
         const float pad = theme.Scale(3.0f);
@@ -261,7 +265,7 @@ bool Card::Toggle(bool& value, const FieldOptions& o)
     return changed;
 }
 
-bool Card::Int(int& value, const FieldOptions& o)
+bool Card::Int(int& value, const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
@@ -270,27 +274,27 @@ bool Card::Int(int& value, const FieldOptions& o)
     bool changed = false;
     const FieldState state = StateOf(&value, sizeof(value));
     if (state == FieldState::NoValue)
-        RenderNoValue(o, w, h);
+        RenderNoValue(o, w, h, loc);
     else
         changed = InputField(value, {.label = o.label, .unit = o.unit, .variant = VariantOf(state),
-                                     .key = o.key, .sizePx = {w, h}});
+                                     .key = o.key, .sizePx = {w, h}}, loc);
     FinishField(col);
     return changed;
 }
 
-bool Card::Text(std::string& value, const FieldOptions& o)
+bool Card::Text(std::string& value, const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
     float h = ResolveHeight(o.size);
     bool changed = InputField(value, {.label = o.label, .hint = o.hint ? o.hint : " — ",
-                                      .key = o.key, .sizePx = {w, h}});
+                                      .key = o.key, .sizePx = {w, h}, .suggest = o.suggest}, loc);
     FinishField(col);
     return changed;
 }
 
-void Card::Display(const std::string& value, const FieldOptions& o)
+void Card::Display(const std::string& value, const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     const char* label = o.label;
@@ -319,7 +323,7 @@ void Card::Display(const std::string& value, const FieldOptions& o)
 
     PrepareField(col, w);
 
-    ImGui::PushID(o.key ? o.key : (label ? label : "display"));
+    AutoIdScope idScope(o.key, label ? label : "display", loc);
     ImGui::BeginGroup();
 
     // Заголовок (Label) над полем
@@ -373,18 +377,18 @@ void Card::Display(const std::string& value, const FieldOptions& o)
 
     ImGui::Dummy(ImVec2(w, frameH));
     ImGui::EndGroup();
-    ImGui::PopID();
 
     FinishField(col);
 }
 
-bool Card::Combo(int& currentItem, const char* const items[], int itemsCount, const FieldOptions& o)
+bool Card::Combo(int& currentItem, const char* const items[], int itemsCount, const FieldOptions& o,
+                 std::source_location loc)
 {
-    return ComboImpl(StateOf(&currentItem, sizeof(currentItem)), currentItem, items, itemsCount, o);
+    return ComboImpl(StateOf(&currentItem, sizeof(currentItem)), currentItem, items, itemsCount, o, loc);
 }
 
 bool Card::ComboImpl(FieldState state, int& currentItem, const char* const items[], int itemsCount,
-                     const FieldOptions& o)
+                     const FieldOptions& o, std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
@@ -392,15 +396,16 @@ bool Card::ComboImpl(FieldState state, int& currentItem, const char* const items
     float h = ResolveHeight(o.size);
     bool changed = false;
     if (state == FieldState::NoValue)
-        RenderNoValue(o, w, h);
+        RenderNoValue(o, w, h, loc);
     else
         changed = ::Combo(currentItem, items, itemsCount, {.label = o.label, .variant = VariantOf(state),
-                                                           .key = o.key, .sizePx = {w, h}});
+                                                           .key = o.key, .sizePx = {w, h}}, loc);
     FinishField(col);
     return changed;
 }
 
-bool Card::Combo(int& currentItem, const std::vector<std::string>& items, const FieldOptions& o)
+bool Card::Combo(int& currentItem, const std::vector<std::string>& items, const FieldOptions& o,
+                 std::source_location loc)
 {
     const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
@@ -409,10 +414,10 @@ bool Card::Combo(int& currentItem, const std::vector<std::string>& items, const 
     bool changed = false;
     const FieldState state = StateOf(&currentItem, sizeof(currentItem));
     if (state == FieldState::NoValue)
-        RenderNoValue(o, w, h);
+        RenderNoValue(o, w, h, loc);
     else
         changed = ::Combo(currentItem, items, {.label = o.label, .variant = VariantOf(state),
-                                               .key = o.key, .sizePx = {w, h}});
+                                               .key = o.key, .sizePx = {w, h}}, loc);
     FinishField(col);
     return changed;
 }
@@ -421,9 +426,9 @@ FieldState Card::StateOf(const void* field, std::size_t size) const {
     return m_fieldStates ? m_fieldStates(field, size) : FieldState::Normal;
 }
 
-void Card::RenderNoValue(const FieldOptions& o, float width, float height) {
+void Card::RenderNoValue(const FieldOptions& o, float width, float height, std::source_location loc) {
     DisabledScope off(true);
     std::string dash = "—";
-    InputField(dash, {.label = o.label ? o.label : "", .hint = " — ", .key = o.key, .sizePx = {width, height}});
+    InputField(dash, {.label = o.label ? o.label : "", .hint = " — ", .key = o.key, .sizePx = {width, height}}, loc);
 }
 

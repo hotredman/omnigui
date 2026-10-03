@@ -7,7 +7,8 @@
 #include <string>
 
 template<typename T>
-static bool RenderInternal(T& value, const std::vector<T>& presets, const PresetGridOptions& options) {
+static bool RenderInternal(T& value, const std::vector<T>& presets, const PresetGridOptions& options,
+                            std::source_location loc) {
     const UiTheme& theme = UiTheme::Get();
     const PresetGridStyle& style = options.style ? *options.style : theme.presetGrid;
     const char* unit = options.unit;
@@ -18,8 +19,8 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
     const char* displayFormat = options.displayFormat;
     const char* btnFormat = options.buttonFormat;
 
-    // Идентичность всей сетки: ключ или адрес значения (две сетки в одном окне не конфликтуют)
-    if (options.key) ImGui::PushID(options.key); else ImGui::PushID(&value);
+    // Идентичность всей сетки: явный key, иначе loc + unit
+    AutoIdScope idScope(options.key, unit, loc);
 
     float w = options.sizePx.x;
     if (w <= 0.0f) {
@@ -166,14 +167,15 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
     ImGui::PopStyleVar();
     theme.PopFont();
 
-    ImGui::PopID();
     return changed;
 }
 
-bool PresetGrid(float& value, const std::vector<float>& presets, const PresetGridOptions& options) {
-    return RenderInternal<float>(value, presets, options);
+bool PresetGrid(float& value, const std::vector<float>& presets, const PresetGridOptions& options,
+                std::source_location loc) {
+    return RenderInternal<float>(value, presets, options, loc);
 }
 
-bool PresetGrid(double& value, const std::vector<double>& presets, const PresetGridOptions& options) {
-    return RenderInternal<double>(value, presets, options);
+bool PresetGrid(double& value, const std::vector<double>& presets, const PresetGridOptions& options,
+                std::source_location loc) {
+    return RenderInternal<double>(value, presets, options, loc);
 }

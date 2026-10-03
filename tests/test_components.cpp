@@ -66,6 +66,7 @@ int main() {
     table.AddColumn({.id = "name", .header = "Name", .width = 1, .widthMode = ColumnWidthMode::Stretch,
                      .renderCell = [](const Row& r, int) { ImGui::TextUnformatted(r.name.c_str()); }});
     table.SetItems({{1, "alpha"}, {2, "beta"}, {3, "gamma"}});
+    std::string suggestText = "Al";
     float cardRate = 1.5f;
     int cardCount = 3;
     std::string cardName = "abc";
@@ -164,6 +165,28 @@ int main() {
             }
         });
 
+        // Sidebar: пункты, дерево, вложенные записи
+        Frame([&] {
+            if (auto sidebar = Sidebar({.posYPx = 40.0f})) {
+                sidebar.Item({.label = "Test Run", .icon = Icon::Gamepad, .selected = true});
+                sidebar.Separator();
+                sidebar.SectionTitle("PROJECTS");
+                if (auto list = sidebar.ScrollList()) {
+                    auto click = list.TreeNode({.label = "A project with a rather long descriptive name",
+                                                .count = "3", .expanded = true, .key = "p1"});
+                    CHECK(click == SidebarTreeClick::None);
+                    list.Entry({.label = "Run 001", .sublabel = "10:14", .statusColor = 0xFF00FF00,
+                                .selected = true, .key = "r1", .level = 2});
+                }
+            }
+        });
+
+        // InputField с подсказками (поле неактивно — список не рисуется, но путь выполняется)
+        Frame([&] {
+            TextSuggest suggest{.entries = {{"Alpha", "12 runs"}, {"Alpha-2", "3 runs"}}, .headline = "New will be created"};
+            InputField(suggestText, {.label = "Project", .suggest = &suggest});
+        });
+
         // FilterBar с левой и правой зонами
         Frame([&] {
             if (FilterBar bar({.key = "filters"}); bar) {
@@ -175,6 +198,54 @@ int main() {
                     Button({.label = "Export"});
                 }
             }
+        });
+
+        // Проверка отсутствия конфликтов ID для одинаковых/пустых подписей благодаря std::source_location и UiKey
+        Frame([&] {
+            // Кнопки с одинаковыми подписями на разных строках
+            Button({.label = "DUPLICATE"});
+            Button({.label = "DUPLICATE"});
+
+            // Кнопки без подписей с одинаковыми иконками
+            Button({.icon = Icon::Play});
+            Button({.icon = Icon::Play});
+
+            // InputField с одинаковыми подписями
+            float v1 = 1.0f, v2 = 2.0f;
+            InputField(v1, {.label = "Same"});
+            InputField(v2, {.label = "Same"});
+
+            // Toggle с одинаковыми подписями
+            bool t1 = false, t2 = true;
+            Toggle(t1, {.label = "Toggle"});
+            Toggle(t2, {.label = "Toggle"});
+
+            // ToolButton с одинаковыми иконками
+            ToolButton({.icon = Icon::Target});
+            ToolButton({.icon = Icon::Target});
+
+            // Combo с одинаковыми подписями
+            int cmb1 = 0, cmb2 = 0;
+            const char* cmbItems[] = {"X", "Y"};
+            Combo(cmb1, cmbItems, 2, {.label = "SameCombo"});
+            Combo(cmb2, cmbItems, 2, {.label = "SameCombo"});
+
+            // Поля в Card с одинаковыми подписями
+            if (Card c({.title = "IdTest"}); c) {
+                float cv1 = 1.0f, cv2 = 2.0f;
+                c.Float(cv1, {.label = "Field"});
+                c.Float(cv2, {.label = "Field"});
+                c.Button({.label = "Action"});
+                c.Button({.label = "Action"});
+            }
+
+            // Явный UiKey: int, string, ptr
+            int myIdx = 42;
+            int dummyData = 123;
+            Button({.label = "Keyed", .key = 0});
+            Button({.label = "Keyed", .key = myIdx});
+            Button({.label = "Keyed", .key = "custom_key"});
+            Button({.label = "Keyed", .key = &dummyData});
         });
     }
 

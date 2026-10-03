@@ -4,6 +4,7 @@
 #include "ui/components/Icon.hpp"
 #include "ui/components/Scope.hpp"
 #include "ui/components/Text.hpp"
+#include "ui/components/UiKey.hpp"
 #include <imgui.h>
 #include <string>
 #include <vector>
@@ -47,7 +48,7 @@ struct TableColumn {
 
 // Постоянные параметры таблицы Table<T> (designated initializers)
 struct TableOptions {
-    const char* key = nullptr;          // идентичность; nullptr — по адресу объекта таблицы
+    UiKey key = {};                     // идентичность; пустой — по адресу объекта таблицы
     float rowHeight = 0.0f;             // базовые px; 0 — theme.table.rowHeight
     bool saveSettings = false;          // сохранять порядок/ширины колонок в ini ImGui
     const char* emptyTitle = nullptr;   // заголовок пустого состояния; nullptr — по умолчанию
@@ -151,7 +152,7 @@ public:
         if (size.x <= 0.0f) size.x = ImGui::GetContentRegionAvail().x;
         if (size.y <= 0.0f) size.y = ImGui::GetContentRegionAvail().y;
 
-        if (m_options.key) ImGui::PushID(m_options.key); else ImGui::PushID(this);
+        if (m_options.key) m_options.key.Push(); else ImGui::PushID(this);
 
         // Пустое состояние
         if (m_filteredIndices.empty()) {
@@ -243,6 +244,7 @@ public:
                     const T& item = m_items[itemIdx];
 
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, rowHeight);
+                    ImGui::PushID(itemIdx);
 
                     for (size_t c = 0; c < m_columns.size(); ++c) {
                         if (!m_columns[c].visible) continue;
@@ -252,6 +254,8 @@ public:
                             }
                         }
                     }
+
+                    ImGui::PopID();
                 }
             }
 

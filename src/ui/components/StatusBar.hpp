@@ -2,8 +2,10 @@
 
 #include "ui/components/Scope.hpp"
 #include "ui/components/UiTheme.hpp"
+#include "ui/components/UiKey.hpp"
 #include <imgui.h>
 #include <string>
+#include <source_location>
 
 // Строка состояния внизу окна (StatusBar): полоса во всю ширину под
 // рабочей областью. Содержимое — элементы в одну строку слева направо:
@@ -27,6 +29,7 @@ struct StatusBarOptions {
 struct StatusBarTextOptions {
     UiVariant variant  = UiVariant::Default;   // цвет текста (Default — стандартный цвет статуса)
     float     maxWidth = 0.0f;                 // базовые px; 0 — по ширине текста
+    UiKey     key      = {};
 };
 
 class StatusBar : public Scope {
@@ -36,7 +39,8 @@ public:
 
     // Текст в одну строку. variant задаёт цвет (Default — вторичный текст
     // полосы); maxWidth = 0 — до правого края полосы
-    void Text(const std::string& text, const StatusBarTextOptions& options = {});
+    void Text(const std::string& text, const StatusBarTextOptions& options = {},
+              std::source_location loc = std::source_location::current());
 
     // Вертикальный разделитель между элементами
     void Separator();
@@ -51,5 +55,6 @@ private:
     const StatusBarStyle* m_customStyle = nullptr;
     const StatusBarStyle& Style() const { return m_customStyle ? *m_customStyle : UiTheme::Get().statusBar; }
     bool m_hasItems = false;
+    int m_textCount = 0;   // порядковый номер текста: уникальный ID для каждого Text()
     float m_height = 0.0f;
 };

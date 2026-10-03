@@ -4,16 +4,27 @@
 #include <imgui_internal.h>
 #include <cfloat>
 
-bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const TabBarOptions& options)
+bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const TabBarOptions& options,
+            std::source_location loc)
 {
     const UiTheme& theme = UiTheme::Get();
     const TabBarStyle& style = options.style ? *options.style : theme.tab;
     const UiVariant* variants = options.variants;
     bool changed = false;
 
-    // Идентичность панели: ключ либо подпись первой вкладки
-    std::string id = std::string("##tabs_") +
-        (options.key ? options.key : (itemsCount > 0 ? items[0] : ""));
+    // Идентичность панели: ключ либо подпись первой вкладки / место вызова
+    std::string id = "##tabs_";
+    if (options.key) {
+        if (options.key.type == UiKey::Type::String && options.key.str) {
+            id += options.key.str;
+        } else {
+            id += std::to_string(options.key.index);
+        }
+    } else if (itemsCount > 0 && items[0]) {
+        id += items[0];
+    } else {
+        id += std::to_string(HashLocation(loc));
+    }
 
     auto tabOptions = [&](int i) {
         TabItemOptions o;
@@ -98,7 +109,8 @@ bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const
     return changed;
 }
 
-bool TabBar(const std::vector<std::string>& items, int& selectedIndex, const TabBarOptions& options)
+bool TabBar(const std::vector<std::string>& items, int& selectedIndex, const TabBarOptions& options,
+            std::source_location loc)
 {
     std::vector<const char*> cItems;
     cItems.reserve(items.size());
@@ -106,10 +118,11 @@ bool TabBar(const std::vector<std::string>& items, int& selectedIndex, const Tab
         cItems.push_back(s.c_str());
     }
     return TabBar(cItems.empty() ? nullptr : cItems.data(), static_cast<int>(cItems.size()),
-                  selectedIndex, options);
+                  selectedIndex, options, loc);
 }
 
-bool TabItem(const char* label, bool isSelected, const TabItemOptions& options)
+bool TabItem(const char* label, bool isSelected, const TabItemOptions& options,
+             std::source_location loc)
 {
     const UiTheme& theme = UiTheme::Get();
     const TabBarStyle& style = options.style ? *options.style : theme.tab;
@@ -137,9 +150,8 @@ bool TabItem(const char* label, bool isSelected, const TabItemOptions& options)
     ImVec2 size(tabW, tabH);
 
     // Невидимая кнопка для обработки ввода
-    ImGui::PushID(options.key ? options.key : label);
+    AutoIdScope idScope(options.key, label, loc);
     bool pressed = ImGui::InvisibleButton("##tab", size);
-    ImGui::PopID();
     bool hovered = ImGui::IsItemHovered();
 
     // Отрисовка

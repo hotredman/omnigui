@@ -112,6 +112,11 @@ struct InputFieldStyle {
     ImFont* unitFont       = nullptr; // Шрифт единицы измерения
     float unitFontSize     = 18.0f;   // Базовый размер единиц (18pt Regular)
 
+    // Список подсказок под полем (TextSuggest)
+    float suggestPaddingY   = 4.0f;    // вертикальный отступ списка
+    float suggestHeadHeight = 26.0f;   // высота строки заголовка списка
+    float suggestGap        = 2.0f;    // зазор между полем и списком
+
     ImU32 colLabel         = 0;
     ImU32 colBg            = 0;
     ImU32 colBorder        = 0;

@@ -4,13 +4,13 @@
 #include <cmath>
 #include <string>
 
-static void ApplyToolbarVerticalCentering(float s) {
+void ApplyToolbarVerticalCentering(float s, bool allowMoveUp) {
     const UiTheme& theme = UiTheme::Get();
     float winH = ImGui::GetWindowHeight();
     // В компактных полосах (тулбар, шапка) центрируем кнопку по вертикали, предотвращая растягивание
     if (winH <= theme.HeaderHeight() * 1.15f) {
         float targetY = std::max(0.0f, std::floor((winH - s) * 0.5f));
-        if (ImGui::GetCursorPosY() < targetY) {
+        if (allowMoveUp || ImGui::GetCursorPosY() < targetY) {
             ImGui::SetCursorPosY(targetY);
         }
     }
@@ -58,7 +58,7 @@ static void ResolveButtonColors(const UiTheme& theme, UiVariant variant, bool ho
     }
 }
 
-bool ToolButton(const ToolButtonOptions& o) {
+bool ToolButton(const ToolButtonOptions& o, std::source_location loc) {
     DisabledScope disabledScope(o.disabled);
     const UiTheme& theme = UiTheme::Get();
 
@@ -70,14 +70,11 @@ bool ToolButton(const ToolButtonOptions& o) {
 
     ApplyToolbarVerticalCentering(s);
 
-    // Идентичность: явный key, иначе глиф, иначе иконка
-    if (o.key)         ImGui::PushID(o.key);
-    else if (o.glyph)  ImGui::PushID(o.glyph);
-    else               ImGui::PushID(static_cast<int>(o.icon.GetId()));
+    // Идентичность: явный key, иначе loc + glyph/icon
+    AutoIdScope idScope(o.key, o.glyph, loc, static_cast<int>(o.icon.GetId()));
 
     ImVec2 screenPos = ImGui::GetCursorScreenPos();
     bool clicked = ImGui::InvisibleButton("##tool", ImVec2(s, s));
-    ImGui::PopID();
     bool hovered = ImGui::IsItemHovered();
     bool active = ImGui::IsItemActive();
 

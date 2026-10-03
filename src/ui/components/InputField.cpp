@@ -67,7 +67,7 @@ void RenderUnitSuffix(const char* unit, const ImVec2& itemMin, const ImVec2& ite
 // Общий каркас поля: подпись, стили рамки/шрифта, единица измерения.
 // draw рисует сам ImGui-виджет с идентификатором "##v" и возвращает true при изменении.
 template <typename DrawFn>
-bool RunField(const InputFieldOptions& o, float defaultWidthBase, DrawFn&& draw)
+bool RunField(const InputFieldOptions& o, float defaultWidthBase, DrawFn&& draw, std::source_location loc)
 {
     const UiTheme& theme = UiTheme::Get();
     const InputFieldStyle& style = theme.input;
@@ -78,8 +78,8 @@ bool RunField(const InputFieldOptions& o, float defaultWidthBase, DrawFn&& draw)
     else if (o.width > 0.0f)                 w = theme.Scale(o.width);
     else                                     w = theme.Scale(defaultWidthBase);
 
-    // Идентичность: явный key, иначе подпись
-    ImGui::PushID(o.key ? o.key : (o.label ? o.label : "input"));
+    // Идентичность: явный key, иначе loc + label
+    AutoIdScope idScope(o.key, o.label, loc);
     ImGui::BeginGroup();
 
     RenderFieldLabel(o.label, w, style);
@@ -111,13 +111,12 @@ bool RunField(const InputFieldOptions& o, float defaultWidthBase, DrawFn&& draw)
     RenderUnitSuffix(o.unit, ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), style, theme);
 
     ImGui::EndGroup();
-    ImGui::PopID();
     return changed;
 }
 
 // Опциональное число: пустая строка -> nullopt, иначе разбор strtof/strtod
 template <typename T, typename ParseFn>
-bool OptionalNumber(std::optional<T>& value, const InputFieldOptions& o, ParseFn parse)
+bool OptionalNumber(std::optional<T>& value, const InputFieldOptions& o, ParseFn parse, std::source_location loc)
 {
     return RunField(o, 160.0f, [&] {
         char buf[64] = "";
@@ -145,31 +144,41 @@ bool OptionalNumber(std::optional<T>& value, const InputFieldOptions& o, ParseFn
             }
         }
         return changed;
-    });
+    }, loc);
 }
 
 } // namespace
 
-bool InputField(float& value, const InputFieldOptions& o) {
-    return RunField(o, 160.0f, [&] { return ImGui::InputFloat("##v", &value, 0.0f, 0.0f, o.format); });
+bool InputField(float& value, const InputFieldOptions& o, std::source_location loc) {
+    return RunField(o, 160.0f, [&] { return ImGui::InputFloat("##v", &value, 0.0f, 0.0f, o.format); }, loc);
 }
 
-bool InputField(double& value, const InputFieldOptions& o) {
-    return RunField(o, 160.0f, [&] { return ImGui::InputDouble("##v", &value, 0.0, 0.0, o.format); });
+bool InputField(double& value, const InputFieldOptions& o, std::source_location loc) {
+    return RunField(o, 160.0f, [&] { return ImGui::InputDouble("##v", &value, 0.0, 0.0, o.format); }, loc);
 }
 
-bool InputField(int& value, const InputFieldOptions& o) {
-    return RunField(o, 160.0f, [&] { return ImGui::InputInt("##v", &value, 0, 0); });
+bool InputField(int& value, const InputFieldOptions& o, std::source_location loc) {
+    return RunField(o, 160.0f, [&] { return ImGui::InputInt("##v", &value, 0, 0); }, loc);
 }
 
-bool InputField(std::string& value, const InputFieldOptions& o) {
-    return RunField(o, 200.0f, [&] { return ImGui::InputTextWithHint("##v", o.hint ? o.hint : "", &value); });
+bool InputField(std::string& value, const InputFieldOptions& o, std::source_location loc) {
+    return RunField(o, 200.0f, [&] {
+        bool changed = ImGui::InputTextWithHint("##v", o.hint ? o.hint : "", &value);
+        if (o.suggest) {
+            // Состояние снимается сразу после поля, до любого другого элемента
+            const TextSuggestFieldState state{ImGui::IsItemActive(), ImGui::IsItemActivated(),
+                                              ImGui::IsItemDeactivated(), changed};
+            if (DrawTextSuggest(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), o.size, state, *o.suggest, value))
+                changed = true;
+        }
+        return changed;
+    }, loc);
 }
 
-bool InputField(std::optional<float>& value, const InputFieldOptions& o) {
-    return OptionalNumber(value, o, [](const char* s, char** end) { return std::strtof(s, end); });
+bool InputField(std::optional<float>& value, const InputFieldOptions& o, std::source_location loc) {
+    return OptionalNumber(value, o, [](const char* s, char** end) { return std::strtof(s, end); }, loc);
 }
 
-bool InputField(std::optional<double>& value, const InputFieldOptions& o) {
-    return OptionalNumber(value, o, [](const char* s, char** end) { return std::strtod(s, end); });
+bool InputField(std::optional<double>& value, const InputFieldOptions& o, std::source_location loc) {
+    return OptionalNumber(value, o, [](const char* s, char** end) { return std::strtod(s, end); }, loc);
 }

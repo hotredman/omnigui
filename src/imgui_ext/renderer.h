@@ -51,6 +51,10 @@ public:
     virtual void Shutdown() = 0;
     virtual void Resize(int width, int height) = 0;
 
+    // Цвет, которым заливается кадр перед отрисовкой (фон за окнами ImGui).
+    // По умолчанию (31, 31, 36); приложению стоит задать цвет фона темы
+    virtual void SetClearColor(Color col) { (void)col; }
+
     // Frame lifecycle
     virtual void BeginFrame() = 0;
     virtual void EndFrame() = 0;

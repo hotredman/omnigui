@@ -4,7 +4,7 @@
 #include <imgui.h>
 #include <algorithm>
 
-bool SearchInput(std::string& query, const SearchInputOptions& options) {
+bool SearchInput(std::string& query, const SearchInputOptions& options, std::source_location loc) {
     const char* hint = options.hint;
     const float baseWidth = options.width;
     const UiSize size = options.size;
@@ -25,7 +25,7 @@ bool SearchInput(std::string& query, const SearchInputOptions& options) {
     float clearBtnW = hasClearBtn ? h : 0.0f;
     float inputW = totalW - (hasClearBtn ? (clearBtnW + theme.Scale(4.0f)) : 0.0f);
 
-    ImGui::PushID(options.key ? options.key : (hint ? hint : "search"));
+    AutoIdScope idScope(options.key, hint ? hint : "search", loc);
 
     float fontSize = theme.Scale(m.fontSize);
     float padY = std::max(2.0f, (m.height - fontSize) * 0.5f);
@@ -60,6 +60,5 @@ bool SearchInput(std::string& query, const SearchInputOptions& options) {
         }
     }
 
-    ImGui::PopID();
     return changed;
 }

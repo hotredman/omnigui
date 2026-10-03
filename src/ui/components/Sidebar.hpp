@@ -28,7 +28,37 @@ struct SidebarEntryOptions {
     ImU32       statusColor = 0;       // 0 — без светодиода
     bool        selected    = false;
     const char* key         = nullptr;
+    int         level       = 0;           // уровень вложенности в дереве (0 — без отступа)
 };
+
+// Отступ одного уровня дерева (базовые px)
+constexpr float kSidebarTreeIndent = 14.0f;
+
+// Реакция на клик по узлу дерева: стрелка раскрытия — Toggle, остальная строка — Activate
+enum class SidebarTreeClick { None, Toggle, Activate };
+
+// Параметры узла дерева: стрелка раскрытия, название (до двух строк), справа счётчик и
+// индикатор статуса. Высота узла растёт с числом строк названия.
+//
+//     auto click = list.TreeNode({.label = "Project Alpha", .count = "12", .level = 0, .expanded = open});
+//     if (click == SidebarTreeClick::Toggle) open = !open;
+struct SidebarTreeNodeOptions {
+    std::string label;
+    std::string count;                     // счётчик справа; пусто — нет
+    int         level       = 0;
+    bool        expanded    = false;
+    bool        selected    = false;
+    ImU32       statusColor = 0;           // 0 — без индикатора
+    const char* key         = nullptr;
+};
+
+// Название в две строки: первая — по границе слова (слово длиннее строки режется по символу),
+// вторая — остаток; если и он не помещается, оканчивается многоточием. Мерка — текущий шрифт ImGui
+struct SidebarWrappedLabel {
+    std::string line1;
+    std::string line2;   // пусто — название уместилось в одну строку
+};
+SidebarWrappedLabel SidebarWrapLabel(const char* text, float maxWidth);
 
 // Прокручиваемый список внутри боковой панели (RAII-область). Создаётся
 // через Sidebar::ScrollList() и занимает всё свободное место до низа панели.
@@ -38,6 +68,9 @@ public:
 
     // Двухстрочная запись списка; true — по ней кликнули
     bool Entry(const SidebarEntryOptions& options);
+
+    // Узел дерева со стрелкой раскрытия и счётчиком
+    SidebarTreeClick TreeNode(const SidebarTreeNodeOptions& options);
 
     // Заглушка пустого списка
     void Empty(const std::string& message = "List is empty", const std::string& detail = "");
