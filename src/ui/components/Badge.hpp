@@ -8,6 +8,7 @@
 //     Badge("beta", {.variant = UiVariant::Warning, .tooltip = "Experimental"});
 struct BadgeOptions {
     UiVariant   variant   = UiVariant::Default;
+    UiSize      size      = UiSize::Medium;  // масштаб чипа по шкале UiSize (Medium — стиль темы)
     const char* tooltip   = nullptr;     // подсказка при наведении
     float       topOffset = -1.0f;       // сдвиг вниз от курсора, базовые px; < 0 — без сдвига
     float       fontSize  = 0.0f;        // кегль, pt; 0 — по стилю темы

@@ -44,7 +44,7 @@ bool ButtonPx(ImVec2 size, const ButtonOptions& o) {
         // Незаданные оси берутся из options: ширина — width, высота — size
         const UiTheme& t = UiTheme::Get();
         if (size.x <= 0.0f) {
-            if (o.width == ButtonOptions::Fill) size.x = ImGui::GetContentRegionAvail().x;
+            if (o.width == Fill) size.x = ImGui::GetContentRegionAvail().x;
             else if (o.width > 0.0f)            size.x = t.Scale(o.width);
         }
         if (size.y <= 0.0f) size.y = t.GetMetrics(o.size).height;

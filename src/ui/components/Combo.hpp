@@ -13,9 +13,6 @@
 // Идентичность выводится из подписи; без подписи (или для одинаковых подписей)
 // задаётся key либо область IdScope.
 struct ComboOptions {
-    // Ширина на всю доступную ширину контейнера
-    static constexpr float Fill = -1.0f;
-
     const char* label   = nullptr;              // подпись над списком
     UiVariant   variant = UiVariant::Default;
     UiSize      size    = UiSize::Medium;

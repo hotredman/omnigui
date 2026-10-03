@@ -13,14 +13,15 @@ bool Tag(const char* label, const TagOptions& options) {
     const UiTheme& theme = UiTheme::Get();
     const TagStyle& st = theme.tag;
 
-    theme.PushFont(st.font ? st.font : theme.fontMedium, st.fontSize);
+    const float sizeFactor = theme.SizeFactor(options.size);
+    theme.PushFont(st.font ? st.font : theme.fontMedium, st.fontSize * sizeFactor);
 
     std::string prefixStr = (prefix && prefix[0] != '\0') ? (std::string(prefix) + " ") : "";
     ImVec2 prefixSz = prefixStr.empty() ? ImVec2(0.0f, 0.0f) : ImGui::CalcTextSize(prefixStr.c_str());
     ImVec2 labelSz = ImGui::CalcTextSize(label);
 
-    float padX = theme.Scale(st.paddingX);
-    float padY = theme.Scale(st.paddingY);
+    float padX = theme.Scale(st.paddingX) * sizeFactor;
+    float padY = theme.Scale(st.paddingY) * sizeFactor;
     float w = prefixSz.x + labelSz.x + padX * 2.0f;
     float h = std::max(prefixSz.y, labelSz.y) + padY * 2.0f;
 
@@ -52,7 +53,7 @@ bool Tag(const char* label, const TagOptions& options) {
     ImU32 prefixCol = hovered ? st.colPrefixHover : st.colPrefix;
     ImU32 labelCol = hovered ? st.colTextHover : st.colText;
 
-    float rounding = theme.Scale(st.cornerRadius);
+    float rounding = theme.Scale(st.cornerRadius) * sizeFactor;
     dl->AddRectFilled(p, ImVec2(p.x + w, p.y + h), bgCol, rounding);
     dl->AddRect(p, ImVec2(p.x + w, p.y + h), borderCol, rounding, 0, st.borderSize);
 
@@ -83,6 +84,7 @@ std::optional<std::string> TagList(const std::vector<std::string>& tags, const T
 
     const UiTheme& theme = UiTheme::Get();
     const TagStyle& st = theme.tag;
+    const float sizeFactor = theme.SizeFactor(options.size);
     float itemSpacingX = theme.Scale(st.spacingX);
     float itemSpacingY = theme.Scale(st.spacingY);
     float availW = (maxAvailableWidth > 0.0f) ? maxAvailableWidth : ImGui::GetContentRegionAvail().x;
@@ -90,12 +92,12 @@ std::optional<std::string> TagList(const std::vector<std::string>& tags, const T
     float curLineW = 0.0f;
     std::optional<std::string> clickedTag;
 
-    theme.PushFont(st.font ? st.font : theme.fontMedium, st.fontSize);
+    theme.PushFont(st.font ? st.font : theme.fontMedium, st.fontSize * sizeFactor);
     for (size_t i = 0; i < tags.size(); ++i) {
         const std::string& tag = tags[i];
         std::string fullText = "# " + tag;
         ImVec2 textSz = ImGui::CalcTextSize(fullText.c_str());
-        float tagW = textSz.x + (theme.Scale(st.paddingX) * 2.0f);
+        float tagW = textSz.x + (theme.Scale(st.paddingX) * sizeFactor * 2.0f);
 
         if (i > 0) {
             if (curLineW + itemSpacingX + tagW <= availW) {
@@ -110,10 +112,10 @@ std::optional<std::string> TagList(const std::vector<std::string>& tags, const T
         curLineW += tagW;
 
         theme.PopFont();
-        if (Tag(tag.c_str())) {
+        if (Tag(tag.c_str(), {.size = options.size})) {
             clickedTag = tag;
         }
-        theme.PushFont(st.font ? st.font : theme.fontMedium, st.fontSize);
+        theme.PushFont(st.font ? st.font : theme.fontMedium, st.fontSize * sizeFactor);
     }
     theme.PopFont();
 

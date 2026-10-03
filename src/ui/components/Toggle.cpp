@@ -17,13 +17,16 @@ bool Toggle(bool& value, const ToggleOptions& options)
                       : (options.width > 0.0f ? theme.Scale(options.width) : 0.0f);
     const float height = options.sizePx.y;
     float scale = theme.GetScale();
+    const float sizeFactor = theme.SizeFactor(options.size);
+    const float fontSizeLabel = style.fontSizeLabel * sizeFactor;
+    const float fontSizeSublabel = style.fontSizeSublabel * sizeFactor;
 
     // 1. Опорные размеры с учётом масштабирования темы
-    float switchW = style.switchWidth * scale;
-    float switchH = style.switchHeight * scale;
-    float knobPad = style.knobPadding * scale;
-    float labelSpacing = style.labelSpacing * scale;
-    float minH = (height > 0.0f) ? height : (style.minHeight * scale);
+    float switchW = style.switchWidth * scale * sizeFactor;
+    float switchH = style.switchHeight * scale * sizeFactor;
+    float knobPad = style.knobPadding * scale * sizeFactor;
+    float labelSpacing = style.labelSpacing * scale * sizeFactor;
+    float minH = (height > 0.0f) ? height : (style.minHeight * scale * sizeFactor);
 
     ImFont* fontMain = style.fontLabel ? style.fontLabel : theme.fontMedium;
     ImFont* fontSub  = style.fontSublabel ? style.fontSublabel : theme.fontRegular;
@@ -33,20 +36,20 @@ bool Toggle(bool& value, const ToggleOptions& options)
     ImVec2 sublabelSize(0.0f, 0.0f);
 
     if (label && label[0] != '\0') {
-        theme.PushFont(fontMain, style.fontSizeLabel);
+        theme.PushFont(fontMain, fontSizeLabel);
         labelSize = ImGui::CalcTextSize(label);
         theme.PopFont();
     }
 
     if (sublabel && sublabel[0] != '\0') {
-        theme.PushFont(fontSub, style.fontSizeSublabel);
+        theme.PushFont(fontSub, fontSizeSublabel);
         sublabelSize = ImGui::CalcTextSize(sublabel);
         theme.PopFont();
     }
 
     float totalTextH = 0.0f;
     if (labelSize.y > 0.0f && sublabelSize.y > 0.0f) {
-        totalTextH = labelSize.y + style.textLineSpacing * scale + sublabelSize.y;
+        totalTextH = labelSize.y + style.textLineSpacing * scale * sizeFactor + sublabelSize.y;
     } else if (labelSize.y > 0.0f) {
         totalTextH = labelSize.y;
     } else if (sublabelSize.y > 0.0f) {
@@ -121,14 +124,14 @@ bool Toggle(bool& value, const ToggleOptions& options)
         float textY = cursorPos.y + (finalH - totalTextH) * 0.5f;
 
         if (label && label[0] != '\0') {
-            theme.PushFont(fontMain, style.fontSizeLabel);
+            theme.PushFont(fontMain, fontSizeLabel);
             drawList->AddText(ImVec2(textX, textY), ImGui::GetColorU32(style.colTextMain), label);
             theme.PopFont();
-            textY += labelSize.y + style.textLineSpacing * scale;
+            textY += labelSize.y + style.textLineSpacing * scale * sizeFactor;
         }
 
         if (sublabel && sublabel[0] != '\0') {
-            theme.PushFont(fontSub, style.fontSizeSublabel);
+            theme.PushFont(fontSub, fontSizeSublabel);
             drawList->AddText(ImVec2(textX, textY), ImGui::GetColorU32(style.colTextSub), sublabel);
             theme.PopFont();
         }

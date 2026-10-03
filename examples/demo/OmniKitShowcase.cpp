@@ -547,17 +547,17 @@ static void RenderRemoteControl() {
     // 2. Right Area: SidePanel Remote Control actions
     if (auto panel = split.Side()) {
         if (Card actionCard("Stream Actions"); actionCard) {
-            if (Button({.label = "START STREAM", .variant = UiVariant::Success, .icon = Icon::Play, .size = UiSize::Large, .width = ButtonOptions::Fill})) {
+            if (Button({.label = "START STREAM", .variant = UiVariant::Success, .icon = Icon::Play, .size = UiSize::Large, .width = Fill})) {
                 s_deviceState = DeviceState::Running;
                 s_deviceStreaming = true;
             }
             Spacer();
-            if (Button({.label = "PAUSE FEED", .variant = UiVariant::Warning, .icon = Icon::Pause, .width = ButtonOptions::Fill})) {
+            if (Button({.label = "PAUSE FEED", .variant = UiVariant::Warning, .icon = Icon::Pause, .width = Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
             }
             Spacer();
-            if (Button({.label = "STOP & RESET", .variant = UiVariant::Danger, .icon = Icon::Square, .width = ButtonOptions::Fill})) {
+            if (Button({.label = "STOP & RESET", .variant = UiVariant::Danger, .icon = Icon::Square, .width = Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
                 s_resetConfirm.Open();
@@ -583,7 +583,7 @@ static void RenderRemoteControl() {
         Spacer();
 
         if (Card calibCard("Baseline & Zero"); calibCard) {
-            if (Button({.label = "Tare / Zero Baseline", .variant = UiVariant::Secondary, .icon = Icon::Zero, .width = ButtonOptions::Fill})) {
+            if (Button({.label = "Tare / Zero Baseline", .variant = UiVariant::Secondary, .icon = Icon::Zero, .width = Fill})) {
                 s_liveChart1.Clear();
                 s_liveChart2.Clear();
                 s_liveChart3.Clear();
@@ -756,7 +756,7 @@ static void RenderMachine() {
 // ----------------------------------------------------------------------------
 static void RenderArchive() {
     if (Card archiveCard("Telemetry Dataset Archive"); archiveCard) {
-        SearchInput(s_searchArchive, {.hint = "Search datasets by name or run ID...", .key = "archive"});
+        SearchInput(s_searchArchive, {.hint = "Search datasets by name or run ID...", .width = Fill, .key = "archive"});
         Spacer();
 
         using Column = TableGrid::Column;

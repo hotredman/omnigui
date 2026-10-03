@@ -76,7 +76,7 @@ bool Combo(int& currentItem, const char* const items[], int itemsCount, const Co
     } else if (o.sizePx.x < 0.0f) {
         float avail = ImGui::GetContentRegionAvail().x;
         w = std::max(theme.Scale(80.0f), avail + o.sizePx.x + 1.0f);
-    } else if (o.width == ComboOptions::Fill) {
+    } else if (o.width == Fill) {
         w = std::max(theme.Scale(80.0f), ImGui::GetContentRegionAvail().x);
     } else if (o.width > 0.0f) {
         w = theme.Scale(o.width);

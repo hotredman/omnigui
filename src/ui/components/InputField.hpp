@@ -13,9 +13,6 @@
 // Идентичность выводится из подписи; без подписи (или для одинаковых подписей)
 // задаётся key либо область IdScope.
 struct InputOptions {
-    // Ширина на всю доступную ширину контейнера
-    static constexpr float Fill = -1.0f;
-
     const char* label   = nullptr;              // подпись над полем
     const char* unit    = nullptr;              // единица измерения внутри поля справа
     const char* format  = "%.2f";               // printf-формат для float/double

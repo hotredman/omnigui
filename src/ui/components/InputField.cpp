@@ -74,7 +74,7 @@ bool RunField(const InputOptions& o, float defaultWidthBase, DrawFn&& draw)
 
     float w;
     if (o.sizePx.x > 0.0f)                   w = o.sizePx.x;
-    else if (o.width == InputOptions::Fill)  w = ImGui::GetContentRegionAvail().x;
+    else if (o.width == Fill)  w = ImGui::GetContentRegionAvail().x;
     else if (o.width > 0.0f)                 w = theme.Scale(o.width);
     else                                     w = theme.Scale(defaultWidthBase);
 

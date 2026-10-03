@@ -31,6 +31,10 @@ enum class UiSize {
     Mini     // 26px — Строки таблиц, инлайн-действия
 };
 
+// Ширина/высота «на всё доступное место» (значение поля width/height в options).
+// 0 — по содержимому/авто, Fill — до края контейнера.
+inline constexpr float Fill = -1.0f;
+
 // Метрики контрола под конкретный размер с автоматическим масштабированием DPI
 struct ControlMetrics {
     float height    = 36.0f; // Высота фрейма (уже масштабирована под scale)
@@ -783,6 +787,10 @@ public:
 
     // Получение масштабированных метрик контрола под размер UiSize
     ControlMetrics GetMetrics(UiSize size) const;
+
+    // Множитель размера для чипов и подписей (Badge, Tag, Toggle): отношение кегля
+    // выбранного UiSize к Medium. Для Medium равен 1, внешний вид не меняется.
+    float SizeFactor(UiSize size) const;
 
     // Получение семантического стиля варианта (цвета фона, текста, рамок)
     const SemanticStyle& GetVariantStyle(UiVariant variant) const;

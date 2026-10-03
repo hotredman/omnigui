@@ -8,13 +8,14 @@ ImVec2 BadgeSize(const char* text, const BadgeOptions& options) {
     if (!text || text[0] == '\0') return ImVec2(0.0f, 0.0f);
     const UiTheme& theme = UiTheme::Get();
     const BadgeStyle& bst = theme.badge;
+    const float sizeFactor = theme.SizeFactor(options.size);
     float scale = theme.GetScale();
-    float resolvedFontSize = (fontSize > 0.0f) ? fontSize : bst.fontSize;
+    float resolvedFontSize = (fontSize > 0.0f) ? fontSize : bst.fontSize * sizeFactor;
     theme.PushFont(bst.font ? bst.font : theme.fontMedium, resolvedFontSize);
     ImVec2 textSz = ImGui::CalcTextSize(text);
     theme.PopFont();
-    float padX = bst.paddingX * scale;
-    float padY = bst.paddingY * scale;
+    float padX = bst.paddingX * scale * sizeFactor;
+    float padY = bst.paddingY * scale * sizeFactor;
     return ImVec2(textSz.x + padX * 2.0f, textSz.y + padY * 2.0f);
 }
 
@@ -25,12 +26,13 @@ ImVec2 BadgeDraw(ImDrawList* dl, ImVec2 pos, const char* text, const BadgeOption
 
     const UiTheme& theme = UiTheme::Get();
     const BadgeStyle& bst = theme.badge;
+    const float sizeFactor = theme.SizeFactor(options.size);
     float scale = theme.GetScale();
-    float resolvedFontSize = (fontSize > 0.0f) ? fontSize : bst.fontSize;
+    float resolvedFontSize = (fontSize > 0.0f) ? fontSize : bst.fontSize * sizeFactor;
     theme.PushFont(bst.font ? bst.font : theme.fontMedium, resolvedFontSize);
     ImVec2 textSz = ImGui::CalcTextSize(text);
-    float padX = bst.paddingX * scale;
-    float padY = bst.paddingY * scale;
+    float padX = bst.paddingX * scale * sizeFactor;
+    float padY = bst.paddingY * scale * sizeFactor;
     float w = textSz.x + padX * 2.0f;
     float h = textSz.y + padY * 2.0f;
 
@@ -41,7 +43,7 @@ ImVec2 BadgeDraw(ImDrawList* dl, ImVec2 pos, const char* text, const BadgeOption
     }
 
     const BadgeVariantColors& colors = bst.GetColors(variant);
-    float rounding = bst.cornerRadius * scale;
+    float rounding = bst.cornerRadius * scale * sizeFactor;
 
     dl->AddRectFilled(pos, ImVec2(pos.x + w, pos.y + h), colors.colBg, rounding);
     dl->AddRect(pos, ImVec2(pos.x + w, pos.y + h), colors.colBorder, rounding, 0, bst.borderSize);

@@ -522,6 +522,10 @@ ControlMetrics UiTheme::GetMetrics(UiSize size) const {
     return m;
 }
 
+float UiTheme::SizeFactor(UiSize size) const {
+    return GetMetrics(size).fontSize / GetMetrics(UiSize::Medium).fontSize;
+}
+
 const SemanticStyle& UiTheme::GetVariantStyle(UiVariant variant) const {
     const size_t idx = static_cast<size_t>(variant);
     return idx < std::size(m_variants) ? m_variants[idx] : m_variants[0];

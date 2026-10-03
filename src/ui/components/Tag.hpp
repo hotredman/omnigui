@@ -12,6 +12,7 @@
 struct TagOptions {
     const char* prefix    = "#";       // префикс перед текстом; nullptr или "" — без префикса
     bool        clickable = true;
+    UiSize      size      = UiSize::Medium;  // масштаб чипа по шкале UiSize (Medium — стиль темы)
     const char* tooltip   = nullptr;   // подсказка; nullptr — "Filter by tag #<text>"
 };
 
@@ -20,6 +21,7 @@ struct TagOptions {
 bool Tag(const char* text, const TagOptions& options = {});
 
 struct TagListOptions {
+    UiSize size      = UiSize::Medium;   // размер всех тегов списка
     float maxWidthPx = 0.0f;   // ширина переноса в финальных px; 0 — вся доступная ширина
 };
 

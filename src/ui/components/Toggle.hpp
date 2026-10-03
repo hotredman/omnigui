@@ -16,6 +16,7 @@
 // задаётся key либо область IdScope.
 struct ToggleOptions {
     const char* label    = nullptr;
+    UiSize      size     = UiSize::Medium;    // масштаб по шкале UiSize (Medium — стиль темы)
     const char* sublabel = nullptr;           // пояснение под подписью
     float       width    = 0.0f;              // базовые px (до масштаба); 0 — по содержимому
     bool        disabled = false;

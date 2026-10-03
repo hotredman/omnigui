@@ -7,10 +7,11 @@
 //
 //     SearchInput(query, {.hint = "Search datasets..."});
 //     SearchInput(query, {.hint = "Filter...", .width = 220});
+//     SearchInput(query, {.hint = "Search...", .width = Fill});   // на всю ширину
 struct SearchInputOptions {
     const char* hint  = "Search...";       // плейсхолдер
     UiSize      size  = UiSize::Small;
-    float       width = 0.0f;              // базовые px (масштабируются внутри); 0 — вся ширина
+    float       width = 0.0f;              // базовые px (масштабируются внутри); 0 — ширина по умолчанию; Fill — вся ширина
     const char* key   = nullptr;           // идентичность; по умолчанию — hint
 };
 

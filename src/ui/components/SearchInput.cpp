@@ -12,10 +12,11 @@ bool SearchInput(std::string& query, const SearchInputOptions& options) {
 
     float totalW = 0.0f;
     float availW = ImGui::GetContentRegionAvail().x;
-    if (baseWidth > 0.0f) {
-        totalW = (availW > 0.0f) ? std::min(theme.Scale(baseWidth), availW) : theme.Scale(baseWidth);
-    } else {
+    if (baseWidth == Fill) {
         totalW = (availW > 0.0f) ? availW : theme.Scale(280.0f);
+    } else {
+        const float requested = theme.Scale(baseWidth > 0.0f ? baseWidth : 280.0f);
+        totalW = (availW > 0.0f) ? std::min(requested, availW) : requested;
     }
     float h = m.height;
 

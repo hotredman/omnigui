@@ -15,9 +15,6 @@
 // Идентичность кнопки (ImGui ID) выводится из подписи и иконки; одинаковые
 // кнопки в цикле различаются областью IdScope, при необходимости — полем key.
 struct ButtonOptions {
-    // Ширина на всю доступную ширину контейнера
-    static constexpr float Fill = -1.0f;
-
     const char* label    = nullptr;           // подпись; nullptr — кнопка без текста
     UiVariant   variant  = UiVariant::Default;
     Icon        icon     = Icon::None;
