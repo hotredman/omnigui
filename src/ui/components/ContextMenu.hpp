@@ -1,41 +1,49 @@
 #pragma once
 
+#include "ui/components/Scope.hpp"
 #include "ui/components/UiTheme.hpp"
+#include <optional>
 #include <string>
 #include <imgui.h>
 
-class ContextMenu {
+// Параметры контекстного меню (designated initializers):
+//
+//     if (ContextMenu menu(open, {.pos = ImVec2(x, y)}); menu) { ... }
+struct ContextMenuOptions {
+    std::optional<ImVec2> pos;                  // экранная позиция; по умолчанию — у курсора мыши
+    const ContextMenuStyle* style = nullptr;    // оверрайд стиля; nullptr — из темы
+};
+
+// Параметры пункта меню
+struct MenuItemOptions {
+    bool selected = false;    // отмечен галочкой
+    bool disabled = false;
+};
+
+// ============================================================================
+// Контекстное меню (RAII-область). Состояние «открыто» хранит приложение (bool):
+// выставьте его в true, чтобы показать меню; меню само сбросит флаг при выборе
+// пункта и при закрытии кликом снаружи. Идентичность меню — адрес этого флага.
+//
+//     static bool s_menuOpen = false;
+//     if (ToolButton({.icon = Icon::List})) s_menuOpen = true;
+//     if (ContextMenu menu(s_menuOpen); menu) {
+//         menu.Header("SCALE");
+//         if (menu.Item("100%", {.selected = true})) { ... }
+//     }
+// ============================================================================
+class ContextMenu : public Scope {
 public:
-    explicit ContextMenu(std::string id, const ContextMenuStyle& style = UiTheme::Get().contextMenu);
-    ContextMenu(std::string id, ImVec2 pos, const ContextMenuStyle& style = UiTheme::Get().contextMenu);
+    explicit ContextMenu(bool& isOpen, const ContextMenuOptions& options = {});
     ~ContextMenu();
-
-    ContextMenu(const ContextMenu&) = delete;
-    ContextMenu& operator=(const ContextMenu&) = delete;
-
-    // Статическое открытие / проверка состояния меню по ID
-    static void Open(const std::string& id);
-    static bool IsOpen(const std::string& id);
-
-    // RAII / функциональный вход в меню
-    bool Begin();
-    bool Begin(ImVec2 pos);
-    void End();
-
-    // Перегрузка bool для удобного синтаксиса: if (ContextMenu menu(id, pos); menu) { ... }
-    explicit operator bool() const { return m_isOpen; }
 
     // Компоненты меню
     void Header(const std::string& text);
-    bool Item(const std::string& label, bool selected = false, bool enabled = true);
+    bool Item(const std::string& label, const MenuItemOptions& options = {});
     void Separator();
 
 private:
-    std::string m_id;
+    bool* m_openRef = nullptr;
     ContextMenuStyle m_style;
-    bool m_hasPos = false;
-    ImVec2 m_pos{0.0f, 0.0f};
-    bool m_isOpen = false;
-    bool m_ended = false;
     int m_itemCounter = 0;
 };

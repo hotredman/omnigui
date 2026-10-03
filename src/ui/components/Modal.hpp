@@ -7,6 +7,7 @@
 
 #include "ui/components/Button.hpp"
 #include "ui/components/Icon.hpp"
+#include "ui/components/Scope.hpp"
 #include "ui/components/UiTheme.hpp"
 
 // Режим прокрутки контентной области модального окна
@@ -15,30 +16,56 @@ enum class ModalScroll {
     None   // Без внешнего скролла: контент фиксирован (для таблиц с собственным скроллом)
 };
 
+// Параметры модального окна (designated initializers):
+//
+//     if (Modal modal(showSettings, {.title = "Settings", .width = 640})) { ... }
+struct ModalOptions {
+    const char* title = nullptr;       // текст в заголовке окна; nullptr — без текста
+    float width = 720.0f;              // базовые px (масштабируются внутри)
+    float height = 580.0f;             // базовые px; <= 0: автоматическая высота по содержимому
+    float footerHeight = 0.0f;         // базовые px; 0: авто-расчет по теме (высота кнопок + отступы)
+    bool cardBackground = true;        // подложка цвета карточки для контентной области
+};
+
+// Параметры контентной области модального окна
+struct ModalContentOptions {
+    ModalScroll scroll = ModalScroll::Auto;
+    float footerHeight = 0.0f;         // базовые px; 0 — высота футера по умолчанию
+};
+
+// Параметры стандартных кнопок футера «Отмена» / «Готово»
+struct ModalActionsOptions {
+    const char* confirmLabel = "Done";
+    const char* cancelLabel = "Cancel";
+    UiVariant variant = UiVariant::Primary;   // стиль подтверждающей кнопки
+    Icon icon = Icon::Check;                  // иконка подтверждающей кнопки
+    bool confirmDisabled = false;
+};
+
 // ============================================================================
-// Компонент первого класса: Модальное диалоговое окно (Modal)
+// Модальное диалоговое окно (RAII-область). Состояние «открыто» хранит приложение
+// (bool): чтобы открыть окно, достаточно выставить его в true, окно само сбросит
+// флаг при закрытии. Идентичность окна — адрес этого флага.
+//
+//     static bool s_open = false;
+//     if (Button("Settings")) s_open = true;
+//     if (Modal modal(s_open, {.title = "Settings"}); modal) {
+//         if (auto content = modal.Content()) { ... }
+//         if (auto footer = modal.Footer()) { if (footer.Actions()) Apply(); }
+//     }
+//
 // Предоставляет RAII-управление жизненным циклом попапа, стеком стилей ImGui,
 // а также фиксированными областями HeaderScope, ContentScope и FooterScope.
 // ============================================================================
-class Modal {
+class Modal : public Scope {
 public:
-    struct Config {
-        float width = 720.0f;
-        float height = 580.0f;       // <= 0: автоматическая высота по содержимому
-        float footerHeight = 0.0f;   // 0: авто-расчет по теме (высота кнопок + отступы)
-        bool cardBackground = true;  // Подложка цвета карточки для контентной области
-
-        constexpr Config(float w = 720.0f, float h = 580.0f, float footerH = 0.0f, bool cardBg = true)
-            : width(w), height(h), footerHeight(footerH), cardBackground(cardBg) {}
-    };
-
     // ------------------------------------------------------------------------
     // 1. HeaderScope: верхняя фиксированная область (заголовок, поля, табы)
     // ------------------------------------------------------------------------
-    class HeaderScope {
+    class HeaderScope : public Scope {
     public:
-        explicit HeaderScope(Modal* parent) : m_parent(parent) {
-            if (m_parent && m_parent->IsOpen()) {
+        explicit HeaderScope(Modal* parent) {
+            if (parent && *parent) {
                 m_open = true;
                 m_width = ImGui::GetContentRegionAvail().x;
             }
@@ -50,16 +77,6 @@ public:
             }
         }
 
-        HeaderScope(const HeaderScope&) = delete;
-        HeaderScope& operator=(const HeaderScope&) = delete;
-
-        HeaderScope(HeaderScope&& other) noexcept
-            : m_parent(other.m_parent), m_open(other.m_open), m_width(other.m_width) {
-            other.m_parent = nullptr;
-            other.m_open = false;
-        }
-
-        explicit operator bool() const { return m_open; }
         float Width() const { return m_width; }
 
         void Title(const std::string& title) {
@@ -87,34 +104,30 @@ public:
         }
 
     private:
-        Modal* m_parent = nullptr;
-        bool m_open = false;
         float m_width = 0.0f;
     };
 
     // ------------------------------------------------------------------------
     // 2. ContentScope: центральная область (скроллируемая или фиксированная)
     // ------------------------------------------------------------------------
-    class ContentScope {
+    class ContentScope : public Scope {
     public:
-        ContentScope(Modal* parent, ModalScroll scrollMode = ModalScroll::Auto,
-                     float customFooterH = 0.0f)
-            : m_parent(parent) {
-            if (!m_parent || !m_parent->IsOpen()) return;
+        ContentScope(Modal* parent, const ModalContentOptions& options) {
+            if (!parent || !*parent) return;
 
             // Если окно фиксированной высоты (> 0) — создаём скролл-регион ChildWindow
-            if (m_parent->m_config.height > 0.0f) {
+            if (parent->m_options.height > 0.0f) {
                 const UiTheme& theme = UiTheme::Get();
-                float footerH = (customFooterH > 0.0f) ? theme.Scale(customFooterH)
-                                                       : m_parent->GetDefaultFooterHeight();
+                float footerH = (options.footerHeight > 0.0f) ? theme.Scale(options.footerHeight)
+                                                              : parent->GetDefaultFooterHeight();
 
-                if (m_parent->m_config.cardBackground) {
+                if (parent->m_options.cardBackground) {
                     ImGui::PushStyleColor(ImGuiCol_ChildBg, theme.card.colBg);
                     m_colorPushed = true;
                 }
 
                 ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-                if (scrollMode == ModalScroll::None) {
+                if (options.scroll == ModalScroll::None) {
                     flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
                 }
 
@@ -136,37 +149,16 @@ public:
         ~ContentScope() {
             if (m_isChild) {
                 ImGui::EndChild();
-                m_isChild = false;
             }
             if (m_colorPushed) {
                 ImGui::PopStyleColor();
-                m_colorPushed = false;
             }
         }
 
-        ContentScope(const ContentScope&) = delete;
-        ContentScope& operator=(const ContentScope&) = delete;
-
-        ContentScope(ContentScope&& other) noexcept
-            : m_parent(other.m_parent),
-              m_open(other.m_open),
-              m_isChild(other.m_isChild),
-              m_colorPushed(other.m_colorPushed),
-              m_width(other.m_width),
-              m_height(other.m_height) {
-            other.m_parent = nullptr;
-            other.m_open = false;
-            other.m_isChild = false;
-            other.m_colorPushed = false;
-        }
-
-        explicit operator bool() const { return m_open; }
         float Width() const { return m_width; }
         float Height() const { return m_height; }
 
     private:
-        Modal* m_parent = nullptr;
-        bool m_open = false;
         bool m_isChild = false;
         bool m_colorPushed = false;
         float m_width = 0.0f;
@@ -176,10 +168,10 @@ public:
     // ------------------------------------------------------------------------
     // 3. FooterScope: нижняя фиксированная область действий
     // ------------------------------------------------------------------------
-    class FooterScope {
+    class FooterScope : public Scope {
     public:
         explicit FooterScope(Modal* parent) : m_parent(parent) {
-            if (m_parent && m_parent->IsOpen()) {
+            if (m_parent && *m_parent) {
                 m_open = true;
                 ImGui::Separator();
                 ImGui::Spacing();
@@ -187,18 +179,6 @@ public:
             }
         }
 
-        ~FooterScope() = default;
-
-        FooterScope(const FooterScope&) = delete;
-        FooterScope& operator=(const FooterScope&) = delete;
-
-        FooterScope(FooterScope&& other) noexcept
-            : m_parent(other.m_parent), m_open(other.m_open), m_width(other.m_width) {
-            other.m_parent = nullptr;
-            other.m_open = false;
-        }
-
-        explicit operator bool() const { return m_open; }
         float Width() const { return m_width; }
 
         // Выравнивание кнопок по правому краю
@@ -223,10 +203,9 @@ public:
             }
         }
 
-        // Standard "Cancel" and "Done" action buttons
-        bool Actions(const char* confirmText = "Done", const char* cancelText = "Cancel",
-                     bool confirmEnabled = true, UiVariant confirmVariant = UiVariant::Primary,
-                     Icon::Id confirmIcon = Icon::Check) {
+        // Стандартные кнопки «Отмена» и «Готово»: обе закрывают окно,
+        // возвращает true, если нажата подтверждающая
+        bool Actions(const ModalActionsOptions& options = {}) {
             if (!m_open || !m_parent) return false;
 
             const UiTheme& theme = UiTheme::Get();
@@ -237,16 +216,16 @@ public:
 
             RightAlign(totalW);
 
-            bool cancelled = Button({.label = cancelText, .variant = UiVariant::Secondary, .width = btnW / scale});
+            bool cancelled = Button({.label = options.cancelLabel, .variant = UiVariant::Secondary, .width = btnW / scale});
             ImGui::SameLine(0.0f, spacingX);
-            bool confirmed = Button({.label = confirmText, .variant = confirmVariant, .icon = confirmIcon,
-                                                 .width = btnW / scale, .disabled = !confirmEnabled});
+            bool confirmed = Button({.label = options.confirmLabel, .variant = options.variant, .icon = options.icon,
+                                     .width = btnW / scale, .disabled = options.confirmDisabled});
 
             if (cancelled) {
                 m_parent->Close();
                 return false;
             }
-            if (confirmed && confirmEnabled) {
+            if (confirmed && !options.confirmDisabled) {
                 m_parent->Close();
                 return true;
             }
@@ -255,34 +234,36 @@ public:
 
     private:
         Modal* m_parent = nullptr;
-        bool m_open = false;
         float m_width = 0.0f;
     };
 
     // ------------------------------------------------------------------------
     // Конструктор и деструктор Modal (RAII)
     // ------------------------------------------------------------------------
-    Modal(const char* id, bool& isOpen, float width, float height = 0.0f)
-        : Modal(id, isOpen, Config(width, height)) {}
+    Modal(bool& isOpen, const ModalOptions& options = {})
+        : m_isOpenRef(&isOpen), m_options(options) {
+        // Идентичность окна — адрес флага «открыто»
+        ImGui::PushID(&isOpen);
 
-    Modal(const char* id, bool& isOpen, const Config& config = {})
-        : m_id(id), m_isOpenRef(&isOpen), m_config(config) {
         if (!*m_isOpenRef) return;
 
-        if (!ImGui::IsPopupOpen(m_id)) {
-            ImGui::OpenPopup(m_id);
+        // Имя окна: «текст заголовка##служебный-суффикс»; одно и то же для всех вызовов ImGui
+        m_windowName = std::string(m_options.title ? m_options.title : "") + kPopupName;
+
+        if (!ImGui::IsPopupOpen(m_windowName.c_str())) {
+            ImGui::OpenPopup(m_windowName.c_str());
         }
 
         const UiTheme& theme = UiTheme::Get();
         const float scale = theme.GetScale();
 
         ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-        if (m_config.height <= 0.0f) {
+        if (m_options.height <= 0.0f) {
             flags |= ImGuiWindowFlags_AlwaysAutoResize;
-            ImGui::SetNextWindowSize(ImVec2(theme.Scale(m_config.width), 0.0f), ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(theme.Scale(m_options.width), 0.0f), ImGuiCond_Always);
         } else {
             ImGui::SetNextWindowSize(
-                ImVec2(theme.Scale(m_config.width), theme.Scale(m_config.height)),
+                ImVec2(theme.Scale(m_options.width), theme.Scale(m_options.height)),
                 ImGuiCond_Appearing);
         }
 
@@ -290,7 +271,7 @@ public:
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, theme.CornerRadius());
         m_stylesPushed = 2;
 
-        if (ImGui::BeginPopupModal(m_id, nullptr, flags)) {
+        if (ImGui::BeginPopupModal(m_windowName.c_str(), nullptr, flags)) {
             m_open = true;
             m_begun = true;
             if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
@@ -313,22 +294,18 @@ public:
             ImGui::PopStyleVar(m_stylesPushed);
             m_stylesPushed = 0;
         }
+        ImGui::PopID();
     }
-
-    Modal(const Modal&) = delete;
-    Modal& operator=(const Modal&) = delete;
-
-    explicit operator bool() const { return m_open; }
-    bool IsOpen() const { return m_open; }
 
     HeaderScope Header() { return HeaderScope(this); }
 
-    ContentScope Content(ModalScroll scrollMode = ModalScroll::Auto, float customFooterH = 0.0f) {
-        return ContentScope(this, scrollMode, customFooterH);
+    ContentScope Content(const ModalContentOptions& options = {}) {
+        return ContentScope(this, options);
     }
 
     FooterScope Footer() { return FooterScope(this); }
 
+    // Закрыть окно (например, из собственной кнопки в футере)
     void Close() {
         if (m_isOpenRef) *m_isOpenRef = false;
         m_open = false;
@@ -341,10 +318,12 @@ public:
     }
 
 private:
-    const char* m_id = nullptr;
+    // Служебный суффикс имени окна: не отображается, участвует в ImGui ID
+    static constexpr const char* kPopupName = "##modal";
+
     bool* m_isOpenRef = nullptr;
-    Config m_config;
-    bool m_open = false;
+    ModalOptions m_options;
+    std::string m_windowName;
     bool m_begun = false;
     int m_stylesPushed = 0;
 };

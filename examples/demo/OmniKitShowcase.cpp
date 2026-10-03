@@ -56,6 +56,11 @@ static bool s_initialized = false;
 static NavScreen s_currentScreen = NavScreen::RemoteControl;
 static int s_selectedRunIndex = 0;
 static int s_indicatorsCount = 5;
+static ConfirmModal s_resetConfirm({.title = "Reset stream?",
+                                  .message = "Clears all live chart buffers and restarts the timeline.",
+                                  .confirmLabel = "Reset"});
+static bool s_scaleMenuOpen = false;
+static bool s_countMenuOpen = false;
 
 // Component instances (strictly decoupled, self-docking design system shell)
 static SidebarMenu s_sidebarMenu;
@@ -328,9 +333,9 @@ static void RenderHeader(double elapsed) {
 
             // Aa Scale button
             if (ToolButton({.icon = Icon::Aa, .size = UiSize::Medium, .tooltip = "Interface scale & DPI"})) {
-                ContextMenu::Open("FontScalePopup");
+                s_scaleMenuOpen = true;
             }
-            if (ContextMenu menu("FontScalePopup"); menu) {
+            if (ContextMenu menu(s_scaleMenuOpen); menu) {
                 menu.Header("INTERFACE SCALE");
                 menu.Separator();
                 float scales[] = { 1.0f, 1.25f, 1.5f, 1.75f, 2.0f };
@@ -338,7 +343,7 @@ static void RenderHeader(double elapsed) {
                     char label[32];
                     std::snprintf(label, sizeof(label), "%.0f%%", s * 100.0f);
                     bool isCurrent = std::abs(theme.GetScale() - s) < 0.05f;
-                    if (menu.Item(label, isCurrent)) {
+                    if (menu.Item(label, {.selected = isCurrent})) {
                         UiTheme::Get().SetScale(s);
                     }
                 }
@@ -383,15 +388,15 @@ static void RenderHeader(double elapsed) {
             char countTip[64];
             std::snprintf(countTip, sizeof(countTip), "Active Indicators (%d)", s_indicatorsCount);
             if (ToolButton({.icon = Icon::List, .size = UiSize::Medium, .tooltip = countTip})) {
-                ContextMenu::Open("IndicatorCountPopup");
+                s_countMenuOpen = true;
             }
-            if (ContextMenu menu("IndicatorCountPopup"); menu) {
+            if (ContextMenu menu(s_countMenuOpen); menu) {
                 menu.Header("DIGITAL INDICATORS");
                 menu.Separator();
                 for (int n = 2; n <= 6; ++n) {
                     char label[32];
                     std::snprintf(label, sizeof(label), "%d indicators", n);
-                    if (menu.Item(label, s_indicatorsCount == n)) {
+                    if (menu.Item(label, {.selected = s_indicatorsCount == n})) {
                         s_indicatorsCount = n;
                     }
                 }
@@ -607,12 +612,17 @@ static void RenderRemoteControl() {
             if (Button({.label = "STOP & RESET", .variant = UiVariant::Danger, .icon = Icon::Square, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
-                s_liveChart1.Clear();
-                s_liveChart2.Clear();
-                s_liveChart3.Clear();
-                s_liveChart4.Clear();
-                s_liveStartTime = std::chrono::steady_clock::now();
+                s_resetConfirm.Open();
             }
+        }
+
+        // Destructive action goes through a confirmation modal
+        if (s_resetConfirm.Render()) {
+            s_liveChart1.Clear();
+            s_liveChart2.Clear();
+            s_liveChart3.Clear();
+            s_liveChart4.Clear();
+            s_liveStartTime = std::chrono::steady_clock::now();
         }
 
         ImGui::Spacing();

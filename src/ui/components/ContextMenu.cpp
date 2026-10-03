@@ -1,48 +1,35 @@
 #include "ui/components/ContextMenu.hpp"
 #include <algorithm>
 
-ContextMenu::ContextMenu(std::string id, const ContextMenuStyle& style)
-    : m_id(std::move(id))
-    , m_style(style)
-    , m_hasPos(false)
+// Идентичность меню — адрес флага «открыто» (кладётся в стек ID на время жизни объекта)
+static constexpr const char* kPopupName = "##ctx_menu";
+
+ContextMenu::ContextMenu(bool& isOpen, const ContextMenuOptions& options)
+    : m_openRef(&isOpen)
+    , m_style(options.style ? *options.style : UiTheme::Get().contextMenu)
 {
-    Begin();
-}
+    ImGui::PushID(&isOpen);
 
-ContextMenu::ContextMenu(std::string id, ImVec2 pos, const ContextMenuStyle& style)
-    : m_id(std::move(id))
-    , m_style(style)
-    , m_hasPos(true)
-    , m_pos(pos)
-{
-    Begin();
-}
-
-ContextMenu::~ContextMenu() {
-    End();
-}
-
-void ContextMenu::Open(const std::string& id) {
-    ImGui::OpenPopup(id.c_str());
-}
-
-bool ContextMenu::IsOpen(const std::string& id) {
-    return ImGui::IsPopupOpen(id.c_str());
-}
-
-bool ContextMenu::Begin() {
-    if (m_hasPos) {
-        ImGui::SetNextWindowPos(m_pos, ImGuiCond_Appearing);
+    // Флаг «попап уже запрашивался» отличает «только что открыли» от «закрыт кликом снаружи»
+    bool* requested = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("##ctx_requested"), false);
+    if (!isOpen) {
+        *requested = false;
+        return;
     }
-    return Begin(m_pos);
-}
-
-bool ContextMenu::Begin(ImVec2 pos) {
-    if (m_isOpen) return true;
+    if (!ImGui::IsPopupOpen(kPopupName)) {
+        if (*requested) {
+            // ImGui закрыл попап сам (клик вне меню, Esc): сбрасываем флаг приложения
+            isOpen = false;
+            *requested = false;
+            return;
+        }
+        ImGui::OpenPopup(kPopupName);
+        *requested = true;
+    }
 
     const UiTheme& theme = UiTheme::Get();
-    if (pos.x != 0.0f || pos.y != 0.0f) {
-        ImGui::SetNextWindowPos(pos, ImGuiCond_Appearing);
+    if (options.pos) {
+        ImGui::SetNextWindowPos(*options.pos, ImGuiCond_Appearing);
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(theme.Scale(m_style.windowPaddingX), theme.Scale(m_style.windowPaddingY)));
@@ -53,27 +40,23 @@ bool ContextMenu::Begin(ImVec2 pos) {
     ImGui::PushStyleColor(ImGuiCol_PopupBg, m_style.colBg);
     ImGui::PushStyleColor(ImGuiCol_Border, m_style.colBorder);
 
-    m_isOpen = ImGui::BeginPopup(m_id.c_str());
-    if (!m_isOpen) {
+    m_open = ImGui::BeginPopup(kPopupName);
+    if (!m_open) {
         ImGui::PopStyleColor(2);
         ImGui::PopStyleVar(4);
     }
-    m_itemCounter = 0;
-    return m_isOpen;
 }
 
-void ContextMenu::End() {
-    if (m_isOpen && !m_ended) {
+ContextMenu::~ContextMenu() {
+    if (m_open) {
         ImGui::EndPopup();
         ImGui::PopStyleColor(2);
         ImGui::PopStyleVar(4);
-        m_ended = true;
-        m_isOpen = false;
     }
+    ImGui::PopID();
 }
-
 void ContextMenu::Header(const std::string& text) {
-    if (!m_isOpen) return;
+    if (!m_open) return;
 
     const UiTheme& theme = UiTheme::Get();
     ImFont* headerFont = m_style.headerFont ? m_style.headerFont : theme.smallFont;
@@ -89,8 +72,10 @@ void ContextMenu::Header(const std::string& text) {
     ImGui::Dummy(ImVec2(txtSz.x, txtSz.y + theme.Scale(6.0f)));
 }
 
-bool ContextMenu::Item(const std::string& label, bool selected, bool enabled) {
-    if (!m_isOpen) return false;
+bool ContextMenu::Item(const std::string& label, const MenuItemOptions& options) {
+    if (!m_open) return false;
+    const bool selected = options.selected;
+    const bool enabled = !options.disabled;
 
     const UiTheme& theme = UiTheme::Get();
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -119,6 +104,7 @@ bool ContextMenu::Item(const std::string& label, bool selected, bool enabled) {
     if (ImGui::InvisibleButton("##ctx_item", itemSize)) {
         if (enabled) {
             clicked = true;
+            *m_openRef = false;
             ImGui::CloseCurrentPopup();
         }
     }
@@ -155,7 +141,7 @@ bool ContextMenu::Item(const std::string& label, bool selected, bool enabled) {
 }
 
 void ContextMenu::Separator() {
-    if (!m_isOpen) return;
+    if (!m_open) return;
     const UiTheme& theme = UiTheme::Get();
     ImVec2 pos = ImGui::GetCursorScreenPos();
     float availW = ImGui::GetContentRegionAvail().x;

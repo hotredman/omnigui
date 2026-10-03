@@ -231,18 +231,16 @@ void Indicator::Render() {
 // Кликабельный текст с выпадающим меню: невидимая кнопка по размеру текста,
 // пунктир под текстом при наведении и при открытом меню, подсказка; меню —
 // под текстом. Идентификаторы уникальны для экземпляра индикатора
-void Indicator::RenderMenuZone(const char* name, const MenuZone& zone, const char* tooltip,
+void Indicator::RenderMenuZone(const char* name, bool& menuOpen, const MenuZone& zone, const char* tooltip,
                                const MenuCallback& fillMenu) {
     const UiTheme& theme = UiTheme::Get();
-    char popupId[64];
     char buttonId[64];
-    std::snprintf(popupId, sizeof(popupId), "##%s_popup_%p", name, static_cast<void*>(this));
     std::snprintf(buttonId, sizeof(buttonId), "##%s_click_%p", name, static_cast<void*>(this));
 
-    const bool popupOpen = ImGui::IsPopupOpen(popupId);
+    const bool popupOpen = menuOpen;
     ImGui::SetCursorScreenPos(zone.pos);
     if (ImGui::InvisibleButton(buttonId, zone.size)) {
-        ImGui::OpenPopup(popupId);
+        menuOpen = true;
     }
     const bool hovered = ImGui::IsItemHovered();
     if (hovered) {
@@ -262,7 +260,7 @@ void Indicator::RenderMenuZone(const char* name, const MenuZone& zone, const cha
     }
 
     const ImVec2 menuPos(zone.pos.x, zone.pos.y + zone.fontSize + theme.Scale(4.0f));
-    if (ContextMenu menu(popupId, menuPos); menu) {
+    if (ContextMenu menu(menuOpen, {.pos = menuPos}); menu) {
         fillMenu(menu);
     }
 }
@@ -292,7 +290,7 @@ void Indicator::Render(const IndicatorStyle& style) {
         ImGui::CalcTextSize(m_title.c_str());
 
     if (m_onRenderTitleMenu) {
-        RenderMenuZone("title", {labelPos, titleSize, titleFontSize, style.colTitle, 1.0f},
+        RenderMenuZone("title", m_titleMenuOpen, {labelPos, titleSize, titleFontSize, style.colTitle, 1.0f},
                        "Click to select channel", m_onRenderTitleMenu);
     }
     drawList->AddText(titleFont, titleFontSize, labelPos, style.colTitle, m_title.c_str());
@@ -307,11 +305,11 @@ void Indicator::Render(const IndicatorStyle& style) {
         ImGui::CalcTextSize(m_value.c_str());
 
     if (m_allowPrecisionChange) {
-        RenderMenuZone("prec", {valPos, valSize, valFontSize, style.colValue, 1.5f},
+        RenderMenuZone("prec", m_precisionMenuOpen, {valPos, valSize, valFontSize, style.colValue, 1.5f},
                        "Click to select precision", [this](ContextMenu& menu) {
             menu.Header("PRECISION (DECIMALS)");
             for (int p = 0; p <= 5; ++p) {
-                if (menu.Item(GetPrecisionLabel(p), m_precision == p) && p != m_precision) {
+                if (menu.Item(GetPrecisionLabel(p), {.selected = m_precision == p}) && p != m_precision) {
                     SetPrecision(p);
                     if (m_onPrecisionChanged) m_onPrecisionChanged(m_precision);
                 }
@@ -328,7 +326,7 @@ void Indicator::Render(const IndicatorStyle& style) {
         ImVec2 unitSize = unitFont ?
             unitFont->CalcTextSizeA(unitFontSize, FLT_MAX, 0.0f, m_unit.c_str()) :
             ImGui::CalcTextSize(m_unit.c_str());
-        RenderMenuZone("unit", {unitPos, unitSize, unitFontSize, style.colUnit, 1.0f},
+        RenderMenuZone("unit", m_unitMenuOpen, {unitPos, unitSize, unitFontSize, style.colUnit, 1.0f},
                        "Click to select measurement units", m_onRenderUnitMenu);
     }
     drawList->AddText(unitFont, unitFontSize, unitPos, style.colUnit, m_unit.c_str());

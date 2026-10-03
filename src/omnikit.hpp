@@ -56,6 +56,7 @@
 #include "ui/components/ContextMenu.hpp"
 #include "ui/components/Tooltip.hpp"
 #include "ui/components/Modal.hpp"
+#include "ui/components/Dialog.hpp"
 #include "ui/components/ConfirmModal.hpp"
 #include "ui/components/Dialog.hpp"
 #include "ui/components/DisabledScope.hpp"

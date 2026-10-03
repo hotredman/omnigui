@@ -75,7 +75,11 @@ private:
         ImU32 color;
         float underlineThickness;
     };
-    void RenderMenuZone(const char* name, const MenuZone& zone, const char* tooltip,
+    // Состояния «меню открыто» зон: название, точность, единицы
+    bool m_titleMenuOpen = false;
+    bool m_precisionMenuOpen = false;
+    bool m_unitMenuOpen = false;
+    void RenderMenuZone(const char* name, bool& menuOpen, const MenuZone& zone, const char* tooltip,
                         const MenuCallback& fillMenu);
 
     void InitFromValueString();
