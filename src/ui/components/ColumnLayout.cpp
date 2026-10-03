@@ -46,13 +46,7 @@ ColumnLayout::~ColumnLayout() {
 }
 
 float ColumnLayout::CalculateSpanWidth(int span) const {
-    span = std::clamp(span, 1, 12);
-    if (span == 12) {
-        return m_rowAvailWidth;
-    }
-    float s = m_columnSpacing;
-    float width = (span * m_rowAvailWidth - (12 - span) * s) / 12.0f;
-    return std::max(20.0f, static_cast<float>(std::floor(width)));
+    return SpanWidth(span, m_rowAvailWidth, m_columnSpacing);
 }
 
 float ColumnLayout::CurrentColumnWidth() {

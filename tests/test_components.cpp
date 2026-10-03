@@ -66,6 +66,11 @@ int main() {
     table.AddColumn({.id = "name", .header = "Name", .width = 1, .widthMode = ColumnWidthMode::Stretch,
                      .renderCell = [](const Row& r, int) { ImGui::TextUnformatted(r.name.c_str()); }});
     table.SetItems({{1, "alpha"}, {2, "beta"}, {3, "gamma"}});
+    float cardRate = 1.5f;
+    int cardCount = 3;
+    std::string cardName = "abc";
+    bool cardFlag = true;
+    int cardMode = 0;
     Table<Row> emptyTable;   // пустое состояние, ключ — по адресу
     emptyTable.AddColumn({.id = "id", .header = "ID"});
 
@@ -143,6 +148,19 @@ int main() {
                     grid.Cell(); grid.CellText("file");
                     grid.Cell(); grid.CellText("12 KB");
                 }
+            }
+        });
+
+        // Card: сетка колонок, поля формы
+        Frame([&] {
+            if (Card card({.title = "Settings"}); card) {
+                card.Float(cardRate, {.label = "Rate", .unit = "Hz", .col = Col::Half()});
+                card.Int(cardCount, {.label = "Count", .col = Col::Half()});
+                card.Text(cardName, {.label = "Name", .col = Col::TwoThirds()});
+                card.Toggle(cardFlag, {.label = "Enabled", .col = Col::Third()});
+                card.Combo(cardMode, std::vector<std::string>{"A", "B"}, {.label = "Mode", .col = Col::Full()});
+                if (auto c = card.Col(Col::Half())) { Button({.label = "Custom"}); }
+                card.Button({.label = "Apply", .col = Col::Auto()});
             }
         });
 

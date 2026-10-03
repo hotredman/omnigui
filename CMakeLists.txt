@@ -66,6 +66,7 @@ set(OMNIKIT_SOURCES
     src/ui/components/Badge.cpp
     src/ui/components/Button.cpp
     src/ui/components/Card.cpp
+    src/ui/components/CardFields.cpp
     src/ui/components/Carousel.cpp
     src/ui/components/Combo.cpp
     src/ui/components/ConfirmModal.cpp

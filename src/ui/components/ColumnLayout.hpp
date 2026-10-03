@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 
 // ============================================================================
 // Доля строки в 12-колоночной сетке (Bootstrap / Grid style)
@@ -30,6 +31,17 @@ struct Col {
     bool IsAuto() const { return span == 0; }
     bool IsFill() const { return span < 0; }
 };
+
+// Ширина колонки в span долей из 12 при доступной ширине avail и зазоре gap (все значения в px).
+// Общая формула для ColumnLayout и Card.
+inline float SpanWidth(int span, float avail, float gap) {
+    span = std::clamp(span, 1, 12);
+    if (span == 12) {
+        return avail;
+    }
+    const float width = (span * avail - (12 - span) * gap) / 12.0f;
+    return std::max(20.0f, std::floor(width));
+}
 
 // ============================================================================
 // Адаптивная 12-колоночная раскладка с автопереносом строк (ColumnLayout).
