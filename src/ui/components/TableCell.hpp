@@ -103,13 +103,13 @@ public:
     // Семантический чип/бейдж (например: 5 исп.)
     static void Badge(int value, const char* unit = nullptr, UiVariant variant = UiVariant::Default, float topOffset = -1.0f) {
         float offset = (topOffset >= 0.0f) ? topOffset : TableRowOffset();
-        ::Badge::Number(value, unit, variant, offset);
+        ::BadgeNumber(value, unit, {.variant = variant, .topOffset = offset});
     }
 
     // Текстовый семантический чип/бейдж (например: «Свой», «Норма»)
     static void BadgeText(const char* text, UiVariant variant = UiVariant::Default, float topOffset = -1.0f, const char* tooltip = nullptr) {
         float offset = (topOffset >= 0.0f) ? topOffset : TableRowOffset();
-        ::Badge::Render(text, variant, offset, 0.0f, tooltip);
+        ::Badge(text, {.variant = variant, .tooltip = tooltip, .topOffset = offset});
     }
 
     // Semantic metric status badge (status badge with tooltip + optional "Custom" badge)

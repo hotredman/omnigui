@@ -323,10 +323,9 @@ static void RenderHeader(double elapsed) {
 
         // 1.1 Left Zone: Font scale Aa, Sun/Moon theme toggle, and DeviceStatus
         if (auto left = header.Left()) {
-            float btnSize = 36.0f;
 
             // Aa Scale button
-            if (ToolButton::Render("##BtnScale", Icon::Aa, "Interface scale & DPI", UiVariant::Default, false, btnSize)) {
+            if (ToolButton({.icon = Icon::Aa, .size = UiSize::Medium, .tooltip = "Interface scale & DPI"})) {
                 ContextMenu::Open("FontScalePopup");
             }
             if (ContextMenu menu("FontScalePopup"); menu) {
@@ -349,7 +348,7 @@ static void RenderHeader(double elapsed) {
             const bool isDark = (theme.mode == ThemeMode::Dark);
             const Icon themeIcon = isDark ? Icon::Moon : Icon::Sun;
             const char* themeTooltip = isDark ? "Dark theme - click for light" : "Light theme - click for dark";
-            if (ToolButton::Render("##BtnTheme", themeIcon, themeTooltip, UiVariant::Default, false, btnSize)) {
+            if (ToolButton({.icon = themeIcon, .size = UiSize::Medium, .tooltip = themeTooltip, .key = "theme"})) {
                 UiTheme::Get().SetMode(isDark ? ThemeMode::Light : ThemeMode::Dark);
             }
 
@@ -379,10 +378,9 @@ static void RenderHeader(double elapsed) {
 
         // 1.2 Right Zone: Indicator count selector (evaluated before Center so Center knows exact width)
         if (auto right = header.Right()) {
-            float btnSize = 36.0f;
             char countTip[64];
             std::snprintf(countTip, sizeof(countTip), "Active Indicators (%d)", s_indicatorsCount);
-            if (ToolButton::Render("##BtnIndicatorsCount", Icon::List, countTip, UiVariant::Default, false, btnSize)) {
+            if (ToolButton({.icon = Icon::List, .size = UiSize::Medium, .tooltip = countTip})) {
                 ContextMenu::Open("IndicatorCountPopup");
             }
             if (ContextMenu menu("IndicatorCountPopup"); menu) {
@@ -492,7 +490,7 @@ static void RenderSidebar() {
                     ImGui::Text("%s", run.title.c_str());
                     ImGui::TextDisabled("Started: %s | Duration: %.1f s", run.timestamp.c_str(), run.durationS);
                     ImGui::TextDisabled("Peak: %.1f MB/s | Latency: %.1f ms", run.peakThroughput, run.avgLatency);
-                    Badge::Render(run.statusText, run.status);
+                    Badge(run.statusText, {.variant = run.status});
                     ImGui::EndTooltip();
                 }
 
@@ -660,7 +658,7 @@ static void RenderProcessing() {
     if (ImGui::BeginChild("##OfflineChartContainer", ImVec2(chartAreaW, availH), true)) {
         ImGui::TextColored(ImColor(theme.palette.accent).Value, "%s", activeRun.title.c_str());
         ImGui::SameLine();
-        Badge::Render(activeRun.statusText, activeRun.status);
+        Badge(activeRun.statusText, {.variant = activeRun.status});
 
         ImGui::SameLine(chartAreaW - 240.0f * theme.GetScale());
         if (Button({.label = "Reset Zoom", .variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
@@ -864,7 +862,7 @@ static void RenderArchive() {
                 grid.SetColumn(2); grid.CellText(run.timestamp, theme.palette.textMuted);
                 grid.SetColumn(3); grid.CellText(Fmt("%.1f s", run.durationS));
                 grid.SetColumn(4); grid.CellText(Fmt("%d", run.pointCount));
-                grid.SetColumn(5); Badge::Render(run.statusText, run.status);
+                grid.SetColumn(5); Badge(run.statusText, {.variant = run.status});
                 grid.SetColumn(6);
                 if (Button({.label = "View", .variant = UiVariant::Secondary, .size = UiSize::Mini, .width = 70.0f,
                             .tooltip = "Open this run in Offline Analysis"})) {
@@ -901,7 +899,7 @@ static void RenderJournal() {
                 }
                 ImGui::TextColored(ImColor(theme.palette.textMuted).Value, "[%s]", entry.timeStr.c_str());
                 ImGui::SameLine();
-                Badge::Render(entry.level.c_str(), entry.variant);
+                Badge(entry.level.c_str(), {.variant = entry.variant});
                 ImGui::SameLine();
                 ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", entry.message.c_str());
             }
@@ -957,7 +955,7 @@ static void RenderSeries() {
                 grid.SetColumn(2); ImGui::Text("%.2f", run.avgLatency);
                 grid.SetColumn(3); ImGui::Text("%.2f", run.p99Latency);
                 grid.SetColumn(4); ImGui::Text("%.1f %%", run.efficiency);
-                grid.SetColumn(5); Badge::Render(run.statusText, run.status);
+                grid.SetColumn(5); Badge(run.statusText, {.variant = run.status});
             }
         }
     }

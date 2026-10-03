@@ -3,7 +3,8 @@
 #include <cstdio>
 #include <algorithm>
 
-ImVec2 Badge::CalcSize(const char* text, float fontSize) {
+ImVec2 BadgeSize(const char* text, const BadgeOptions& options) {
+    const float fontSize = options.fontSize;
     if (!text || text[0] == '\0') return ImVec2(0.0f, 0.0f);
     const UiTheme& theme = UiTheme::Get();
     const BadgeStyle& bst = theme.badge;
@@ -17,7 +18,9 @@ ImVec2 Badge::CalcSize(const char* text, float fontSize) {
     return ImVec2(textSz.x + padX * 2.0f, textSz.y + padY * 2.0f);
 }
 
-ImVec2 Badge::Draw(ImDrawList* dl, ImVec2 pos, const char* text, UiVariant variant, float fontSize) {
+ImVec2 BadgeDraw(ImDrawList* dl, ImVec2 pos, const char* text, const BadgeOptions& options) {
+    const float fontSize = options.fontSize;
+    const UiVariant variant = options.variant;
     if (!text || text[0] == '\0') return ImVec2(0.0f, 0.0f);
 
     const UiTheme& theme = UiTheme::Get();
@@ -48,8 +51,10 @@ ImVec2 Badge::Draw(ImDrawList* dl, ImVec2 pos, const char* text, UiVariant varia
     return ImVec2(w, h);
 }
 
-void Badge::Render(const char* text, UiVariant variant, float topOffset, float fontSize, const char* tooltip) {
+void Badge(const char* text, const BadgeOptions& options) {
     if (!text || text[0] == '\0') return;
+    const float topOffset = options.topOffset;
+    const char* tooltip = options.tooltip;
 
     const UiTheme& theme = UiTheme::Get();
     if (topOffset >= 0.0f) {
@@ -58,7 +63,7 @@ void Badge::Render(const char* text, UiVariant variant, float topOffset, float f
 
     ImVec2 p = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImVec2 sz = Draw(dl, p, text, variant, fontSize);
+    ImVec2 sz = BadgeDraw(dl, p, text, options);
     ImGui::Dummy(sz);
 
     if (tooltip && tooltip[0] != '\0' && ImGui::IsItemHovered()) {
@@ -66,12 +71,12 @@ void Badge::Render(const char* text, UiVariant variant, float topOffset, float f
     }
 }
 
-void Badge::Number(int value, const char* unit, UiVariant variant, float topOffset, float fontSize) {
+void BadgeNumber(int value, const char* unit, const BadgeOptions& options) {
     char buf[64];
     if (unit && unit[0] != '\0') {
         std::snprintf(buf, sizeof(buf), "%d %s", value, unit);
     } else {
         std::snprintf(buf, sizeof(buf), "%d", value);
     }
-    Render(buf, variant, topOffset, fontSize);
+    Badge(buf, options);
 }

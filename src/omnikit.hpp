@@ -20,7 +20,7 @@
 #include "ui/components/ToolButton.hpp"
 #include "ui/components/Badge.hpp"
 #include "ui/components/Tag.hpp"
-#include "ui/components/Label.hpp"
+#include "ui/components/Text.hpp"
 #include "ui/components/EditableLabel.hpp"
 #include "ui/components/InputField.hpp"
 #include "ui/components/SearchInput.hpp"

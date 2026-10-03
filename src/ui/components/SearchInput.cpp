@@ -49,7 +49,7 @@ bool SearchInput::Render(const char* id, std::string& query, const char* hint, f
     // 2. Clear query toolbutton
     if (hasClearBtn) {
         ImGui::SameLine(0.0f, theme.Scale(4.0f));
-        if (ToolButton::Render("##clear", Icon::Close, size, UiVariant::Default, "Clear search")) {
+        if (ToolButton({.icon = Icon::Close, .size = size, .tooltip = "Clear search", .key = "clear"})) {
             query.clear();
             changed = true;
         }

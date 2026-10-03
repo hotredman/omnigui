@@ -71,7 +71,7 @@ set(OMNIKIT_SOURCES
     src/ui/components/Indicator.cpp
     src/ui/components/InputField.cpp
     src/ui/components/ItemRow.cpp
-    src/ui/components/Label.cpp
+    src/ui/components/Text.cpp
     src/ui/components/List.cpp
     src/ui/components/PresetGrid.cpp
     src/ui/components/SearchInput.cpp

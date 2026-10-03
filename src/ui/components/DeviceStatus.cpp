@@ -168,9 +168,9 @@ bool DeviceStatus::Render(const char* deviceName,
                 tooltip = "Disconnect from device";
                 iconColor = style.colLedFault;
             }
-            clicked = ToolButton::Render("##DevPowerAction", Icon::Power, tooltip, UiVariant::Default, false, style.actionBtnSize, iconColor);
+            clicked = ToolButton({.icon = Icon::Power, .tooltip = tooltip, .iconColor = iconColor, .key = "power", .sidePx = btnSize});
         } else {
-            clicked = ToolButton::Render("##DevAction", buttonLabel, nullptr, UiVariant::Default, false, style.actionBtnSize);
+            clicked = ToolButton({.glyph = buttonLabel, .key = "action", .sidePx = btnSize});
         }
         if (clicked) {
             actionClicked = true;

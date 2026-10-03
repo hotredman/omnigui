@@ -155,7 +155,7 @@ void ItemRow::DrawBadges() {
     sizes.reserve(m_badges.size());
     float totalBadgesW = 0.0f;
     for (size_t i = 0; i < m_badges.size(); ++i) {
-        ImVec2 sz = ::Badge::CalcSize(m_badges[i].text.c_str(), st.badgeFontSize);
+        ImVec2 sz = ::BadgeSize(m_badges[i].text.c_str(), {.fontSize = st.badgeFontSize});
         sizes.push_back(sz);
         totalBadgesW += sz.x;
         if (i > 0) totalBadgesW += badgeSpacing;
@@ -174,7 +174,7 @@ void ItemRow::DrawBadges() {
         float offsetY = std::max(0.0f, (m_titleRowHeight - badgeH) * 0.5f);
         float badgeY = m_titleRowTopY + offsetY;
 
-        ::Badge::Draw(dl, ImVec2(curX, badgeY), m_badges[i].text.c_str(), m_badges[i].variant, st.badgeFontSize);
+        ::BadgeDraw(dl, ImVec2(curX, badgeY), m_badges[i].text.c_str(), {.variant = m_badges[i].variant, .fontSize = st.badgeFontSize});
         curX += sizes[i].x + badgeSpacing;
     }
 }
@@ -208,7 +208,7 @@ bool ItemRow::Action(Icon icon, const char* tooltip, UiVariant variant, bool dis
     char btnId[32];
     std::snprintf(btnId, sizeof(btnId), "##act_%d", m_actionCount + 1);
 
-    bool clicked = ToolButton::Render(btnId, icon, UiSize::Small, variant, tooltip, false, 0, disabled);
+    bool clicked = ToolButton({.icon = icon, .variant = variant, .size = UiSize::Small, .tooltip = tooltip, .disabled = disabled, .key = btnId});
 
     ImGui::SetCursorPos(savedLeftPos);
     m_actionCount++;

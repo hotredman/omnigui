@@ -35,7 +35,7 @@ public:
 
     bool ToolButton(Icon icon, const char* tooltip = nullptr, UiVariant variant = UiVariant::Default) {
         BeforeNextItem();
-        return ::ToolButton::Render("##tb", icon, tooltip, UiSize::Mini, variant);
+        return ::ToolButton({.icon = icon, .variant = variant, .size = UiSize::Mini, .tooltip = tooltip});
     }
 
 private:

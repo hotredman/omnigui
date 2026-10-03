@@ -1,6 +1,6 @@
 #include "ui/components/ConfirmModal.hpp"
 
-#include "ui/components/Label.hpp"
+#include "ui/components/Text.hpp"
 #include "ui/components/Modal.hpp"
 
 ConfirmModal::ConfirmModal(std::string id, std::string title, std::string text,
@@ -22,7 +22,7 @@ bool ConfirmModal::Render() {
         header.Title(m_title.c_str());
     }
     if (auto content = modal.Content(ModalScroll::None)) {
-        Label::Wrapped(m_text.c_str());
+        ::Text(m_text, {.variant = UiVariant::Secondary, .wrap = true});
     }
     if (auto footer = modal.Footer()) {
         if (footer.Actions(m_confirmLabel.c_str(), "Cancel", true, m_variant, Icon::None)) {

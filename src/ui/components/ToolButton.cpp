@@ -58,29 +58,34 @@ static void ResolveButtonColors(const UiTheme& theme, UiVariant variant, bool ho
     }
 }
 
-bool ToolButton::Render(const char* id, Icon icon, UiVariant variant, const char* tooltip, bool selected, float baseSize, ImU32 iconColor, bool disabled) {
-    DisabledScope disabledScope(disabled);
+bool ToolButton(const ToolButtonOptions& o) {
+    DisabledScope disabledScope(o.disabled);
     const UiTheme& theme = UiTheme::Get();
-    float s = (baseSize > 0.0f) ? theme.Scale(baseSize) : theme.Scale(theme.toolButton.size);
+
+    // Сторона квадрата: sidePx (контейнеры) > size > размер из темы
+    float s;
+    if (o.sidePx > 0.0f)       s = o.sidePx;
+    else if (o.size)           s = theme.GetMetrics(*o.size).height;
+    else                       s = theme.Scale(theme.toolButton.size);
 
     ApplyToolbarVerticalCentering(s);
 
-    char safeId[64];
-    const char* targetId = id;
-    if (!id || id[0] != '#' || id[1] != '#') {
-        std::snprintf(safeId, sizeof(safeId), "##tb_icon_%s", id ? id : "btn");
-        targetId = safeId;
-    }
+    // Идентичность: явный key, иначе глиф, иначе иконка
+    if (o.key)         ImGui::PushID(o.key);
+    else if (o.glyph)  ImGui::PushID(o.glyph);
+    else               ImGui::PushID(static_cast<int>(o.icon.GetId()));
+
     ImVec2 screenPos = ImGui::GetCursorScreenPos();
-    bool clicked = ImGui::InvisibleButton(targetId, ImVec2(s, s));
+    bool clicked = ImGui::InvisibleButton("##tool", ImVec2(s, s));
+    ImGui::PopID();
     bool hovered = ImGui::IsItemHovered();
     bool active = ImGui::IsItemActive();
 
-    ImU32 bgCol = 0, borderCol = 0, iconCol = 0;
-    ResolveButtonColors(theme, variant, hovered, active, selected, bgCol, borderCol, iconCol);
+    ImU32 bgCol = 0, borderCol = 0, fgCol = 0;
+    ResolveButtonColors(theme, o.variant, hovered, active, o.selected, bgCol, borderCol, fgCol);
 
-    if (iconColor != 0 && !hovered && !active && !selected) {
-        iconCol = iconColor;
+    if (o.iconColor != 0 && !hovered && !active && !o.selected) {
+        fgCol = o.iconColor;
     }
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -91,81 +96,36 @@ bool ToolButton::Render(const char* id, Icon icon, UiVariant variant, const char
     if (theme.toolButton.borderSize > 0.0f) {
         dl->AddRect(screenPos, ImVec2(screenPos.x + s, screenPos.y + s), ImGui::GetColorU32(borderCol), radius, 0, theme.toolButton.borderSize);
     }
+
+    const float pressOffset = active ? 1.0f : 0.0f;
 
     // Векторная пиктограмма
-    if (icon != Icon::None) {
-        float pressOffset = active ? 1.0f : 0.0f;
+    if (o.icon != Icon::None) {
         ImVec2 center(screenPos.x + s * 0.5f + pressOffset, screenPos.y + s * 0.5f + pressOffset);
         float iconSz = s * theme.toolButton.iconScale;
-        icon.Draw(dl, center, iconSz, ImGui::GetColorU32(iconCol));
-    }
-
-    // Всплывающая подсказка
-    if (tooltip && tooltip[0] != '\0' && hovered) {
-        ImGui::SetTooltip("%s", tooltip);
-    }
-
-    return clicked;
-}
-
-bool ToolButton::Render(const char* id, Icon icon, UiSize size, UiVariant variant, const char* tooltip, bool selected, ImU32 iconColor, bool disabled) {
-    const UiTheme& theme = UiTheme::Get();
-    ControlMetrics m = theme.GetMetrics(size);
-    float baseSize = m.height / theme.GetScale();
-    return Render(id, icon, variant, tooltip, selected, baseSize, iconColor, disabled);
-}
-
-bool ToolButton::Render(const char* id, const char* glyphOrLabel, UiVariant variant, const char* tooltip, bool selected, float baseSize, bool disabled) {
-    DisabledScope disabledScope(disabled);
-    const UiTheme& theme = UiTheme::Get();
-    float s = (baseSize > 0.0f) ? theme.Scale(baseSize) : theme.Scale(theme.toolButton.size);
-
-    ApplyToolbarVerticalCentering(s);
-
-    char safeId[64];
-    const char* targetId = id;
-    if (!id || id[0] != '#' || id[1] != '#') {
-        std::snprintf(safeId, sizeof(safeId), "##tb_txt_%s", id ? id : (glyphOrLabel ? glyphOrLabel : "btn"));
-        targetId = safeId;
-    }
-    ImVec2 screenPos = ImGui::GetCursorScreenPos();
-    bool clicked = ImGui::InvisibleButton(targetId, ImVec2(s, s));
-    bool hovered = ImGui::IsItemHovered();
-    bool active = ImGui::IsItemActive();
-
-    ImU32 bgCol = 0, borderCol = 0, textCol = 0;
-    ResolveButtonColors(theme, variant, hovered, active, selected, bgCol, borderCol, textCol);
-
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-    float radius = theme.Scale(theme.toolButton.cornerRadius);
-
-    // Подложка и контур
-    dl->AddRectFilled(screenPos, ImVec2(screenPos.x + s, screenPos.y + s), ImGui::GetColorU32(bgCol), radius);
-    if (theme.toolButton.borderSize > 0.0f) {
-        dl->AddRect(screenPos, ImVec2(screenPos.x + s, screenPos.y + s), ImGui::GetColorU32(borderCol), radius, 0, theme.toolButton.borderSize);
+        o.icon.Draw(dl, center, iconSz, ImGui::GetColorU32(fgCol));
     }
 
     // Текстовый символ / глиф
-    if (glyphOrLabel && glyphOrLabel[0] != '\0') {
+    if (o.glyph && o.glyph[0] != '\0') {
         ImFont* font = theme.toolButton.font ? theme.toolButton.font : (theme.buttonFont ? theme.buttonFont : theme.defaultFont);
         float fontSz = theme.Scale(theme.toolButton.fontSize);
-        float pressOffset = active ? 1.0f : 0.0f;
         if (font) {
-            ImVec2 textSize = font->CalcTextSizeA(fontSz, FLT_MAX, 0.0f, glyphOrLabel);
+            ImVec2 textSize = font->CalcTextSizeA(fontSz, FLT_MAX, 0.0f, o.glyph);
             ImVec2 textPos(screenPos.x + (s - textSize.x) * 0.5f + pressOffset,
                            screenPos.y + (s - textSize.y) * 0.5f + pressOffset);
-            dl->AddText(font, fontSz, textPos, ImGui::GetColorU32(textCol), glyphOrLabel);
+            dl->AddText(font, fontSz, textPos, ImGui::GetColorU32(fgCol), o.glyph);
         } else {
-            ImVec2 textSize = ImGui::CalcTextSize(glyphOrLabel);
+            ImVec2 textSize = ImGui::CalcTextSize(o.glyph);
             ImVec2 textPos(screenPos.x + (s - textSize.x) * 0.5f + pressOffset,
                            screenPos.y + (s - textSize.y) * 0.5f + pressOffset);
-            dl->AddText(textPos, ImGui::GetColorU32(textCol), glyphOrLabel);
+            dl->AddText(textPos, ImGui::GetColorU32(fgCol), o.glyph);
         }
     }
 
     // Всплывающая подсказка
-    if (tooltip && tooltip[0] != '\0' && hovered) {
-        ImGui::SetTooltip("%s", tooltip);
+    if (o.tooltip && o.tooltip[0] != '\0' && hovered) {
+        ImGui::SetTooltip("%s", o.tooltip);
     }
 
     return clicked;
