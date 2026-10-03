@@ -526,6 +526,12 @@ bool Card::Button(const char* label, Icon icon, UiVariant variant, RowHeight hei
     return clicked;
 }
 
+bool Card::HoldButton(const char* label, Icon icon, UiVariant variant, RowHeight height, ::Col col,
+                      bool disabled) {
+    Button(label, icon, variant, height, col, disabled);
+    return !disabled && ImGui::IsItemActive();
+}
+
 bool Card::ButtonAuto(const char* label, UiVariant variant, RowHeight height, bool disabled) {
     return Button(label, Icon::None, variant, height, ::Col::Auto(), disabled);
 }

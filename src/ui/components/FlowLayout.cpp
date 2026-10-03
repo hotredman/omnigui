@@ -176,6 +176,10 @@ void FlowLayout::EndCol() {
     }
 }
 
+void FlowLayout::VerticalGap() {
+    ImGui::Spacing();
+}
+
 void FlowLayout::NextRow() {
     if (m_colOpen) {
         EndCol();

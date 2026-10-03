@@ -470,6 +470,7 @@ public:
         }
         UiTheme& theme = UiTheme::Get();
         float h = (height > 0.0f) ? theme.Scale(height) : (theme.GetMetrics(UiSize::Medium).height + theme.Scale(8.0f));
+        m_rowHeightPx = h;
         ImGui::TableNextRow(0, h);
     }
 
@@ -493,6 +494,15 @@ public:
         return ImGui::GetContentRegionAvail().x;
     }
 
+    // Текст ячейки по центру высоты строки (высота — как у последней NextRow)
+    void CellText(const std::string& text, ImU32 color = 0) {
+        const UiTheme& theme = UiTheme::Get();
+        const float offset = (m_rowHeightPx - ImGui::GetTextLineHeight()) * 0.5f - ImGui::GetStyle().CellPadding.y;
+        if (offset > 0.0f)
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + offset);
+        ImGui::TextColored(ImColor(color != 0 ? color : theme.palette.textPrimary).Value, "%s", text.c_str());
+    }
+
     void CenterNextItem(float itemWidth) {
         float avail = CellWidth();
         if (avail > itemWidth) {
@@ -503,4 +513,5 @@ public:
 private:
     bool m_open = false;
     bool m_rowIdPushed = false;
+    float m_rowHeightPx = 0.0f;
 };

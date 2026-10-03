@@ -14,6 +14,8 @@ public:
                  UiVariant variant = UiVariant::Danger);
 
     void Open() { m_open = true; }
+    // Текст, зависящий от введённых значений: задаётся перед Open
+    void SetText(std::string text) { m_text = std::move(text); }
     bool IsOpen() const { return m_open; }
 
     // Раз в кадр; true — оператор подтвердил

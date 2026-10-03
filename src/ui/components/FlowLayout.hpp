@@ -104,6 +104,9 @@ public:
     // Принудительный переход на новую строку
     void NextRow();
 
+    // Вертикальный зазор между карточками, стоящими друг под другом в колонке
+    static void VerticalGap();
+
     // Геометрия
     float GetAvailableWidth() const { return m_rowAvailWidth; }
     float CalculateSpanWidth(int span) const;

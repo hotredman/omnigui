@@ -103,6 +103,11 @@ public:
                 RowHeight height = RowHeight::Auto(), ::Col col = ::Col::Half(),
                 bool disabled = false);
 
+    // Кнопка удержания: true, пока её держат нажатой (движение «пока держат»). Неактивная — всегда false
+    bool HoldButton(const char* label, Icon icon, UiVariant variant = UiVariant::Default,
+                    RowHeight height = RowHeight::Auto(), ::Col col = ::Col::Half(),
+                    bool disabled = false);
+
     // Автоматическая ширина кнопки по содержимому (не привязана к 12-колоночной сетке)
     bool ButtonAuto(const char* label, UiVariant variant = UiVariant::Default, 
                     RowHeight height = RowHeight::Auto(), bool disabled = false);
