@@ -7,10 +7,59 @@
 #include "ui/components/UiTheme.hpp"
 #include "ui/components/Icon.hpp"
 
+// Параметры пункта навигации (designated initializers):
+//
+//     sidebar.Item({.label = "Live Stream", .icon = Icon::Gamepad, .selected = true});
+//
+// Идентичность — key, иначе label.
+struct SidebarItemOptions {
+    std::string label;
+    Icon        icon     = Icon::None;
+    bool        selected = false;
+    const char* key      = nullptr;
+};
+
+// Параметры двухстрочной записи списка (название + дата/статус + светодиод):
+//
+//     list.Entry({.label = run.title, .sublabel = "10:14 • 1240 pts", .statusColor = run.ledColor, .key = run.id.c_str()});
+struct SidebarEntryOptions {
+    std::string label;
+    std::string sublabel;
+    ImU32       statusColor = 0;       // 0 — без светодиода
+    bool        selected    = false;
+    const char* key         = nullptr;
+};
+
+// Прокручиваемый список внутри боковой панели (RAII-область). Создаётся
+// через Sidebar::ScrollList() и занимает всё свободное место до низа панели.
+class SidebarList : public Scope {
+public:
+    ~SidebarList();
+
+    // Двухстрочная запись списка; true — по ней кликнули
+    bool Entry(const SidebarEntryOptions& options);
+
+    // Заглушка пустого списка
+    void Empty(const std::string& message = "List is empty", const std::string& detail = "");
+
+private:
+    friend class Sidebar;
+    SidebarList();
+};
+
+// ============================================================================
 // Боковая навигационная панель (Sidebar). RAII-область: конструктор открывает
 // окно, деструктор закрывает.
 //
-//     if (auto sidebar = Sidebar()) { ... }
+//     if (auto sidebar = Sidebar()) {
+//         sidebar.Item({.label = "Live Stream", .icon = Icon::Gamepad}, Screen::Live, current);
+//         sidebar.Separator();
+//         sidebar.SectionTitle("RECORDED RUNS");
+//         if (auto list = sidebar.ScrollList()) {
+//             if (list.Entry({.label = "Run #01", .key = "run_01"})) { ... }
+//         }
+//     }
+// ============================================================================
 class Sidebar : public Scope {
 public:
     // По умолчанию геометрия рассчитывается из UiTheme::Get():
@@ -18,44 +67,29 @@ public:
     explicit Sidebar(float posY = -1.0f, float height = -1.0f);
     ~Sidebar();
 
-    // 1. Добавление пункта меню с векторной иконкой
-    bool AddItem(const char* id, const char* label, Icon icon, bool isActive = false);
+    // 1. Однострочный пункт меню с векторной иконкой; true — по нему кликнули
+    bool Item(const SidebarItemOptions& options);
 
-    // 2. Добавление пункта меню со строковой иконкой
-    bool AddItem(const char* id, const char* label, const char* iconStr, bool isActive = false);
-
-    // 3. Шаблоны для автоматической привязки к перечислению экранов
+    // 2. Привязка пункта к значению enum: selected вычисляется сам, по клику
+    // current принимает value
     template<typename T>
-    bool AddItem(T screenId, const char* label, Icon icon, T& currentScreen) {
-        bool active = (currentScreen == screenId);
-        if (AddItem(label, label, icon, active)) {
-            currentScreen = screenId;
+    bool Item(SidebarItemOptions options, T value, T& current) {
+        options.selected = (current == value);
+        if (Item(options)) {
+            current = value;
             return true;
         }
         return false;
     }
 
-    template<typename T>
-    bool AddItem(T screenId, const char* label, const char* iconStr, T& currentScreen) {
-        bool active = (currentScreen == screenId);
-        if (AddItem(label, label, iconStr, active)) {
-            currentScreen = screenId;
-            return true;
-        }
-        return false;
-    }
+    // 3. Разделитель, заголовок группы, вертикальный отступ (базовые px)
+    void Separator();
+    void SectionTitle(const std::string& title);
+    void Spacer(float basePx = 8.0f);
 
-    // 4. Тонкий горизонтальный разделитель
-    void AddSeparator();
-
-    // 5. Вертикальный отступ
-    void AddSpacing(float height = 8.0f);
+    // 4. Прокручиваемый список под пунктами (до низа панели)
+    SidebarList ScrollList();
 
 private:
-    void DrawVectorIcon(Icon icon, ImDrawList* dl, ImVec2 center, float size, ImU32 color);
     float Scale(float val) const { return UiTheme::Get().Scale(val); }
-
-    float m_width = 190.0f;
-    float m_height = 0.0f;
-    float m_posY = 0.0f;
 };

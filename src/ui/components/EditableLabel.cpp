@@ -31,11 +31,16 @@ void EditableLabel::CommitEdit(std::string& targetValue) {
     targetValue = m_buffer;
 }
 
-bool EditableLabel::Render(const char* id, std::string& value, float width, ImFont* font,
-                           const std::function<std::string()>& onDefaultValue, bool editable) {
+bool EditableLabel::Render(std::string& value, const EditableLabelOptions& options) {
+    float width = options.widthPx;
+    const std::function<std::string()>& onDefaultValue = options.defaultValue;
+    const bool editable = options.editable;
+
     const UiTheme& theme = UiTheme::Get();
-    ImFont* currentFont = font ? font : (theme.fontBold ? theme.fontBold : theme.defaultFont);
-    float pt = (font == theme.projectTitleFont || font == theme.fontBold) ? 20.0f : 18.0f;
+    const bool title = (options.role == TextRole::Title);
+    ImFont* currentFont = title ? (theme.fontBold ? theme.fontBold : theme.defaultFont)
+                                : (theme.fontRegular ? theme.fontRegular : theme.defaultFont);
+    float pt = title ? 20.0f : 18.0f;
     theme.PushFont(currentFont, pt);
 
     if (width < 0.0f) {
@@ -60,7 +65,7 @@ bool EditableLabel::Render(const char* id, std::string& value, float width, ImFo
     }
 
     bool valueChanged = false;
-    ImGui::PushID(id);
+    ImGui::PushID(this);
 
     if (!editable) {
         // --- 0. Неактивный режим: статичный текст без карандаша и клика ---

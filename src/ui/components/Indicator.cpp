@@ -17,51 +17,18 @@ static const char* GetPrecisionLabel(int p) {
     }
 }
 
-Indicator::Indicator(std::string title, std::string value, std::string unit, int digitsCount, bool showTare)
-    : m_title(Utf8ToUpper(title))
-    , m_value(std::move(value))
-    , m_unit(std::move(unit))
-    , m_digitsCount(digitsCount)
-    , m_showTare(showTare)
-{
-    InitFromValueString();
-}
-
-Indicator::Indicator(std::string title, std::string value, std::string unit, bool showTare)
-    : Indicator(std::move(title), std::move(value), std::move(unit), 0, showTare)
-{
-}
-
-Indicator::Indicator(std::string title, double value, int precision, std::string unit, int digitsCount, bool showTare)
-    : m_title(Utf8ToUpper(title))
-    , m_unit(std::move(unit))
-    , m_numericValue(value)
-    , m_precision(std::clamp(precision, 0, 5))
-    , m_digitsCount(digitsCount)
-    , m_showTare(showTare)
+Indicator::Indicator(const IndicatorOptions& o)
+    : m_title(Utf8ToUpper(o.title))
+    , m_unit(o.unit)
+    , m_numericValue(o.value)
+    , m_precision(std::clamp(o.precision, 0, 5))
+    , m_digitsCount(o.digits)
+    , m_showTare(o.tare)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "%.*f", m_precision, m_numericValue);
     m_value = buf;
     m_integerDigits = 2;
-}
-
-void Indicator::InitFromValueString() {
-    size_t dotPos = m_value.find('.');
-    if (dotPos != std::string::npos) {
-        m_precision = static_cast<int>(m_value.length() - dotPos - 1);
-        m_integerDigits = std::max(1, static_cast<int>(dotPos));
-    } else {
-        m_precision = 0;
-        m_integerDigits = std::max(1, static_cast<int>(m_value.length()));
-    }
-    m_precision = std::clamp(m_precision, 0, 5);
-
-    try {
-        m_numericValue = std::stod(m_value);
-    } catch (...) {
-        m_numericValue = 0.0;
-    }
 }
 
 void Indicator::SetValue(const std::string& value) {

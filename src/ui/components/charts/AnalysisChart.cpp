@@ -280,7 +280,7 @@ ChartBounds AnalysisChart::GetActiveBounds() const {
     return activeB;
 }
 
-void AnalysisChart::Render(const char* id, ImVec2 size) {
+void AnalysisChart::Render(ImVec2 size) {
     const UiTheme& theme = UiTheme::Get();
     ChartStyle style = GetStyle();
 
@@ -292,7 +292,9 @@ void AnalysisChart::Render(const char* id, ImVec2 size) {
     canvasSize.y = std::max(80.0f, canvasSize.y);
 
     ImVec2 origin = ImGui::GetCursorScreenPos();
-    ImGui::InvisibleButton(id, canvasSize, ImGuiButtonFlags_MouseButtonLeft);
+    ImGui::PushID(this);
+    ImGui::InvisibleButton("##chart", canvasSize, ImGuiButtonFlags_MouseButtonLeft);
+    ImGui::PopID();
 
     bool isHovered = ImGui::IsItemHovered();
     bool isActive = ImGui::IsItemActive();

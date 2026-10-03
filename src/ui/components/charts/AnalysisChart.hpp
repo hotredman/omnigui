@@ -76,7 +76,8 @@ public:
     }
 
     // 8. Отрисовка виджета
-    void Render(const char* id, ImVec2 size = ImVec2(0.0f, 0.0f));
+    // Размер в px; 0 по оси — всё свободное место. Идентичность — сам объект графика
+    void Render(ImVec2 sizePx = ImVec2(0.0f, 0.0f));
 
 private:
     std::string m_xLabel;

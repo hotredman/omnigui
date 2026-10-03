@@ -63,7 +63,7 @@ bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const
     float selectedMaxX = 0.0f;
     bool hasSelected = false;
 
-    if (Carousel carousel(id.c_str(), ImVec2(0.0f, tabH), &cStyle); carousel) {
+    if (Carousel carousel({.heightPx = tabH, .key = id.c_str(), .style = &cStyle}); carousel) {
         for (int i = 0; i < itemsCount; ++i) {
             bool isSelected = (selectedIndex == i);
 

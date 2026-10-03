@@ -63,7 +63,6 @@ static bool s_scaleMenuOpen = false;
 static bool s_countMenuOpen = false;
 
 // Component instances (strictly decoupled, self-docking design system shell)
-static SidebarMenu s_sidebarMenu;
 static std::vector<std::unique_ptr<Indicator>> s_indicators;
 
 // Charts
@@ -294,12 +293,12 @@ void Init() {
 
     // 5. Setup Persistent Indicators for Header Carousel
     s_indicators.clear();
-    s_indicators.push_back(std::make_unique<Indicator>("THROUGHPUT", 0.0, 1, "MB/s", 5, true));
-    s_indicators.push_back(std::make_unique<Indicator>("LATENCY", 0.0, 2, "ms", 5, true));
-    s_indicators.push_back(std::make_unique<Indicator>("CPU LOAD", 0.0, 1, "%", 4, false));
-    s_indicators.push_back(std::make_unique<Indicator>("UPTIME", 0.0, 1, "s", 4, false));
-    s_indicators.push_back(std::make_unique<Indicator>("THREADS", 16.0, 0, "", 3, false));
-    s_indicators.push_back(std::make_unique<Indicator>("MEMORY", 512.0, 0, "MB", 4, false));
+    s_indicators.push_back(std::make_unique<Indicator>(IndicatorOptions{.title = "THROUGHPUT", .precision = 1, .unit = "MB/s", .digits = 5, .tare = true}));
+    s_indicators.push_back(std::make_unique<Indicator>(IndicatorOptions{.title = "LATENCY", .precision = 2, .unit = "ms", .digits = 5, .tare = true}));
+    s_indicators.push_back(std::make_unique<Indicator>(IndicatorOptions{.title = "CPU LOAD", .precision = 1, .unit = "%", .digits = 4}));
+    s_indicators.push_back(std::make_unique<Indicator>(IndicatorOptions{.title = "UPTIME", .precision = 1, .unit = "s", .digits = 4}));
+    s_indicators.push_back(std::make_unique<Indicator>(IndicatorOptions{.title = "THREADS", .value = 16.0, .precision = 0, .digits = 3}));
+    s_indicators.push_back(std::make_unique<Indicator>(IndicatorOptions{.title = "MEMORY", .value = 512.0, .precision = 0, .unit = "MB", .digits = 4}));
 
     // Zero / Tare action resets live stream baseline
     s_indicators[0]->SetOnTare([]() {
@@ -407,7 +406,7 @@ static void RenderHeader(double elapsed) {
                 s_indicators[5]->SetValue(liveMem);
             }
 
-            if (Carousel carousel("##HeaderTelemetryCarousel", ImVec2(center.Width(), center.Height())); carousel) {
+            if (Carousel carousel({.widthPx = center.Width(), .heightPx = center.Height()}); carousel) {
                 for (size_t i = 0; i < s_indicators.size() && i < static_cast<size_t>(s_indicatorsCount); ++i) {
                     if (i > 0) SameLine();
                     s_indicators[i]->Render();
@@ -431,7 +430,7 @@ static void RenderToolbar() {
 
         // 2.2 Center / Fill Zone: Editable title
         if (auto fill = toolbar.Fill()) {
-            s_editableSessionTitle.Render("##SessionTitleLabel", s_sessionTitle, fill.Width(), theme.fontBold);
+            s_editableSessionTitle.Render(s_sessionTitle, {.widthPx = fill.Width()});
         }
 
         // 2.3 Right Zone: "New Session" button
@@ -451,28 +450,29 @@ static void RenderToolbar() {
 static void RenderSidebar() {
     if (auto sidebar = Sidebar()) {
         // Fixed navigation items
-        s_sidebarMenu.Item("Live Stream",      Icon::Gamepad,   NavScreen::RemoteControl, s_currentScreen);
-        s_sidebarMenu.Item("Offline Analysis", Icon::LineChart, NavScreen::Processing,    s_currentScreen);
-        s_sidebarMenu.Item("Machine & Node",   Icon::Cog,       NavScreen::Machine,       s_currentScreen);
-        s_sidebarMenu.Item("Data Archive",     Icon::Database,  NavScreen::Archive,       s_currentScreen);
-        s_sidebarMenu.Item("Event Journal",    Icon::List,      NavScreen::Journal,       s_currentScreen);
-        s_sidebarMenu.Item("Node Passport",    Icon::Clipboard, NavScreen::Passport,      s_currentScreen);
-        s_sidebarMenu.Item("Batch Analytics",  Icon::BarChart,  NavScreen::Series,        s_currentScreen);
+        sidebar.Item({.label = "Live Stream",      .icon = Icon::Gamepad},   NavScreen::RemoteControl, s_currentScreen);
+        sidebar.Item({.label = "Offline Analysis", .icon = Icon::LineChart}, NavScreen::Processing,    s_currentScreen);
+        sidebar.Item({.label = "Machine & Node",   .icon = Icon::Cog},       NavScreen::Machine,       s_currentScreen);
+        sidebar.Item({.label = "Data Archive",     .icon = Icon::Database},  NavScreen::Archive,       s_currentScreen);
+        sidebar.Item({.label = "Event Journal",    .icon = Icon::List},      NavScreen::Journal,       s_currentScreen);
+        sidebar.Item({.label = "Node Passport",    .icon = Icon::Clipboard}, NavScreen::Passport,      s_currentScreen);
+        sidebar.Item({.label = "Batch Analytics",  .icon = Icon::BarChart},  NavScreen::Series,        s_currentScreen);
 
-        s_sidebarMenu.Spacing(8.0f);
-        s_sidebarMenu.Separator();
-        s_sidebarMenu.SectionTitle("RECORDED RUNS");
+        sidebar.Spacer();
+        sidebar.Separator();
+        sidebar.SectionTitle("RECORDED RUNS");
 
-        // Scrollable region for recorded runs
-        if (s_sidebarMenu.BeginScrollRegion("##RunsScrollRegion")) {
+        // Scrollable list of recorded runs
+        if (auto list = sidebar.ScrollList()) {
             for (size_t i = 0; i < s_runs.size(); ++i) {
                 const auto& run = s_runs[i];
-                bool isSelected = (s_currentScreen == NavScreen::Processing && s_selectedRunIndex == static_cast<int>(i));
+                const bool isSelected = (s_currentScreen == NavScreen::Processing && s_selectedRunIndex == static_cast<int>(i));
 
-                char sublabel[64];
-                std::snprintf(sublabel, sizeof(sublabel), "%s • %d pts", run.timestamp.c_str(), run.pointCount);
-
-                if (s_sidebarMenu.ItemEx(run.id.c_str(), run.title.c_str(), sublabel, run.ledColor, isSelected)) {
+                if (list.Entry({.label = run.title,
+                                .sublabel = Format("%s • %d pts", run.timestamp.c_str(), run.pointCount),
+                                .statusColor = run.ledColor,
+                                .selected = isSelected,
+                                .key = run.id.c_str()})) {
                     s_selectedRunIndex = static_cast<int>(i);
                     s_currentScreen = NavScreen::Processing;
                     BuildOfflineAnalysisData(s_runs[i]);
@@ -505,7 +505,6 @@ static void RenderSidebar() {
                     }
                 }
             }
-            s_sidebarMenu.EndScrollRegion();
         }
     }
 }
@@ -531,7 +530,6 @@ static void RenderRemoteControl() {
 
         // Chart tiles: 1 graph - full area; 2 - stacked; 3 - top full width + two below; 4 - 2x2
         RealtimeChart* const charts[] = { &s_liveChart1, &s_liveChart2, &s_liveChart3, &s_liveChart4 };
-        const char* const chartIds[] = { "##LiveChart1", "##LiveChart2", "##LiveChart3", "##LiveChart4" };
         const int count = s_realtimeLayout + 1;
         const int cols = count >= 3 ? 2 : 1;
         const int rows = count >= 2 ? 2 : 1;
@@ -541,7 +539,7 @@ static void RenderRemoteControl() {
             const int col = (count == 3) ? std::max(0, i - 1) : i % cols;
             const int row = (count == 3) ? (i == 0 ? 0 : 1) : i / cols;
             if (auto cell = grid.Cell(col, row, wide ? 2 : 1)) {
-                charts[i]->Render(chartIds[i], cell.Size());
+                charts[i]->Render(cell.Size());
             }
         }
     }
@@ -629,44 +627,25 @@ static void RenderProcessing() {
 
         Spacer();
 
-        s_offlineChart.Render("##OfflineDatasetAnalysisChart", main.Available());
+        s_offlineChart.Render();
     }
 
     // 2. Right Area: Metrics Evaluation & Run Metadata
     if (auto side = split.Side()) {
         if (Card metricsCard("Calculated Indicators"); metricsCard) {
-            std::vector<TableGrid::Column> cols = {
-                { "Indicator", ColumnWidthMode::Stretch, 1.0f },
-                { "Value / Status", ColumnWidthMode::Fixed, 120.0f }
-            };
-            TableGrid::Options opts;
-            opts.scrollY = false;
-            opts.height = 170.0f;
-            if (TableGrid grid("MetricsTable", cols, opts); grid) {
-                grid.NextRow();
-                grid.SetColumn(0); Text("Peak Throughput");
-                grid.SetColumn(1); Text(Format("%.1f MB/s", activeRun.peakThroughput));
-                SameLine(); TableCell::MetricStatus("ok");
-
-                grid.NextRow();
-                grid.SetColumn(0); Text("Mean Latency");
-                grid.SetColumn(1); Text(Format("%.1f ms", activeRun.avgLatency));
-                SameLine(); TableCell::MetricStatus("ok");
-
-                grid.NextRow();
-                grid.SetColumn(0); Text("P99 Latency");
-                grid.SetColumn(1); Text(Format("%.1f ms", activeRun.p99Latency));
-                SameLine(); TableCell::MetricStatus(activeRun.p99Latency > 30.0 ? "manual_needed" : "ok");
-
-                grid.NextRow();
-                grid.SetColumn(0); Text("Efficiency Factor");
-                grid.SetColumn(1); Text(Format("%.1f %%", activeRun.efficiency));
-                SameLine(); TableCell::MetricStatus("ok");
-
-                grid.NextRow();
-                grid.SetColumn(0); Text("Anomaly Classifier");
-                grid.SetColumn(1); Text(activeRun.anomaly);
-                SameLine(); TableCell::MetricStatus(activeRun.anomaly == "Nominal" ? "ok" : "empty");
+            if (TableGrid grid({TableGrid::Column::Stretch("Indicator"), TableGrid::Column::Fixed("Value / Status", 120.0f)},
+                               {.height = 170.0f, .scrollY = false}); grid) {
+                auto metric = [&grid](const char* name, const std::string& value, const char* status) {
+                    grid.Row();
+                    grid.Cell(); Text(name);
+                    grid.Cell(); Text(value);
+                    SameLine(); TableCell::MetricStatus(status);
+                };
+                metric("Peak Throughput",    Format("%.1f MB/s", activeRun.peakThroughput), "ok");
+                metric("Mean Latency",       Format("%.1f ms", activeRun.avgLatency), "ok");
+                metric("P99 Latency",        Format("%.1f ms", activeRun.p99Latency), activeRun.p99Latency > 30.0 ? "manual_needed" : "ok");
+                metric("Efficiency Factor",  Format("%.1f %%", activeRun.efficiency), "ok");
+                metric("Anomaly Classifier", activeRun.anomaly, activeRun.anomaly == "Nominal" ? "ok" : "empty");
             }
         }
 
@@ -776,22 +755,18 @@ static void RenderMachine() {
 // 7. SCREEN 4: DATA ARCHIVE (TableGrid & SearchInput)
 // ----------------------------------------------------------------------------
 static void RenderArchive() {
-    const UiTheme& theme = UiTheme::Get();
     if (Card archiveCard("Telemetry Dataset Archive"); archiveCard) {
         SearchInput(s_searchArchive, {.hint = "Search datasets by name or run ID...", .key = "archive"});
         Spacer();
 
-        std::vector<TableGrid::Column> cols = {
-            { "ID", ColumnWidthMode::Fixed, 65.0f },
-            { "Dataset Name", ColumnWidthMode::Stretch, 1.0f },
-            { "Timestamp", ColumnWidthMode::Fixed, 90.0f },
-            { "Duration", ColumnWidthMode::Fixed, 80.0f },
-            { "Samples", ColumnWidthMode::Fixed, 80.0f },
-            { "Status", ColumnWidthMode::Fixed, 110.0f },
-            { "Action", ColumnWidthMode::Fixed, 80.0f }
-        };
-
-        if (TableGrid grid("FullArchiveTable", cols); grid) {
+        using Column = TableGrid::Column;
+        if (TableGrid grid({Column::Fixed("ID", 65.0f),
+                            Column::Stretch("Dataset Name"),
+                            Column::Fixed("Timestamp", 90.0f),
+                            Column::Fixed("Duration", 80.0f),
+                            Column::Fixed("Samples", 80.0f),
+                            Column::Fixed("Status", 110.0f),
+                            Column::Fixed("Action", 80.0f)}); grid) {
             for (size_t i = 0; i < s_runs.size(); ++i) {
                 const auto& run = s_runs[i];
                 if (!s_searchArchive.empty() &&
@@ -799,14 +774,14 @@ static void RenderArchive() {
                     run.id.find(s_searchArchive) == std::string::npos) {
                     continue;
                 }
-                grid.NextRow(static_cast<int>(i));
-                grid.SetColumn(0); grid.CellText(run.id);
-                grid.SetColumn(1); grid.CellText(run.title);
-                grid.SetColumn(2); grid.CellText(run.timestamp, theme.palette.textMuted);
-                grid.SetColumn(3); grid.CellText(Format("%.1f s", run.durationS));
-                grid.SetColumn(4); grid.CellText(Format("%d", run.pointCount));
-                grid.SetColumn(5); Badge(run.statusText, {.variant = run.status});
-                grid.SetColumn(6);
+                grid.Row({.key = run.id.c_str()});
+                grid.Cell(); grid.CellText(run.id);
+                grid.Cell(); grid.CellText(run.title);
+                grid.Cell(); grid.CellText(run.timestamp, {.role = TextRole::Muted});
+                grid.Cell(); grid.CellText(Format("%.1f s", run.durationS));
+                grid.Cell(); grid.CellText(Format("%d", run.pointCount));
+                grid.Cell(); Badge(run.statusText, {.variant = run.status});
+                grid.Cell();
                 if (Button({.label = "View", .variant = UiVariant::Secondary, .size = UiSize::Mini, .width = 70.0f,
                             .tooltip = "Open this run in Offline Analysis"})) {
                     s_selectedRunIndex = static_cast<int>(i);
@@ -873,25 +848,21 @@ static void RenderPassport() {
 // ----------------------------------------------------------------------------
 static void RenderSeries() {
     if (Card seriesCard("Cluster Nodes Comparative Analytics"); seriesCard) {
-        std::vector<TableGrid::Column> cols = {
-            { "Node Identifier", ColumnWidthMode::Stretch, 1.0f },
-            { "Peak Tput (MB/s)", ColumnWidthMode::Fixed, 130.0f },
-            { "Avg Latency (ms)", ColumnWidthMode::Fixed, 130.0f },
-            { "P99 Tail (ms)", ColumnWidthMode::Fixed, 110.0f },
-            { "Efficiency", ColumnWidthMode::Fixed, 100.0f },
-            { "State", ColumnWidthMode::Fixed, 110.0f }
-        };
-
-        if (TableGrid grid("SeriesTable", cols); grid) {
-            for (size_t i = 0; i < s_runs.size(); ++i) {
-                const auto& run = s_runs[i];
-                grid.NextRow(static_cast<int>(i));
-                grid.SetColumn(0); Text(run.title);
-                grid.SetColumn(1); Text(Format("%.1f", run.peakThroughput));
-                grid.SetColumn(2); Text(Format("%.2f", run.avgLatency));
-                grid.SetColumn(3); Text(Format("%.2f", run.p99Latency));
-                grid.SetColumn(4); Text(Format("%.1f %%", run.efficiency));
-                grid.SetColumn(5); Badge(run.statusText, {.variant = run.status});
+        using Column = TableGrid::Column;
+        if (TableGrid grid({Column::Stretch("Node Identifier"),
+                            Column::Fixed("Peak Tput (MB/s)", 130.0f),
+                            Column::Fixed("Avg Latency (ms)", 130.0f),
+                            Column::Fixed("P99 Tail (ms)", 110.0f),
+                            Column::Fixed("Efficiency", 100.0f),
+                            Column::Fixed("State", 110.0f)}); grid) {
+            for (const auto& run : s_runs) {
+                grid.Row({.key = run.id.c_str()});
+                grid.Cell(); Text(run.title);
+                grid.Cell(); Text(Format("%.1f", run.peakThroughput));
+                grid.Cell(); Text(Format("%.2f", run.avgLatency));
+                grid.Cell(); Text(Format("%.2f", run.p99Latency));
+                grid.Cell(); Text(Format("%.1f %%", run.efficiency));
+                grid.Cell(); Badge(run.statusText, {.variant = run.status});
             }
         }
     }

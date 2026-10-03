@@ -77,7 +77,6 @@ set(OMNIKIT_SOURCES
     src/ui/components/PresetGrid.cpp
     src/ui/components/SearchInput.cpp
     src/ui/components/Sidebar.cpp
-    src/ui/components/SidebarMenu.cpp
     src/ui/components/SidePanel.cpp
     src/ui/components/StatusBar.cpp
     src/ui/components/TabBar.cpp

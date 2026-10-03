@@ -4,10 +4,10 @@
 #include <imgui_internal.h>
 #include <algorithm>
 
-Carousel::Carousel(const char* id, ImVec2 size, const CarouselStyle* customStyle)
-    : m_id(id)
-    , m_requestedSize(size)
-    , m_style(customStyle ? *customStyle : UiTheme::Get().carousel)
+Carousel::Carousel(const CarouselOptions& o)
+    : m_id(o.key ? o.key : "##carousel")
+    , m_requestedSize(o.widthPx, o.heightPx)
+    , m_style(o.style ? *o.style : UiTheme::Get().carousel)
 {
     Begin();
 }
@@ -16,66 +16,11 @@ Carousel::~Carousel() {
     End();
 }
 
-Carousel::Carousel(Carousel&& other) noexcept
-    : m_id(other.m_id)
-    , m_requestedSize(other.m_requestedSize)
-    , m_style(other.m_style)
-    , m_open(other.m_open)
-    , m_ended(other.m_ended)
-    , m_groupStarted(other.m_groupStarted)
-    , m_childStarted(other.m_childStarted)
-    , m_canScroll(other.m_canScroll)
-    , m_showLeftArrow(other.m_showLeftArrow)
-    , m_showRightArrow(other.m_showRightArrow)
-    , m_arrowW(other.m_arrowW)
-    , m_cardH(other.m_cardH)
-    , m_spacing(other.m_spacing)
-    , m_scrollAreaW(other.m_scrollAreaW)
-    , m_maxScrollX(other.m_maxScrollX)
-    , m_scrollX(other.m_scrollX)
-    , m_targetScrollX(other.m_targetScrollX)
-    , m_storageId(other.m_storageId)
-{
-    other.m_open = false;
-    other.m_ended = true;
-    other.m_groupStarted = false;
-    other.m_childStarted = false;
-}
-
-Carousel& Carousel::operator=(Carousel&& other) noexcept {
-    if (this != &other) {
-        End();
-        m_id = other.m_id;
-        m_requestedSize = other.m_requestedSize;
-        m_style = other.m_style;
-        m_open = other.m_open;
-        m_ended = other.m_ended;
-        m_groupStarted = other.m_groupStarted;
-        m_childStarted = other.m_childStarted;
-        m_canScroll = other.m_canScroll;
-        m_showLeftArrow = other.m_showLeftArrow;
-        m_showRightArrow = other.m_showRightArrow;
-        m_arrowW = other.m_arrowW;
-        m_cardH = other.m_cardH;
-        m_spacing = other.m_spacing;
-        m_scrollAreaW = other.m_scrollAreaW;
-        m_maxScrollX = other.m_maxScrollX;
-        m_scrollX = other.m_scrollX;
-        m_targetScrollX = other.m_targetScrollX;
-        m_storageId = other.m_storageId;
-        other.m_open = false;
-        other.m_ended = true;
-        other.m_groupStarted = false;
-        other.m_childStarted = false;
-    }
-    return *this;
-}
-
-bool Carousel::Begin() {
-    if (m_ended) return false;
+void Carousel::Begin() {
+    if (m_ended) return;
     if (ImGui::GetCurrentWindowRead() == nullptr) {
         m_open = false;
-        return false;
+        return;
     }
 
     const UiTheme& theme = UiTheme::Get();
@@ -84,7 +29,7 @@ bool Carousel::Begin() {
     float availW = (m_requestedSize.x > 0.0f) ? m_requestedSize.x : ImGui::GetContentRegionAvail().x;
     if (availW < theme.Scale(40.0f)) {
         m_open = false;
-        return false;
+        return;
     }
 
     m_cardH = (m_requestedSize.y > 0.0f) ? m_requestedSize.y : theme.IndicatorHeight();
@@ -179,7 +124,6 @@ bool Carousel::Begin() {
         *pTargetScrollX = m_targetScrollX;
     }
 
-    return m_open;
 }
 
 void Carousel::End() {

@@ -137,8 +137,8 @@ void RealtimeChart::RebuildPointsFromSamples() {
     }
 }
 
-void RealtimeChart::Render(const char* strId, ImVec2 size) {
-    ImGui::PushID(strId);
+void RealtimeChart::Render(ImVec2 size) {
+    ImGui::PushID(this);
 
     const UiTheme& theme = UiTheme::Get();
     ImVec2 canvasSize = size;

@@ -6,13 +6,23 @@
 
 class ContextMenu;
 
+// Параметры индикатора (designated initializers):
+//
+//     Indicator speed({.title = "THROUGHPUT", .precision = 1, .unit = "MB/s", .digits = 5, .tare = true});
+struct IndicatorOptions {
+    std::string title;
+    double      value     = 0.0;
+    int         precision = 2;       // знаков после запятой, 0..5
+    std::string unit;
+    int         digits    = 0;       // число разрядов для расчёта ширины плашки; 0 — по значению
+    bool        tare      = false;   // показывать кнопку обнуления
+};
+
 class Indicator {
 public:
     using MenuCallback = std::function<void(ContextMenu& menu)>;
 
-    Indicator(std::string title, std::string value, std::string unit, int digitsCount = 0, bool showTare = false);
-    Indicator(std::string title, std::string value, std::string unit, bool showTare);
-    Indicator(std::string title, double value, int precision, std::string unit, int digitsCount = 0, bool showTare = false);
+    explicit Indicator(const IndicatorOptions& options);
 
     // Заголовок плашки выводится капсом (оформление компонента)
     void SetTitle(std::string title);
@@ -82,7 +92,6 @@ private:
     void RenderMenuZone(const char* name, bool& menuOpen, const MenuZone& zone, const char* tooltip,
                         const MenuCallback& fillMenu);
 
-    void InitFromValueString();
 
     mutable float m_cachedWidth = 0.0f;
     mutable float m_lastScale = 0.0f;

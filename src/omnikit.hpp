@@ -40,7 +40,6 @@
 #include "ui/components/Toolbar.hpp"
 #include "ui/components/TabBar.hpp"
 #include "ui/components/Sidebar.hpp"
-#include "ui/components/SidebarMenu.hpp"
 #include "ui/components/SidePanel.hpp"
 #include "ui/components/StatusBar.hpp"
 #include "ui/components/StatusBanner.hpp"

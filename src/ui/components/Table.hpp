@@ -2,6 +2,8 @@
 
 #include "ui/components/UiTheme.hpp"
 #include "ui/components/Icon.hpp"
+#include "ui/components/Scope.hpp"
+#include "ui/components/Text.hpp"
 #include <imgui.h>
 #include <string>
 #include <vector>
@@ -344,33 +346,67 @@ private:
 template <typename T>
 using VirtualTable = Table<T>;
 
-// Легковесная процедурная таблица для форм, редакторов и модальных окон
-// Автоматически управляет жизненным циклом (RAII), палитрой темы и строками
-class TableGrid {
+// Параметры табличной сетки (designated initializers):
+//
+//     TableGrid grid({TableGrid::Column::Stretch("Name"), TableGrid::Column::Fixed("Size", 80)},
+//                    {.height = 170, .scrollY = false});
+struct TableGridOptions {
+    const char* key = nullptr;     // идентичность; nullptr — выводится из заголовков колонок
+    float height = 0.0f;           // базовые px; <= 0: автоматически на всё доступное пространство
+    bool scrollY = true;
+    bool rowBg = true;
+    bool bordersOuter = true;
+    bool bordersInnerH = true;
+    bool bordersInnerV = true;
+    bool highlightHeaders = false; // подсветка заголовков при наведении мыши
+    float cellPaddingX = -1.0f;    // <= 0: использовать theme.table.cellPaddingX
+    float cellPaddingY = 6.0f;
+};
+
+// Параметры строки табличной сетки
+struct TableRowOptions {
+    const char* key = nullptr;     // идентичность строки (обязательна, если в ячейках одинаковые кнопки)
+    float height = 0.0f;           // базовые px; 0 — стандартная высота
+};
+
+// Легковесная процедурная таблица для форм, редакторов и модальных окон (RAII-область).
+// Автоматически управляет палитрой темы и строками:
+//
+//     if (TableGrid grid({Column::Stretch("Name"), Column::Fixed("Size", 80)}); grid) {
+//         grid.Row();
+//         grid.Cell(); Text("report.csv");
+//         grid.Cell(); Text("12 KB");
+//     }
+class TableGrid : public Scope {
 public:
     struct Column {
         std::string header;
         ColumnWidthMode widthMode = ColumnWidthMode::Stretch;
-        float width = 1.0f; // вес растяжения (Stretch) или пиксели (Fixed)
+        float width = 1.0f; // вес растяжения (Stretch) или базовые px (Fixed)
         bool sortable = false;
+
+        static Column Stretch(std::string header, float weight = 1.0f) {
+            return Column{std::move(header), ColumnWidthMode::Stretch, weight, false};
+        }
+        static Column Fixed(std::string header, float widthBasePx) {
+            return Column{std::move(header), ColumnWidthMode::Fixed, widthBasePx, false};
+        }
     };
 
-    struct Options {
-        float height = 0.0f;           // <= 0: автоматически на всё доступное пространство
-        bool scrollY = true;
-        bool rowBg = true;
-        bool bordersOuter = true;
-        bool bordersInnerH = true;
-        bool bordersInnerV = true;
-        bool highlightHeaders = false; // подсветка заголовков при наведении мыши
-        float cellPaddingX = -1.0f;    // <= 0: использовать theme.table.cellPaddingX
-        float cellPaddingY = 6.0f;
-    };
+    using Options = TableGridOptions;
 
-    TableGrid(const char* tableId, const std::vector<Column>& columns, const Options& opts = {}) {
+    explicit TableGrid(const std::vector<Column>& columns, const TableGridOptions& opts = {}) {
         UiTheme& theme = UiTheme::Get();
         const TableStyle& ts = theme.table;
         const float scale = theme.GetScale();
+
+        // Идентичность таблицы: явный key либо склейка заголовков колонок
+        std::string tableId = "##grid";
+        if (opts.key) {
+            tableId += opts.key;
+        } else {
+            for (const auto& col : columns) tableId += ":" + col.header;
+        }
 
         ImGuiTableFlags flags = 0;
         if (opts.scrollY) flags |= ImGuiTableFlags_ScrollY;
@@ -395,7 +431,7 @@ public:
         float tableH = (opts.height > 0.0f) ? theme.Scale(opts.height)
                                             : std::max(60.0f, ImGui::GetContentRegionAvail().y - 1.0f);
 
-        m_open = ImGui::BeginTable(tableId, static_cast<int>(columns.size()), flags, ImVec2(0.0f, tableH));
+        m_open = ImGui::BeginTable(tableId.c_str(), static_cast<int>(columns.size()), flags, ImVec2(0.0f, tableH));
         if (m_open) {
             if (opts.scrollY) {
                 ImGui::TableSetupScrollFreeze(0, 1);
@@ -424,69 +460,41 @@ public:
     }
 
     ~TableGrid() {
-        End();
-    }
-
-    TableGrid(const TableGrid&) = delete;
-    TableGrid& operator=(const TableGrid&) = delete;
-
-    TableGrid(TableGrid&& other) noexcept
-        : m_open(other.m_open), m_rowIdPushed(other.m_rowIdPushed) {
-        other.m_open = false;
-        other.m_rowIdPushed = false;
-    }
-
-    TableGrid& operator=(TableGrid&& other) noexcept {
-        if (this != &other) {
-            End();
-            m_open = other.m_open;
-            m_rowIdPushed = other.m_rowIdPushed;
-            other.m_open = false;
-            other.m_rowIdPushed = false;
-        }
-        return *this;
-    }
-
-    explicit operator bool() const { return m_open; }
-    bool IsOpen() const { return m_open; }
-
-    void End() {
         if (m_rowIdPushed) {
             ImGui::PopID();
-            m_rowIdPushed = false;
         }
         if (m_open) {
             ImGui::EndTable();
             ImGui::PopStyleVar();
             ImGui::PopStyleColor(9);
-            m_open = false;
         }
     }
 
-    void NextRow(float height = 0.0f) {
+    // Новая строка; ячейки заполняются по порядку вызовами Cell()
+    void Row(const TableRowOptions& options = {}) {
         if (m_rowIdPushed) {
             ImGui::PopID();
             m_rowIdPushed = false;
         }
         UiTheme& theme = UiTheme::Get();
-        float h = (height > 0.0f) ? theme.Scale(height) : (theme.GetMetrics(UiSize::Medium).height + theme.Scale(8.0f));
+        float h = (options.height > 0.0f) ? theme.Scale(options.height) : (theme.GetMetrics(UiSize::Medium).height + theme.Scale(8.0f));
         m_rowHeightPx = h;
+        m_nextColumn = 0;
         ImGui::TableNextRow(0, h);
+        if (options.key) {
+            ImGui::PushID(options.key);
+            m_rowIdPushed = true;
+        }
     }
 
-    void NextRow(int rowId, float height = 0.0f) {
-        NextRow(height);
-        ImGui::PushID(rowId);
-        m_rowIdPushed = true;
+    // Переход в следующую ячейку строки
+    bool Cell() {
+        return ImGui::TableSetColumnIndex(m_nextColumn++);
     }
 
-    void NextRow(const char* rowId, float height = 0.0f) {
-        NextRow(height);
-        ImGui::PushID(rowId);
-        m_rowIdPushed = true;
-    }
-
-    bool SetColumn(int columnIndex) {
+    // Переход в ячейку по номеру колонки
+    bool Cell(int columnIndex) {
+        m_nextColumn = columnIndex + 1;
         return ImGui::TableSetColumnIndex(columnIndex);
     }
 
@@ -494,13 +502,12 @@ public:
         return ImGui::GetContentRegionAvail().x;
     }
 
-    // Текст ячейки по центру высоты строки (высота — как у последней NextRow)
-    void CellText(const std::string& text, ImU32 color = 0) {
-        const UiTheme& theme = UiTheme::Get();
+    // Текст ячейки по центру высоты строки (высота — как у последней Row)
+    void CellText(const std::string& text, const TextOptions& options = {}) {
         const float offset = (m_rowHeightPx - ImGui::GetTextLineHeight()) * 0.5f - ImGui::GetStyle().CellPadding.y;
         if (offset > 0.0f)
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + offset);
-        ImGui::TextColored(ImColor(color != 0 ? color : theme.palette.textPrimary).Value, "%s", text.c_str());
+        ::Text(text, options);
     }
 
     void CenterNextItem(float itemWidth) {
@@ -511,7 +518,7 @@ public:
     }
 
 private:
-    bool m_open = false;
     bool m_rowIdPushed = false;
+    int m_nextColumn = 0;
     float m_rowHeightPx = 0.0f;
 };
