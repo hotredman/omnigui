@@ -57,11 +57,11 @@ OmniGUI ships with **OmniKit** (`src/omnikit.hpp`), a complete, theme-driven imm
 #include "omnikit.hpp"
 
 // Inside your UI loop:
-if (Card card("test_cfg", "Machine Configuration"); card) {
-    InputField::Text("##name", "Specimen Identifier", specimenName);
-    Toggle::Render("tog_stream", isStreaming, "Telemetry Streaming", "Sends real-time high-rate samples");
-    
-    if (card.Button("Start Testing Cycle", Icon(Icon::Play), UiVariant::Primary)) {
+if (Card card("Machine Configuration"); card) {
+    InputField(specimenName, {.label = "Specimen Identifier"});
+    Toggle(isStreaming, {.label = "Telemetry Streaming", .sublabel = "Sends real-time high-rate samples"});
+
+    if (Button({.label = "Start Testing Cycle", .variant = UiVariant::Primary, .icon = Icon::Play})) {
         machineState = DeviceState::Running;
     }
 }

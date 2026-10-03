@@ -26,12 +26,12 @@ UiVariant VariantOf(FieldState state) {
 // ============================================================================
 // RAII Scopes
 // ============================================================================
-
-Card::RowScope::RowScope(Card* parent, RowHeight height)
+Card::RowScope::RowScope(Card* parent, std::optional<UiSize> size)
     : m_parent(parent)
 {
     if (m_parent) {
-        m_parent->BeginRow(height);
+        m_parent->BeginRow(size);
+        m_open = true;
     }
 }
 
@@ -41,29 +41,14 @@ Card::RowScope::~RowScope() {
     }
 }
 
-Card::RowScope::RowScope(RowScope&& other) noexcept
-    : m_parent(other.m_parent)
-{
-    other.m_parent = nullptr;
-}
-
-Card::RowScope& Card::RowScope::operator=(RowScope&& other) noexcept {
-    if (this != &other) {
-        if (m_parent) m_parent->EndRow();
-        m_parent = other.m_parent;
-        other.m_parent = nullptr;
-    }
-    return *this;
-}
-
 Card::ColumnScope::ColumnScope(Card* parent, ::Col col)
     : m_parent(parent)
     , m_col(col)
-    , m_width(0.0f)
 {
     if (m_parent) {
         m_parent->PrepareField(col, m_width);
         ImGui::BeginGroup();
+        m_open = true;
     }
 }
 
@@ -74,63 +59,19 @@ Card::ColumnScope::~ColumnScope() {
     }
 }
 
-Card::ColumnScope::ColumnScope(ColumnScope&& other) noexcept
-    : m_parent(other.m_parent)
-    , m_col(other.m_col)
-    , m_width(other.m_width)
-{
-    other.m_parent = nullptr;
-}
-
-Card::ColumnScope& Card::ColumnScope::operator=(ColumnScope&& other) noexcept {
-    if (this != &other) {
-        if (m_parent) {
-            ImGui::EndGroup();
-            m_parent->FinishField(m_col);
-        }
-        m_parent = other.m_parent;
-        m_col = other.m_col;
-        m_width = other.m_width;
-        other.m_parent = nullptr;
-    }
-    return *this;
-}
-
 // ============================================================================
 // Card Lifecycle
 // ============================================================================
 
-Card::Card(const char* id, const char* title, ImVec2 size)
-    : Card(id, title, UiTheme::Get().card, size, false)
-{
-}
-
-Card::Card(const char* id, const char* title, float width)
-    : Card(id, title, UiTheme::Get().card, ImVec2(width, 0.0f), false)
-{
-}
-
-Card::Card(const char* id, const char* title, bool stretchY)
-    : Card(id, title, UiTheme::Get().card, ImVec2(0.0f, 0.0f), stretchY)
-{
-}
-
-Card::Card(const char* id, const char* title, RowHeight height)
-    : Card(id, title, UiTheme::Get().card, ImVec2(0.0f, height.IsCustom() ? UiTheme::Get().Scale(height.baselinePx) : 0.0f), height.IsFill())
-{
-}
-
-Card Card::StretchY(const char* id, const char* title) {
-    return Card(id, title, true);
-}
-
-Card::Card(const char* id, const char* title, const CardStyle& style, ImVec2 size, bool stretchY)
-    : m_style(style)
-    , m_stretchY(stretchY)
+Card::Card(const CardOptions& options)
+    : m_stretchY(options.stretchY)
+    , m_style(options.style ? *options.style : UiTheme::Get().card)
 {
     const UiTheme& theme = UiTheme::Get();
+    const char* title = options.title;
+    const char* id = options.key ? options.key : ((title && title[0] != '\0') ? title : "##card");
+    ImVec2 size(theme.Scale(options.width), theme.Scale(options.height));
 
-    // Автоопределение геометрии из активных контейнеров раскладки (GridLayout или FlowLayout)
     if (size.x <= 0.0f) {
         float gridW = GridLayout::CurrentCellWidth();
         float flowW = FlowLayout::CurrentColumnWidth();
@@ -201,55 +142,6 @@ Card::~Card() {
     End();
 }
 
-Card::Card(Card&& other) noexcept
-    : m_rowSpanUsed(other.m_rowSpanUsed)
-    , m_open(other.m_open)
-    , m_ended(other.m_ended)
-    , m_columnSpacing(other.m_columnSpacing)
-    , m_rowSpacing(other.m_rowSpacing)
-    , m_rowStartX(other.m_rowStartX)
-    , m_rowStartY(other.m_rowStartY)
-    , m_rowMaxY(other.m_rowMaxY)
-    , m_currentRowHeight(other.m_currentRowHeight)
-    , m_needsRowAdvance(other.m_needsRowAdvance)
-    , m_inAutoRow(other.m_inAutoRow)
-    , m_stretchY(other.m_stretchY)
-    , m_style(other.m_style)
-{
-    other.m_ended = true;
-    other.m_open = false;
-    other.m_needsRowAdvance = false;
-    other.m_inAutoRow = false;
-    other.m_currentRowHeight = 0.0f;
-    other.m_stretchY = false;
-}
-
-Card& Card::operator=(Card&& other) noexcept {
-    if (this != &other) {
-        End();
-        m_rowSpanUsed = other.m_rowSpanUsed;
-        m_open = other.m_open;
-        m_ended = other.m_ended;
-        m_columnSpacing = other.m_columnSpacing;
-        m_rowSpacing = other.m_rowSpacing;
-        m_rowStartX = other.m_rowStartX;
-        m_rowStartY = other.m_rowStartY;
-        m_rowMaxY = other.m_rowMaxY;
-        m_currentRowHeight = other.m_currentRowHeight;
-        m_needsRowAdvance = other.m_needsRowAdvance;
-        m_inAutoRow = other.m_inAutoRow;
-        m_stretchY = other.m_stretchY;
-        m_style = other.m_style;
-        other.m_ended = true;
-        other.m_open = false;
-        other.m_needsRowAdvance = false;
-        other.m_inAutoRow = false;
-        other.m_currentRowHeight = 0.0f;
-        other.m_stretchY = false;
-    }
-    return *this;
-}
-
 void Card::End() {
     if (!m_ended) {
         m_needsRowAdvance = false;
@@ -283,19 +175,19 @@ float Card::CalculateSpanWidth(int span) const {
     return std::max(20.0f, static_cast<float>(std::floor(width)));
 }
 
-Card::RowScope Card::Row(RowHeight height) {
-    return RowScope(this, height);
+Card::RowScope Card::Row(std::optional<UiSize> size) {
+    return RowScope(this, size);
 }
 
 Card::ColumnScope Card::Col(::Col col) {
     return ColumnScope(this, col);
 }
 
-void Card::BeginRow(RowHeight height) {
+void Card::BeginRow(std::optional<UiSize> size) {
     if (m_rowSpanUsed > 0 || m_inAutoRow) {
         NextRow();
     }
-    m_currentRowHeight = ResolveHeight(height, RowHeight::Auto());
+    m_currentRowHeight = size ? UiTheme::Get().GetMetrics(*size).height : 0.0f;
 }
 
 void Card::EndRow() {
@@ -305,20 +197,16 @@ void Card::EndRow() {
     m_currentRowHeight = 0.0f;
 }
 
-float Card::ResolveHeight(RowHeight height, RowHeight defaultFallback) const {
+float Card::ResolveHeight(std::optional<UiSize> size, std::optional<UiSize> fallback) const {
     const UiTheme& theme = UiTheme::Get();
-    if (height.IsCustom()) {
-        return theme.Scale(height.baselinePx);
-    }
-    if (height.IsFill()) {
-        float availH = ImGui::GetContentRegionAvail().y;
-        return (availH > 0.0f) ? availH : (defaultFallback.baselinePx > 0.0f ? theme.Scale(defaultFallback.baselinePx) : 0.0f);
+    if (size) {
+        return theme.GetMetrics(*size).height;
     }
     if (m_currentRowHeight > 0.0f) {
         return m_currentRowHeight;
     }
-    if (defaultFallback.baselinePx > 0.0f) {
-        return theme.Scale(defaultFallback.baselinePx);
+    if (fallback) {
+        return theme.GetMetrics(*fallback).height;
     }
     return 0.0f;
 }
@@ -508,67 +396,56 @@ void Card::NextRow() {
 // Interactive Widgets: Buttons & Display
 // ============================================================================
 
-bool Card::Button(const char* label, UiVariant variant, RowHeight height, ::Col col,
-                  bool disabled) {
-    return Button(label, Icon::None, variant, height, col, disabled);
-}
-
-bool Card::Button(const char* label, Icon icon, UiVariant variant, RowHeight height, ::Col col,
-                  bool disabled) {
-    float h = ResolveHeight(height, RowHeight::Default());
+bool Card::Button(const FieldOptions& o) {
+    const ::Col col = o.col.value_or(::Col::Half());
+    float h = ResolveHeight(o.size, UiSize::Medium);
     float w = 0.0f;
     if (col.IsAuto()) {
-        w = ButtonWidthPx({.label = label, .icon = icon}, height.IsCustom() ? UiTheme::Get().Scale(height.baselinePx) : 0.0f);
+        w = ButtonWidthPx({.label = o.label, .icon = o.icon}, h);
     }
     PrepareField(col, w);
 
-    bool clicked = ::ButtonPx(ImVec2(w, h), {.label = label, .variant = variant, .icon = icon, .disabled = disabled});
+    bool clicked = ::ButtonPx(ImVec2(w, h), {.label = o.label, .variant = o.variant, .icon = o.icon,
+                                             .tooltip = o.tooltip, .disabled = o.disabled, .key = o.key});
 
     FinishField(col);
     return clicked;
 }
 
-bool Card::HoldButton(const char* label, Icon icon, UiVariant variant, RowHeight height, ::Col col,
-                      bool disabled) {
-    Button(label, icon, variant, height, col, disabled);
-    return !disabled && ImGui::IsItemActive();
+bool Card::HoldButton(const FieldOptions& o) {
+    Button(o);
+    return !o.disabled && ImGui::IsItemActive();
 }
 
-bool Card::ButtonAuto(const char* label, UiVariant variant, RowHeight height, bool disabled) {
-    return Button(label, Icon::None, variant, height, ::Col::Auto(), disabled);
+void Card::Value(double value, const FieldOptions& o) {
+    char buf[64];
+    snprintf(buf, sizeof(buf), o.format ? o.format : "%.2f", value);
+    ValueImpl(buf, o);
 }
 
-bool Card::ButtonAuto(const char* label, Icon icon, UiVariant variant, RowHeight height, bool disabled) {
-    return Button(label, icon, variant, height, ::Col::Auto(), disabled);
+void Card::Value(const char* text, const FieldOptions& o) {
+    ValueImpl(text, o);
 }
 
-void Card::AddValueDisplay(double value, const char* unit, const char* format, RowHeight height, ::Col col) {
-    float w = 0.0f;
-    PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Display());
-    ValueDisplay(value, {.unit = unit, .format = format, .sizePx = ImVec2(w, h)});
-    FinishField(col);
+void Card::Value(std::optional<double> value, const FieldOptions& o) {
+    if (value.has_value()) {
+        Value(*value, o);
+    } else {
+        ValueImpl("—", o);
+    }
 }
 
-void Card::AddValueDisplay(const char* text, const char* unit, RowHeight height, ::Col col) {
-    float w = 0.0f;
-    PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Display());
-    ValueDisplay(text, {.unit = unit, .sizePx = ImVec2(w, h)});
-    FinishField(col);
-}
-
-void Card::AddValueDisplay(const char* label, std::optional<double> value, const char* unit,
-                           const char* format, RowHeight height, ::Col col, UiVariant variant)
-{
+void Card::ValueImpl(const char* text, const FieldOptions& o) {
+    const ::Col col = o.col.value_or(::Col::Full());
     float w = 0.0f;
     PrepareField(col, w);
 
     const UiTheme& theme = UiTheme::Get();
     const InputFieldStyle& inStyle = theme.input;
+    const bool hasLabel = o.label && o.label[0] != '\0';
 
-    ImGui::BeginGroup();
-    if (label && label[0] != '\0') {
+    if (hasLabel) {
+        ImGui::BeginGroup();
         ImFont* font = inStyle.labelFont ? inStyle.labelFont : theme.fontRegular;
         theme.PushFont(font, inStyle.labelFontSize);
 
@@ -577,7 +454,7 @@ void Card::AddValueDisplay(const char* label, std::optional<double> value, const
         ImDrawList* dl = ImGui::GetWindowDrawList();
 
         dl->PushClipRect(pos, ImVec2(pos.x + w, pos.y + lineHeight + 2.0f), true);
-        dl->AddText(pos, inStyle.colLabel, label);
+        dl->AddText(pos, inStyle.colLabel, o.label);
         dl->PopClipRect();
 
         ImGui::Dummy(ImVec2(w, lineHeight));
@@ -587,135 +464,135 @@ void Card::AddValueDisplay(const char* label, std::optional<double> value, const
         ImGui::SetCursorScreenPos(ImVec2(pos.x, pos.y + lineHeight + spacing));
     }
 
-    float h = ResolveHeight(height, RowHeight::Display());
+    float h = ResolveHeight(o.size);
+    if (h <= 0.0f) {
+        h = theme.Scale(80.0f);
+    }
+
     ValueDisplayStyle vStyle = theme.valueDisplay;
-    if (variant != UiVariant::Default) {
-        const SemanticStyle& sem = theme.GetVariantStyle(variant);
+    const bool customStyle = o.variant != UiVariant::Default;
+    if (customStyle) {
+        const SemanticStyle& sem = theme.GetVariantStyle(o.variant);
         vStyle.colValue = sem.colText;
         vStyle.colBorder = sem.colBorder;
     }
 
-    if (value.has_value()) {
-        ValueDisplay(*value, {.unit = unit, .format = format, .style = &vStyle, .sizePx = ImVec2(w, h)});
-    } else {
-        ValueDisplay("—", {.unit = unit, .style = &vStyle, .sizePx = ImVec2(w, h)});
+    ::ValueDisplay(text, {.unit = o.unit, .style = customStyle ? &vStyle : nullptr, .sizePx = ImVec2(w, h)});
+
+    if (hasLabel) {
+        ImGui::EndGroup();
     }
-
-    ImGui::EndGroup();
     FinishField(col);
 }
 
-bool Card::AddPresetGrid(float& value, const std::vector<float>& presets, 
-                         const char* unit, int columns,
-                         RowHeight displayHeight, ::Col col)
+template<typename T>
+bool Card::PresetGridImpl(T& value, const std::vector<T>& presets, int columns, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Full());
     float w = 0.0f;
     PrepareField(col, w);
-    float dispH = ResolveHeight(displayHeight, RowHeight(44.0f));
-    bool changed = PresetGrid(value, presets, {.unit = unit, .columns = columns, .sizePx = ImVec2(w, dispH)});
+    const UiTheme& theme = UiTheme::Get();
+    float dispH = o.size ? theme.GetMetrics(*o.size).height : theme.Scale(44.0f);
+    bool changed = ::PresetGrid(value, presets, {.unit = o.unit, .columns = columns,
+                                                 .displayFormat = o.format ? o.format : "%.1f",
+                                                 .key = o.key, .sizePx = ImVec2(w, dispH)});
     FinishField(col);
     return changed;
 }
 
-bool Card::AddPresetGrid(double& value, const std::vector<double>& presets, 
-                         const char* unit, int columns,
-                         RowHeight displayHeight, ::Col col)
-{
-    float w = 0.0f;
-    PrepareField(col, w);
-    float dispH = ResolveHeight(displayHeight, RowHeight(44.0f));
-    bool changed = PresetGrid(value, presets, {.unit = unit, .columns = columns, .sizePx = ImVec2(w, dispH)});
-    FinishField(col);
-    return changed;
+bool Card::PresetGrid(float& value, const std::vector<float>& presets, const FieldOptions& options) {
+    return PresetGridImpl<float>(value, presets, options.columns, options);
+}
+
+bool Card::PresetGrid(double& value, const std::vector<double>& presets, const FieldOptions& options) {
+    return PresetGridImpl<double>(value, presets, options.columns, options);
 }
 
 // ============================================================================
 // Form Fields
 // ============================================================================
 
-bool Card::AddFloat(const char* id, const char* label, float& value, 
-                    const char* unit, const char* format, ::Col col, RowHeight height,
-                    bool disabled)
+bool Card::Float(float& value, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Auto());
+    float h = ResolveHeight(o.size);
     bool changed = false;
     const FieldState state = StateOf(&value, sizeof(value));
     if (state == FieldState::NoValue) {
-        RenderNoValue(id, label, w, h);
+        RenderNoValue(o, w, h);
     } else {
-        DisabledScope disabledScope(disabled);
-        changed = InputField(value, {.label = label, .unit = unit, .format = format, .variant = VariantOf(state), .key = id, .sizePx = {w, h}});
+        DisabledScope disabledScope(o.disabled);
+        changed = InputField(value, {.label = o.label, .unit = o.unit, .format = o.format ? o.format : "%.2f",
+                                     .variant = VariantOf(state), .key = o.key, .sizePx = {w, h}});
     }
     FinishField(col);
     return changed;
 }
 
-bool Card::AddFloat(const char* id, const char* label, std::optional<float>& value, 
-                    const char* unit, const char* format, ::Col col, RowHeight height,
-                    bool disabled)
+bool Card::Float(std::optional<float>& value, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Auto());
+    float h = ResolveHeight(o.size);
     bool changed = false;
     {
-        DisabledScope disabledScope(disabled);
-        changed = InputField(value, {.label = label, .unit = unit, .format = format, .key = id, .sizePx = {w, h}});
+        DisabledScope disabledScope(o.disabled);
+        changed = InputField(value, {.label = o.label, .unit = o.unit, .format = o.format ? o.format : "%.2f",
+                                     .key = o.key, .sizePx = {w, h}});
     }
     FinishField(col);
     return changed;
 }
 
-bool Card::AddDouble(const char* id, const char* label, double& value, 
-                     const char* unit, const char* format, ::Col col, RowHeight height,
-                     bool disabled)
+bool Card::Double(double& value, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Auto());
+    float h = ResolveHeight(o.size);
     bool changed = false;
     {
-        DisabledScope disabledScope(disabled);
-        changed = InputField(value, {.label = label, .unit = unit, .format = format, .key = id, .sizePx = {w, h}});
+        DisabledScope disabledScope(o.disabled);
+        changed = InputField(value, {.label = o.label, .unit = o.unit, .format = o.format ? o.format : "%.2f",
+                                     .key = o.key, .sizePx = {w, h}});
     }
     FinishField(col);
     return changed;
 }
 
-bool Card::AddDouble(const char* id, const char* label, std::optional<double>& value, 
-                     const char* unit, const char* format, ::Col col, RowHeight height,
-                     bool disabled)
+bool Card::Double(std::optional<double>& value, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Auto());
+    float h = ResolveHeight(o.size);
     bool changed = false;
     {
-        DisabledScope disabledScope(disabled);
-        changed = InputField(value, {.label = label, .unit = unit, .format = format, .key = id, .sizePx = {w, h}});
+        DisabledScope disabledScope(o.disabled);
+        changed = InputField(value, {.label = o.label, .unit = o.unit, .format = o.format ? o.format : "%.2f",
+                                     .key = o.key, .sizePx = {w, h}});
     }
     FinishField(col);
     return changed;
 }
 
-bool Card::AddToggle(const char* id, bool& value,
-                     const char* label, const char* sublabel,
-                     bool disabled, ::Col col,
-                     std::optional<bool> alignBottom)
+bool Card::Toggle(bool& value, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
 
     const FieldState state = StateOf(&value, sizeof(value));
     if (state == FieldState::NoValue) {
-        RenderNoValue(id, label, w, ResolveHeight(RowHeight::Auto(), RowHeight::Auto()));
+        RenderNoValue(o, w, ResolveHeight(std::nullopt));
         FinishField(col);
         return false;
     }
 
-    bool shouldAlignBottom = alignBottom.value_or(col.span < 12 && sublabel == nullptr);
+    bool shouldAlignBottom = o.alignBottom.value_or(col.span < 12 && o.sublabel == nullptr);
 
     if (shouldAlignBottom) {
         const UiTheme& theme = UiTheme::Get();
@@ -733,9 +610,10 @@ bool Card::AddToggle(const char* id, bool& value,
     }
 
     const UiTheme& theme = UiTheme::Get();
-    float frameHeight = (m_currentRowHeight > 0.0f) ? m_currentRowHeight : theme.GetMetrics(UiSize::Medium).height;
+    float frameHeight = ResolveHeight(o.size, UiSize::Medium);
 
-    bool changed = ::Toggle(value, {.label = label, .sublabel = sublabel, .disabled = disabled, .key = id, .sizePx = {w, frameHeight}});
+    bool changed = ::Toggle(value, {.label = o.label, .sublabel = o.sublabel, .disabled = o.disabled,
+                                    .key = o.key, .sizePx = {w, frameHeight}});
     if (state == FieldState::Modified) {
         // У переключателя нет рамки-варианта: изменённое отмечаем контуром вокруг него
         const float pad = theme.Scale(3.0f);
@@ -749,42 +627,39 @@ bool Card::AddToggle(const char* id, bool& value,
     return changed;
 }
 
-bool Card::AddInt(const char* id, const char* label, int& value, 
-                  const char* unit, ::Col col, RowHeight height)
+bool Card::Int(int& value, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Auto());
+    float h = ResolveHeight(o.size);
     bool changed = false;
     const FieldState state = StateOf(&value, sizeof(value));
     if (state == FieldState::NoValue)
-        RenderNoValue(id, label, w, h);
+        RenderNoValue(o, w, h);
     else
-        changed = InputField(value, {.label = label, .unit = unit, .variant = VariantOf(state), .key = id, .sizePx = {w, h}});
+        changed = InputField(value, {.label = o.label, .unit = o.unit, .variant = VariantOf(state),
+                                     .key = o.key, .sizePx = {w, h}});
     FinishField(col);
     return changed;
 }
 
-bool Card::AddText(const char* id, const char* label, std::string& value, 
-                   ::Col col, RowHeight height, const char* hint)
+bool Card::Text(std::string& value, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Auto());
-    bool changed = InputField(value, {.label = label, .hint = hint, .key = id, .sizePx = {w, h}});
+    float h = ResolveHeight(o.size);
+    bool changed = InputField(value, {.label = o.label, .hint = o.hint ? o.hint : " — ",
+                                      .key = o.key, .sizePx = {w, h}});
     FinishField(col);
     return changed;
 }
 
-bool Card::AddText(const char* id, const char* label, std::string& value, 
-                   const char* hint, ::Col col, RowHeight height)
+void Card::Display(const std::string& value, const FieldOptions& o)
 {
-    return AddText(id, label, value, col, height, hint);
-}
-
-void Card::AddDisplay(const char* id, const char* label, const std::string& value, 
-                      ::Col col, RowHeight height)
-{
+    const ::Col col = o.col.value_or(::Col::Half());
+    const char* label = o.label;
     float w = 0.0f;
     const UiTheme& theme = UiTheme::Get();
     const InputFieldStyle& style = theme.input;
@@ -810,7 +685,7 @@ void Card::AddDisplay(const char* id, const char* label, const std::string& valu
 
     PrepareField(col, w);
 
-    ImGui::PushID(id);
+    ImGui::PushID(o.key ? o.key : (label ? label : "display"));
     ImGui::BeginGroup();
 
     // Заголовок (Label) над полем
@@ -834,7 +709,7 @@ void Card::AddDisplay(const char* id, const char* label, const std::string& valu
     }
 
     // Рамка только для чтения
-    float targetH = ResolveHeight(height, RowHeight::Auto());
+    float targetH = ResolveHeight(o.size);
     float frameH = (targetH > 0.0f) ? targetH : theme.GetMetrics(UiSize::Medium).height;
     ImVec2 minPos = ImGui::GetCursorScreenPos();
     ImVec2 maxPos(minPos.x + w, minPos.y + frameH);
@@ -869,40 +744,41 @@ void Card::AddDisplay(const char* id, const char* label, const std::string& valu
     FinishField(col);
 }
 
-bool Card::AddCombo(const char* id, const char* label, int& currentItem,
-                    const char* const items[], int itemsCount, ::Col col, RowHeight height)
+bool Card::Combo(int& currentItem, const char* const items[], int itemsCount, const FieldOptions& o)
 {
-    return AddComboImpl(StateOf(&currentItem, sizeof(currentItem)), id, label, currentItem, items,
-                        itemsCount, col, height);
+    return ComboImpl(StateOf(&currentItem, sizeof(currentItem)), currentItem, items, itemsCount, o);
 }
 
-bool Card::AddComboImpl(FieldState state, const char* id, const char* label, int& currentItem,
-                        const char* const items[], int itemsCount, ::Col col, RowHeight height)
+bool Card::ComboImpl(FieldState state, int& currentItem, const char* const items[], int itemsCount,
+                     const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Auto());
+    float h = ResolveHeight(o.size);
     bool changed = false;
     if (state == FieldState::NoValue)
-        RenderNoValue(id, label, w, h);
+        RenderNoValue(o, w, h);
     else
-        changed = ::Combo(currentItem, items, itemsCount, {.label = label, .variant = VariantOf(state), .key = id, .sizePx = {w, h}});
+        changed = ::Combo(currentItem, items, itemsCount, {.label = o.label, .variant = VariantOf(state),
+                                                           .key = o.key, .sizePx = {w, h}});
     FinishField(col);
     return changed;
 }
 
-bool Card::AddCombo(const char* id, const char* label, int& currentItem,
-                    const std::vector<std::string>& items, ::Col col, RowHeight height)
+bool Card::Combo(int& currentItem, const std::vector<std::string>& items, const FieldOptions& o)
 {
+    const ::Col col = o.col.value_or(::Col::Half());
     float w = 0.0f;
     PrepareField(col, w);
-    float h = ResolveHeight(height, RowHeight::Auto());
+    float h = ResolveHeight(o.size);
     bool changed = false;
     const FieldState state = StateOf(&currentItem, sizeof(currentItem));
     if (state == FieldState::NoValue)
-        RenderNoValue(id, label, w, h);
+        RenderNoValue(o, w, h);
     else
-        changed = ::Combo(currentItem, items, {.label = label, .variant = VariantOf(state), .key = id, .sizePx = {w, h}});
+        changed = ::Combo(currentItem, items, {.label = o.label, .variant = VariantOf(state),
+                                               .key = o.key, .sizePx = {w, h}});
     FinishField(col);
     return changed;
 }
@@ -911,54 +787,34 @@ FieldState Card::StateOf(const void* field, std::size_t size) const {
     return m_fieldStates ? m_fieldStates(field, size) : FieldState::Normal;
 }
 
-void Card::RenderNoValue(const char* id, const char* label, float width, float height) {
+void Card::RenderNoValue(const FieldOptions& o, float width, float height) {
     DisabledScope off(true);
     std::string dash = "—";
-    InputField(dash, {.label = label ? label : "", .hint = " — ", .key = id, .sizePx = {width, height}});
+    InputField(dash, {.label = o.label ? o.label : "", .hint = " — ", .key = o.key, .sizePx = {width, height}});
 }
 
 // ============================================================================
 // ContentList & Card Helpers
 // ============================================================================
 
-Card::ContentListScope::ContentListScope(Card* parent, const char* id)
+Card::ContentListScope::ContentListScope(Card* parent, const char* key)
     : m_parent(parent)
 {
     if (m_parent) {
-        m_open = m_parent->BeginContentList(id);
+        m_open = m_parent->BeginContentList(key);
     }
 }
 
+// EndChild обязателен и тогда, когда BeginChild вернул false (требование ImGui)
 Card::ContentListScope::~ContentListScope() {
-    if (m_parent && m_open) {
+    if (m_parent) {
         m_parent->EndContentList();
     }
 }
 
-Card::ContentListScope::ContentListScope(ContentListScope&& other) noexcept
-    : m_parent(other.m_parent)
-    , m_open(other.m_open)
-{
-    other.m_parent = nullptr;
-    other.m_open = false;
-}
-
-Card::ContentListScope& Card::ContentListScope::operator=(ContentListScope&& other) noexcept {
-    if (this != &other) {
-        if (m_parent && m_open) {
-            m_parent->EndContentList();
-        }
-        m_parent = other.m_parent;
-        m_open = other.m_open;
-        other.m_parent = nullptr;
-        other.m_open = false;
-    }
-    return *this;
-}
-
-bool Card::BeginContentList(const char* id) {
+bool Card::BeginContentList(const char* key) {
     float availH = GetRemainingHeight();
-    return ImGui::BeginChild(id, ImVec2(0.0f, availH), false);
+    return ImGui::BeginChild(key ? key : "##content_list", ImVec2(0.0f, availH), false);
 }
 
 void Card::EndContentList() {

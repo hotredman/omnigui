@@ -9,6 +9,7 @@
 #include <functional>
 #include <type_traits>
 
+#include "ui/components/Scope.hpp"
 #include "ui/components/FlowLayout.hpp"
 #include "ui/components/UiTheme.hpp"
 #include "ui/components/Icon.hpp"
@@ -19,195 +20,145 @@
 // (не считано — вместо ввода прочерк)
 enum class FieldState { Normal, Modified, NoValue };
 
-class Card {
+// Параметры самой карточки (designated initializers):
+//
+//     if (Card card({.title = "Stream Actions"})) { ... }
+//     if (Card card({.title = "Log", .stretchY = true})) { ... }
+//
+// Идентичность карточки (ImGui ID) берётся из key, иначе из title. Две карточки без
+// title и без key в одном окне конфликтуют — задайте key.
+struct CardOptions {
+    const char* title    = nullptr;
+    const char* key      = nullptr;     // идентичность; по умолчанию — title
+    float       width    = 0.0f;        // базовые px (масштабируются); 0 — ширина колонки/ячейки раскладки
+    float       height   = 0.0f;        // базовые px (масштабируются); 0 — по содержимому
+    bool        stretchY = false;       // растянуть по вертикали на всю оставшуюся высоту
+    const CardStyle* style = nullptr;   // оверрайд стиля; nullptr — из темы
+};
+
+// Параметры любого элемента карточки (поля, кнопки, табло). Применяются только те поля,
+// которые имеют смысл для конкретного элемента; остальные игнорируются:
+//
+//     card.Float(rate,  {.label = "Rate", .unit = "Hz", .col = Col::Half()});
+//     card.Toggle(on,   {.label = "Enable", .sublabel = "Verifies liveness"});
+//     card.Button({.label = "Save", .variant = UiVariant::Primary, .icon = Icon::Check});
+struct FieldOptions {
+    const char* label    = nullptr;     // подпись (над полем / на кнопке)
+    const char* sublabel = nullptr;     // Toggle: вторая строка
+    const char* unit     = nullptr;     // единица измерения
+    const char* format   = nullptr;     // printf-формат числа; nullptr — "%.2f"
+    const char* hint     = nullptr;     // Text: плейсхолдер; nullptr — " — "
+    UiVariant   variant  = UiVariant::Default;  // Button / Value: семантический стиль
+    Icon        icon     = Icon::None;  // Button
+    const char* tooltip  = nullptr;     // Button
+    std::optional< ::Col> col;         // доля строки; по умолчанию Half (табло и пресеты — Full)
+    std::optional<UiSize>  size;        // высота; по умолчанию — высота текущей Row()
+    bool        disabled = false;
+    const char* key      = nullptr;     // идентичность; по умолчанию — label
+    std::optional<bool> alignBottom;    // Toggle: выровнять по нижней кромке соседних полей
+    int         columns  = 5;           // PresetGrid: число колонок сетки пресетов
+};
+
+class Card : public Scope {
 public:
-    // RAII RowScope для блочной настройки высоты строки и выравнивания
-    class RowScope {
+    // RAII-строка сетки карточки с общей высотой элементов:  if (auto row = card.Row()) { ... }
+    class RowScope : public Scope {
     public:
-        RowScope(Card* parent, RowHeight height);
+        RowScope(Card* parent, std::optional<UiSize> size);
         ~RowScope();
-
-        RowScope(const RowScope&) = delete;
-        RowScope& operator=(const RowScope&) = delete;
-
-        RowScope(RowScope&& other) noexcept;
-        RowScope& operator=(RowScope&& other) noexcept;
-
-        explicit operator bool() const { return m_parent != nullptr; }
-
     private:
         Card* m_parent = nullptr;
     };
 
-    // RAII ColumnScope для произвольных виджетов в ячейке сетки карточки
-    class ColumnScope {
+    // RAII-ячейка сетки для произвольных виджетов:  if (auto c = card.Col(Col::Third())) { ... }
+    class ColumnScope : public Scope {
     public:
         ColumnScope(Card* parent, ::Col col);
         ~ColumnScope();
-
-        ColumnScope(const ColumnScope&) = delete;
-        ColumnScope& operator=(const ColumnScope&) = delete;
-
-        ColumnScope(ColumnScope&& other) noexcept;
-        ColumnScope& operator=(ColumnScope&& other) noexcept;
-
-        explicit operator bool() const { return m_parent != nullptr; }
         float Width() const { return m_width; }
-
     private:
         Card* m_parent = nullptr;
         ::Col m_col = ::Col::Half();
         float m_width = 0.0f;
     };
 
-    // RAII конструктор: открывает стилизованную карточку (стиль берется из UiTheme::Get().card)
-    Card(const char* id, const char* title = nullptr, ImVec2 size = ImVec2(0, 0));
-    Card(const char* id, const char* title, float width);
-    Card(const char* id, const char* title, bool stretchY);
-    Card(const char* id, const char* title, RowHeight height);
-    Card(const char* id, const char* title, const CardStyle& customStyle, ImVec2 size = ImVec2(0, 0), bool stretchY = false);
+    // RAII-область скроллируемого списка контента (занимает оставшуюся высоту карточки)
+    class ContentListScope : public Scope {
+    public:
+        ContentListScope(Card* parent, const char* key);
+        ~ContentListScope();
+    private:
+        Card* m_parent = nullptr;
+    };
+
+    // Открывает стилизованную карточку (стиль — из UiTheme::Get().card)
+    Card(const CardOptions& options = {});
+    explicit Card(const char* title) : Card(CardOptions{.title = title}) {}
     ~Card();
 
-    // Фабричный метод для карточки, растягивающейся по вертикали
-    static Card StretchY(const char* id, const char* title = nullptr);
-
-    // Запрет копирования (во избежание двойного закрытия ImGui Child)
-    Card(const Card&) = delete;
-    Card& operator=(const Card&) = delete;
-
-    // Перемещение (Move)
-    Card(Card&& other) noexcept;
-    Card& operator=(Card&& other) noexcept;
-
-    // Проверка открытия: if (Card card(...); card) или if (card)
-    explicit operator bool() const { return m_open; }
-    bool IsOpen() const { return m_open; }
-
-    // Явное закрытие (деструктор не будет повторно вызывать EndChild)
-    void End();
-
     // 2D-сетка: управление строками и колонками
-    RowScope Row(RowHeight height = RowHeight::Default());
+    RowScope Row(std::optional<UiSize> size = UiSize::Medium);
     ColumnScope Col(::Col col = ::Col::Half());
 
-    void BeginRow(RowHeight height = RowHeight::Default());
-    void EndRow();
+    // Принудительный переход на следующую строку сетки
+    void NextRow();
 
-    // Кнопки с семантическими стилями (UiVariant) и высотой строки;
-    // disabled — кнопка видна, но неактивна (клик не проходит)
-    bool Button(const char* label, UiVariant variant = UiVariant::Default, 
-                RowHeight height = RowHeight::Auto(), ::Col col = ::Col::Half(),
-                bool disabled = false);
-
-    bool Button(const char* label, Icon icon, UiVariant variant = UiVariant::Default, 
-                RowHeight height = RowHeight::Auto(), ::Col col = ::Col::Half(),
-                bool disabled = false);
+    // Кнопки с семантическими стилями; disabled — кнопка видна, но неактивна.
+    // Col::Auto() даёт ширину по содержимому (не привязана к 12-колоночной сетке)
+    bool Button(const FieldOptions& options);
 
     // Кнопка удержания: true, пока её держат нажатой (движение «пока держат»). Неактивная — всегда false
-    bool HoldButton(const char* label, Icon icon, UiVariant variant = UiVariant::Default,
-                    RowHeight height = RowHeight::Auto(), ::Col col = ::Col::Half(),
-                    bool disabled = false);
+    bool HoldButton(const FieldOptions& options);
 
-    // Автоматическая ширина кнопки по содержимому (не привязана к 12-колоночной сетке)
-    bool ButtonAuto(const char* label, UiVariant variant = UiVariant::Default, 
-                    RowHeight height = RowHeight::Auto(), bool disabled = false);
+    // Информационное/расчётное табло (ValueDisplay); label — подпись над табло.
+    // Без размера высота — 80 базовых px; std::nullopt вместо числа — прочерк
+    void Value(double value, const FieldOptions& options = {});
+    void Value(const char* text, const FieldOptions& options = {});
+    void Value(std::optional<double> value, const FieldOptions& options = {});
 
-    bool ButtonAuto(const char* label, Icon icon, UiVariant variant = UiVariant::Default, 
-                    RowHeight height = RowHeight::Auto(), bool disabled = false);
-
-    // Информационное/расчетное табло (ValueDisplay)
-    void AddValueDisplay(double value, const char* unit = nullptr, const char* format = "%.2f", 
-                         RowHeight height = RowHeight::Display(), ::Col col = ::Col::Full());
-
-    void AddValueDisplay(const char* text, const char* unit = nullptr, 
-                         RowHeight height = RowHeight::Display(), ::Col col = ::Col::Full());
-
-    void AddValueDisplay(const char* label, std::optional<double> value, const char* unit = nullptr,
-                         const char* format = "%.2f", RowHeight height = RowHeight::Display(),
-                         ::Col col = ::Col::Full(), UiVariant variant = UiVariant::Default);
-
-    // Селектор пресетов со встроенным табло (PresetGrid)
-    bool AddPresetGrid(float& value, const std::vector<float>& presets, 
-                       const char* unit = nullptr, int columns = 5,
-                       RowHeight displayHeight = RowHeight(44.0f), ::Col col = ::Col::Full());
-
-    bool AddPresetGrid(double& value, const std::vector<double>& presets, 
-                       const char* unit = nullptr, int columns = 5,
-                       RowHeight displayHeight = RowHeight(44.0f), ::Col col = ::Col::Full());
+    // Селектор пресетов со встроенным табло (PresetGrid); unit — единица на табло,
+    // columns — число колонок сетки пресетов, format — формат значения на табло
+    bool PresetGrid(float& value, const std::vector<float>& presets, const FieldOptions& options = {});
+    bool PresetGrid(double& value, const std::vector<double>& presets, const FieldOptions& options = {});
 
     // Состояние полей карточки по адресу поля (float/int/bool/enum): без провайдера
     // все поля обычные. Провайдер живёт не дольше карточки
     using FieldStateProvider = std::function<FieldState(const void* field, std::size_t size)>;
     void SetFieldStates(FieldStateProvider provider) { m_fieldStates = std::move(provider); }
 
-    // Методы добавления полей ввода в 12-колоночную сетку
-    bool AddFloat(const char* id, const char* label, float& value, 
-                  const char* unit = nullptr, const char* format = "%.2f", 
-                  ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto(),
-                  bool disabled = false);
+    // Поля ввода в 12-колоночной сетке
+    bool Float(float& value, const FieldOptions& options);
+    bool Float(std::optional<float>& value, const FieldOptions& options);
+    bool Double(double& value, const FieldOptions& options);
+    bool Double(std::optional<double>& value, const FieldOptions& options);
+    bool Int(int& value, const FieldOptions& options);
+    bool Text(std::string& value, const FieldOptions& options);
+    bool Toggle(bool& value, const FieldOptions& options);
 
-    bool AddFloat(const char* id, const char* label, std::optional<float>& value, 
-                  const char* unit = nullptr, const char* format = "%.2f", 
-                  ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto(),
-                  bool disabled = false);
+    // Поле только для чтения: подпись над значением
+    void Display(const std::string& value, const FieldOptions& options);
 
-    bool AddDouble(const char* id, const char* label, double& value, 
-                   const char* unit = nullptr, const char* format = "%.2f", 
-                   ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto(),
-                   bool disabled = false);
+    bool Combo(int& currentItem, const char* const items[], int itemsCount, const FieldOptions& options);
+    bool Combo(int& currentItem, const std::vector<std::string>& items, const FieldOptions& options);
 
-    bool AddDouble(const char* id, const char* label, std::optional<double>& value, 
-                   const char* unit = nullptr, const char* format = "%.2f", 
-                   ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto(),
-                   bool disabled = false);
+    // Массив с автовыводом размера
+    template<std::size_t N>
+    bool Combo(int& currentItem, const char* const (&items)[N], const FieldOptions& options) {
+        return Combo(currentItem, items, static_cast<int>(N), options);
+    }
 
-    bool AddToggle(const char* id, bool& value,
-                   const char* label = nullptr,
-                   const char* sublabel = nullptr,
-                   bool disabled = false,
-                   ::Col col = ::Col::Half(),
-                   std::optional<bool> alignBottom = std::nullopt);
-
-    bool AddInt(const char* id, const char* label, int& value, 
-                const char* unit = nullptr, 
-                ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto());
-
-    bool AddText(const char* id, const char* label, std::string& value, 
-                 ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto(),
-                 const char* hint = " — ");
-
-    void AddDisplay(const char* id, const char* label, const std::string& value, 
-                    ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto());
-
-    bool AddText(const char* id, const char* label, std::string& value, 
-                 const char* hint, ::Col col = ::Col::Half(), 
-                 RowHeight height = RowHeight::Auto());
-
-    bool AddCombo(const char* id, const char* label, int& currentItem, 
-                  const char* const items[], int itemsCount, 
-                  ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto());
-
-    bool AddCombo(const char* id, const char* label, int& currentItem, 
-                  const std::vector<std::string>& items, 
-                  ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto());
-
-    // Шаблонный AddCombo для строго типизированных Enum и массивов с автовыводом размера
-    template<typename EnumT, size_t N, std::enable_if_t<std::is_enum_v<EnumT>, int> = 0>
-    bool AddCombo(const char* id, const char* label, EnumT& currentItem, 
-                  const char* const (&items)[N], 
-                  ::Col col = ::Col::Half(), RowHeight height = RowHeight::Auto())
+    // Строго типизированные Enum и массивы с автовыводом размера
+    template<typename EnumT, std::size_t N, std::enable_if_t<std::is_enum_v<EnumT>, int> = 0>
+    bool Combo(EnumT& currentItem, const char* const (&items)[N], const FieldOptions& options)
     {
         int current = static_cast<int>(currentItem);
-        if (AddComboImpl(StateOf(&currentItem, sizeof(currentItem)), id, label, current, items,
-                         static_cast<int>(N), col, height)) {
+        if (ComboImpl(StateOf(&currentItem, sizeof(currentItem)), current, items,
+                      static_cast<int>(N), options)) {
             currentItem = static_cast<EnumT>(current);
             return true;
         }
         return false;
     }
-
-    // Принудительный переход на следующую строку сетки
-    void NextRow();
 
     // Геометрия 12-колоночной сетки
     float GetFullWidth() const;
@@ -225,27 +176,9 @@ public:
     float GetRemainingHeight() const;
     bool IsStretchY() const { return m_stretchY; }
 
-    // Скроллируемая область списка контента (занимает оставшуюся высоту карточки)
-    bool BeginContentList(const char* id);
-    void EndContentList();
-
-    // RAII scope для скроллируемой области списка контента
-    class ContentListScope {
-    public:
-        ContentListScope(Card* parent, const char* id);
-        ~ContentListScope();
-        ContentListScope(const ContentListScope&) = delete;
-        ContentListScope& operator=(const ContentListScope&) = delete;
-        ContentListScope(ContentListScope&& other) noexcept;
-        ContentListScope& operator=(ContentListScope&& other) noexcept;
-        explicit operator bool() const { return m_open; }
-    private:
-        Card* m_parent = nullptr;
-        bool m_open = false;
-    };
-
-    ContentListScope ContentList(const char* id) {
-        return ContentListScope(this, id);
+    // Скроллируемая область списка контента:  if (auto list = card.ContentList()) { ... }
+    ContentListScope ContentList(const char* key = nullptr) {
+        return ContentListScope(this, key);
     }
 
     // Сообщение о пустом состоянии внутри карточки
@@ -260,17 +193,26 @@ public:
     void AlignTextToButton(UiSize size = UiSize::Small);
 
 private:
+    void BeginRow(std::optional<UiSize> size);
+    void EndRow();
+    void End();
+    bool BeginContentList(const char* key);
+    void EndContentList();
+
     FieldState StateOf(const void* field, std::size_t size) const;
     // Прочерк на месте поля: та же подпись и ширина, ввода нет
-    void RenderNoValue(const char* id, const char* label, float width, float height);
-    bool AddComboImpl(FieldState state, const char* id, const char* label, int& currentItem,
-                      const char* const items[], int itemsCount, ::Col col, RowHeight height);
+    void RenderNoValue(const FieldOptions& options, float width, float height);
+    bool ComboImpl(FieldState state, int& currentItem, const char* const items[], int itemsCount,
+                   const FieldOptions& options);
+    void ValueImpl(const char* text, const FieldOptions& options);
+    template<typename T>
+    bool PresetGridImpl(T& value, const std::vector<T>& presets, int columns, const FieldOptions& options);
     void PrepareField(::Col col, float& outWidth);
     void FinishField(::Col col);
-    float ResolveHeight(RowHeight height, RowHeight defaultFallback) const;
+    // Высота элемента в финальных px: явный size, иначе высота строки, иначе fallback; 0 — авто
+    float ResolveHeight(std::optional<UiSize> size, std::optional<UiSize> fallback = std::nullopt) const;
 
     int m_rowSpanUsed = 0; // Использовано долей в текущей строке (0..12)
-    bool m_open = false;
     bool m_ended = false;
     float m_columnSpacing = 12.0f;
     float m_rowSpacing = 12.0f;

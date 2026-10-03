@@ -102,6 +102,7 @@ static bool s_compressionZstd = true;
 static int s_workerThreads = 16;
 static std::string s_clusterRegion = "us-east-zone-b";
 static bool s_numaAffinity = true;
+static int s_schedPolicy = 0;
 static float s_cacheQuotaMb = 2048.0f;
 static float s_evictionThreshold = 85.0f;
 static int s_replicationFactor = 3;
@@ -117,6 +118,7 @@ static float s_passportMaxThroughput = 250.0f;
 static float s_passportMinLatency = 0.85f;
 static bool s_passportEccMemory = true;
 static bool s_passportRdmaEnabled = true;
+static bool s_machineAvx512Enabled = true;
 
 // printf-style formatting into std::string (for TableGrid::CellText and similar)
 static std::string Fmt(const char* format, ...) {
@@ -591,7 +593,7 @@ static void RenderRemoteControl() {
 
     // 2. Right Area: SidePanel Remote Control actions
     if (SidePanel panel("##RemoteSidePanel", 260.0f, SidePanel::Side::Right); panel) {
-        if (Card actionCard("pult_card", "Stream Actions"); actionCard) {
+        if (Card actionCard("Stream Actions"); actionCard) {
             if (Button({.label = "START STREAM", .variant = UiVariant::Success, .icon = Icon::Play, .size = UiSize::Large, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Running;
                 s_deviceStreaming = true;
@@ -615,14 +617,14 @@ static void RenderRemoteControl() {
 
         ImGui::Spacing();
 
-        if (Card jogCard("jog_card", "Sampling Frequency"); jogCard) {
+        if (Card jogCard("Sampling Frequency"); jogCard) {
             static const std::vector<float> freqs = { 20.0f, 50.0f, 100.0f, 250.0f, 500.0f };
             PresetGrid(s_streamRateJog, freqs, {.unit = "Hz", .columns = 3});
         }
 
         ImGui::Spacing();
 
-        if (Card calibCard("calib_card", "Baseline & Zero"); calibCard) {
+        if (Card calibCard("Baseline & Zero"); calibCard) {
             if (Button({.label = "Tare / Zero Baseline", .variant = UiVariant::Secondary, .icon = Icon::Zero, .width = ButtonOptions::Fill})) {
                 s_liveChart1.Clear();
                 s_liveChart2.Clear();
@@ -633,8 +635,8 @@ static void RenderRemoteControl() {
 
             // Hold button: true only while pressed (Card::HoldButton); streams ~4x faster while held
             ImGui::Spacing();
-            s_boostHeld = calibCard.HoldButton("Hold to Boost Stream", Icon::Play, UiVariant::Info, RowHeight::Auto(),
-                                               ::Col::Full(), !s_deviceStreaming);
+            s_boostHeld = calibCard.HoldButton({.label = "Hold to Boost Stream", .variant = UiVariant::Info, .icon = Icon::Play,
+                                               .col = Col::Full(), .disabled = !s_deviceStreaming});
             Tooltip::OnLastItem(s_deviceStreaming ? "Samples ~4x faster while the button is held"
                                                   : "Start the stream to enable boost");
         }
@@ -683,7 +685,7 @@ static void RenderProcessing() {
 
     // 2. Right Area: Metrics Evaluation & Run Metadata
     if (SidePanel sideP("##AnalysisSideMetrics", 280.0f, SidePanel::Side::Right); sideP) {
-        if (Card metricsCard("calc_metrics_card", "Calculated Indicators"); metricsCard) {
+        if (Card metricsCard("Calculated Indicators"); metricsCard) {
             std::vector<TableGrid::Column> cols = {
                 { "Indicator", ColumnWidthMode::Stretch, 1.0f },
                 { "Value / Status", ColumnWidthMode::Fixed, 120.0f }
@@ -721,7 +723,7 @@ static void RenderProcessing() {
 
         ImGui::Spacing();
 
-        if (Card metaCard("meta_card", "Run Metadata"); metaCard) {
+        if (Card metaCard("Run Metadata"); metaCard) {
             ValueDisplay(static_cast<double>(activeRun.pointCount), {.unit = "points", .format = "%.0f", .compact = true});
             ImGui::Spacing();
             ValueDisplay(activeRun.durationS, {.unit = "s", .format = "%.1f", .compact = true});
@@ -752,35 +754,31 @@ static void RenderMachine() {
     {
         switch (s_machineTab) {
             case 0: { // Networking
-                if (Card netCard("net_cfg_card", "Socket & Transport Configuration"); netCard) {
-                    InputField(s_bindAddress, {.label = "Listening Interface Address"});
-                    ImGui::Spacing();
-                    InputField(s_bindPort, {.label = "Uplink TCP Port"});
-                    ImGui::Spacing();
-                    InputField(s_tcpBufferSize, {.label = "Socket Ring Buffer Size", .unit = "KB"});
-                    ImGui::Spacing();
-                    Toggle(s_keepaliveEnabled, {.label = "Enable TCP Keepalive Probes", .sublabel = "Verifies socket liveness every 15s"});
-                    Toggle(s_compressionZstd, {.label = "Payload Compression (Zstandard)", .sublabel = "Compresses wire packets above 4 KB"});
-                    ImGui::Spacing();
-                    Button({.label = "Apply Network Configuration", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
+                if (Card netCard("Socket & Transport Configuration"); netCard) {
+                    // Card grid: fields flow across a 12-column row
+                    netCard.Text(s_bindAddress, {.label = "Listening Interface Address", .col = Col::TwoThirds()});
+                    netCard.Int(s_bindPort, {.label = "Uplink TCP Port", .col = Col::Third()});
+                    netCard.Float(s_tcpBufferSize, {.label = "Socket Ring Buffer Size", .unit = "KB", .format = "%.0f", .col = Col::Third()});
+                    netCard.Toggle(s_keepaliveEnabled, {.label = "Enable TCP Keepalive Probes", .sublabel = "Verifies socket liveness every 15s"});
+                    netCard.Toggle(s_compressionZstd, {.label = "Payload Compression (Zstandard)", .sublabel = "Compresses wire packets above 4 KB"});
+                    netCard.Button({.label = "Apply Network Configuration", .variant = UiVariant::Primary, .icon = Icon::Check, .col = Col::Auto()});
                 }
                 break;
             }
             case 1: { // Compute Architecture
-                if (Card compCard("comp_cfg_card", "Thread Concurrency & Core Allocation"); compCard) {
-                    InputField(s_workerThreads, {.label = "Active Worker Thread Count"});
-                    ImGui::Spacing();
-                    InputField(s_clusterRegion, {.label = "Cluster Deployment Zone"});
-                    ImGui::Spacing();
-                    Toggle(s_numaAffinity, {.label = "NUMA Socket Memory Pinning", .sublabel = "Allocates buffers strictly local to core"});
-                    ImGui::Spacing();
-                    Button({.label = "Apply Compute Settings", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
+                if (Card compCard("Thread Concurrency & Core Allocation"); compCard) {
+                    static const char* const schedPolicies[] = { "Round Robin", "Work Stealing", "Priority Queue" };
+                    compCard.Int(s_workerThreads, {.label = "Active Worker Thread Count"});
+                    compCard.Combo(s_schedPolicy, schedPolicies, {.label = "Scheduling Policy"});
+                    compCard.Text(s_clusterRegion, {.label = "Cluster Deployment Zone", .col = Col::Full()});
+                    compCard.Toggle(s_numaAffinity, {.label = "NUMA Socket Memory Pinning", .sublabel = "Allocates buffers strictly local to core", .col = Col::Full()});
+                    compCard.Button({.label = "Apply Compute Settings", .variant = UiVariant::Primary, .icon = Icon::Check, .col = Col::Auto()});
                 }
                 break;
             }
             case 2: { // AVX-512 SIMD
-                if (Card simdCard("simd_cfg_card", "Vectorization Engine Parameters"); simdCard) {
-                    Toggle(s_passportRdmaEnabled, {.label = "Enable AVX-512 FPU Instructions", .sublabel = "512-bit wide vector matrix operations"});
+                if (Card simdCard("Vectorization Engine Parameters"); simdCard) {
+                    Toggle(s_machineAvx512Enabled, {.label = "Enable AVX-512 FPU Instructions", .sublabel = "512-bit wide vector matrix operations"});
                     ImGui::Spacing();
                     InputField(s_passportMaxThroughput, {.label = "Rated Maximum Bandwidth", .unit = "MB/s"});
                     ImGui::Spacing();
@@ -789,17 +787,16 @@ static void RenderMachine() {
                 break;
             }
             case 3: { // Buffer Pool
-                if (Card bufCard("buf_cfg_card", "Slab Allocator Quotas"); bufCard) {
-                    InputField(s_cacheQuotaMb, {.label = "Max L1 Memory Slab Size", .unit = "MB"});
-                    ImGui::Spacing();
-                    InputField(s_evictionThreshold, {.label = "Eviction High-Watermark", .unit = "%"});
-                    ImGui::Spacing();
-                    Button({.label = "Flush & Reallocate Slabs", .variant = UiVariant::Warning, .icon = Icon::Refresh, .width = 240.0f});
+                if (Card bufCard("Slab Allocator Quotas"); bufCard) {
+                    bufCard.Float(s_cacheQuotaMb, {.label = "Max L1 Memory Slab Size", .unit = "MB", .format = "%.0f"});
+                    bufCard.Float(s_evictionThreshold, {.label = "Eviction High-Watermark", .unit = "%", .format = "%.0f"});
+                    bufCard.Value(s_cacheQuotaMb * s_evictionThreshold / 100.0f, {.label = "Effective Watermark", .unit = "MB", .format = "%.0f", .size = UiSize::Large});
+                    bufCard.Button({.label = "Flush & Reallocate Slabs", .variant = UiVariant::Warning, .icon = Icon::Refresh, .col = Col::Auto()});
                 }
                 break;
             }
             case 4: { // Storage NVMe
-                if (Card storageCard("storage_cfg_card", "Zero-Copy Disk Writer"); storageCard) {
+                if (Card storageCard("Zero-Copy Disk Writer"); storageCard) {
                     InputField(s_replicationFactor, {.label = "Replication Factor"});
                     ImGui::Spacing();
                     Button({.label = "Sync Storage Buffers", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
@@ -807,19 +804,18 @@ static void RenderMachine() {
                 break;
             }
             case 5: { // Rate Limiter & PID
-                if (Card pidCard("pid_cfg_card", "Telemetry Stream PID Controller"); pidCard) {
-                    InputField(s_pidKp, {.label = "Proportional Gain (Kp)"});
-                    ImGui::Spacing();
-                    InputField(s_pidKi, {.label = "Integral Gain (Ki)"});
-                    ImGui::Spacing();
-                    InputField(s_pidKd, {.label = "Derivative Gain (Kd)"});
-                    ImGui::Spacing();
-                    Button({.label = "Apply PID Calibration", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
+                if (Card pidCard("Telemetry Stream PID Controller"); pidCard) {
+                    if (auto row = pidCard.Row()) {
+                        pidCard.Float(s_pidKp, {.label = "Proportional Gain (Kp)", .col = Col::Third()});
+                        pidCard.Float(s_pidKi, {.label = "Integral Gain (Ki)", .col = Col::Third()});
+                        pidCard.Float(s_pidKd, {.label = "Derivative Gain (Kd)", .col = Col::Third()});
+                    }
+                    pidCard.Button({.label = "Apply PID Calibration", .variant = UiVariant::Primary, .icon = Icon::Check, .col = Col::Auto()});
                 }
                 break;
             }
             default: { // Diagnostics & Export
-                if (Card diagCard("diag_cfg_card", "Self-Test & Diagnostics"); diagCard) {
+                if (Card diagCard("Self-Test & Diagnostics"); diagCard) {
                     Button({.label = "Run Cluster Diagnostic Self-Test", .variant = UiVariant::Info, .icon = Icon::Target, .width = 260.0f});
                 }
                 break;
@@ -834,7 +830,7 @@ static void RenderMachine() {
 // ----------------------------------------------------------------------------
 static void RenderArchive() {
     const UiTheme& theme = UiTheme::Get();
-    if (Card archiveCard("archive_full_card", "Telemetry Dataset Archive"); archiveCard) {
+    if (Card archiveCard("Telemetry Dataset Archive"); archiveCard) {
         SearchInput(s_searchArchive, {.hint = "Search datasets by name or run ID...", .key = "archive"});
         ImGui::Spacing();
 
@@ -880,7 +876,7 @@ static void RenderArchive() {
 // ----------------------------------------------------------------------------
 static void RenderJournal() {
     const UiTheme& theme = UiTheme::Get();
-    if (Card journalCard("journal_full_card", "Real-Time Event & Operator Journal"); journalCard) {
+    if (Card journalCard("Real-Time Event & Operator Journal"); journalCard) {
         ImGui::Checkbox("Auto-scroll", &s_autoScrollJournal);
         ImGui::SameLine();
         SearchInput(s_searchJournal, {.hint = "Filter log entries...", .width = 220, .key = "journal"});
@@ -915,7 +911,7 @@ static void RenderJournal() {
 // 9. SCREEN 6: NODE PASSPORT (Hardware Specs)
 // ----------------------------------------------------------------------------
 static void RenderPassport() {
-    if (Card passportCard("passport_full_card", "Node Hardware Specification & Identity"); passportCard) {
+    if (Card passportCard("Node Hardware Specification & Identity"); passportCard) {
         InputField(s_passportNodeId, {.label = "Node Unique Identifier"});
         ImGui::Spacing();
         InputField(s_passportFwRev, {.label = "Firmware / Runtime Revision"});
@@ -936,7 +932,7 @@ static void RenderPassport() {
 // ----------------------------------------------------------------------------
 static void RenderSeries() {
     const UiTheme& theme = UiTheme::Get();
-    if (Card seriesCard("series_full_card", "Cluster Nodes Comparative Analytics"); seriesCard) {
+    if (Card seriesCard("Cluster Nodes Comparative Analytics"); seriesCard) {
         std::vector<TableGrid::Column> cols = {
             { "Node Identifier", ColumnWidthMode::Stretch, 1.0f },
             { "Peak Tput (MB/s)", ColumnWidthMode::Fixed, 130.0f },
