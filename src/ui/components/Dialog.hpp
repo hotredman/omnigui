@@ -62,14 +62,14 @@ public:
             float totalBtnsW = btnW * 2.0f + 10.0f * scale;
             ImGui::SetCursorPosX(ImGui::GetWindowWidth() - totalBtnsW - 18.0f * scale);
 
-            if (Button("Cancel", {.variant = UiVariant::Secondary, .width = btnW / scale})) {
+            if (Button({.label = "Cancel", .variant = UiVariant::Secondary, .width = btnW / scale})) {
                 isOpen = false;
                 ImGui::CloseCurrentPopup();
             }
 
             ImGui::SameLine(0.0f, 10.0f * scale);
 
-            if (Button(confirmBtnText, {.variant = confirmVariant, .icon = confirmIcon, .width = btnW / scale})) {
+            if (Button({.label = confirmBtnText, .variant = confirmVariant, .icon = confirmIcon, .width = btnW / scale})) {
                 confirmed = true;
                 isOpen = false;
                 ImGui::CloseCurrentPopup();
@@ -148,7 +148,7 @@ public:
             float totalBtnsW = btnW * 2.0f + 10.0f * scale;
             ImGui::SetCursorPosX(ImGui::GetWindowWidth() - totalBtnsW - 18.0f * scale);
 
-            if (Button("Cancel", {.variant = UiVariant::Secondary, .width = btnW / scale})) {
+            if (Button({.label = "Cancel", .variant = UiVariant::Secondary, .width = btnW / scale})) {
                 isOpen = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -156,7 +156,7 @@ public:
             ImGui::SameLine(0.0f, 10.0f * scale);
 
             bool canConfirm = (buf[0] != '\0');
-            if (Button(confirmBtnText, {.variant = confirmVariant, .icon = confirmIcon, .width = btnW / scale, .disabled = !canConfirm}) || (enterPressed && canConfirm)) {
+            if (Button({.label = confirmBtnText, .variant = confirmVariant, .icon = confirmIcon, .width = btnW / scale, .disabled = !canConfirm}) || (enterPressed && canConfirm)) {
                 value = buf;
                 confirmed = true;
                 isOpen = false;

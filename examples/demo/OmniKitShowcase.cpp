@@ -444,7 +444,7 @@ static void RenderToolbar() {
 
         // 2.3 Right Zone: "New Session" button
         if (auto right = toolbar.Right()) {
-            if (right.Button("New Session", {.variant = UiVariant::Primary, .icon = Icon::Plus})) {
+            if (right.Button({.label = "New Session", .variant = UiVariant::Primary, .icon = Icon::Plus})) {
                 s_sessionTitle = "Telemetry Ingestion Session - " + FormatCurrentClock();
                 s_liveChart1.Clear();
                 s_liveStartTime = std::chrono::steady_clock::now();
@@ -543,7 +543,7 @@ static void RenderRemoteControl() {
             "3 Graphs",
             "4 Graphs"
         };
-        Combo::Render("##GraphCountCombo", s_realtimeLayout, graphCountOptions, 4, UiSize::Medium, 160.0f * theme.GetScale());
+        Combo(s_realtimeLayout, graphCountOptions, 4, {.width = 160.0f, .key = "graph_count"});
 
         ImGui::Spacing();
 
@@ -594,17 +594,17 @@ static void RenderRemoteControl() {
     // 2. Right Area: SidePanel Remote Control actions
     if (SidePanel panel("##RemoteSidePanel", 260.0f, SidePanel::Side::Right); panel) {
         if (Card actionCard("pult_card", "Stream Actions"); actionCard) {
-            if (Button("START STREAM", {.variant = UiVariant::Success, .icon = Icon::Play, .size = UiSize::Large, .width = ButtonOptions::Fill})) {
+            if (Button({.label = "START STREAM", .variant = UiVariant::Success, .icon = Icon::Play, .size = UiSize::Large, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Running;
                 s_deviceStreaming = true;
             }
             ImGui::Spacing();
-            if (Button("PAUSE FEED", {.variant = UiVariant::Warning, .icon = Icon::Pause, .width = ButtonOptions::Fill})) {
+            if (Button({.label = "PAUSE FEED", .variant = UiVariant::Warning, .icon = Icon::Pause, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
             }
             ImGui::Spacing();
-            if (Button("STOP & RESET", {.variant = UiVariant::Danger, .icon = Icon::Square, .width = ButtonOptions::Fill})) {
+            if (Button({.label = "STOP & RESET", .variant = UiVariant::Danger, .icon = Icon::Square, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
                 s_liveChart1.Clear();
@@ -625,7 +625,7 @@ static void RenderRemoteControl() {
         ImGui::Spacing();
 
         if (Card calibCard("calib_card", "Baseline & Zero"); calibCard) {
-            if (Button("Tare / Zero Baseline", {.variant = UiVariant::Secondary, .icon = Icon::Zero, .width = ButtonOptions::Fill})) {
+            if (Button({.label = "Tare / Zero Baseline", .variant = UiVariant::Secondary, .icon = Icon::Zero, .width = ButtonOptions::Fill})) {
                 s_liveChart1.Clear();
                 s_liveChart2.Clear();
                 s_liveChart3.Clear();
@@ -663,12 +663,12 @@ static void RenderProcessing() {
         Badge::Render(activeRun.statusText, activeRun.status);
 
         ImGui::SameLine(chartAreaW - 240.0f * theme.GetScale());
-        if (Button("Reset Zoom", {.variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
+        if (Button({.label = "Reset Zoom", .variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
             s_offlineChart.ResetZoom();
         }
         ImGui::SameLine();
         bool majGrid = s_offlineChart.GetOptions().majorGrid;
-        if (Button(majGrid ? "Grid: ON" : "Grid: OFF", {.variant = UiVariant::Secondary, .size = UiSize::Small})) {
+        if (Button({.label = majGrid ? "Grid: ON" : "Grid: OFF", .variant = UiVariant::Secondary, .size = UiSize::Small})) {
             s_offlineChart.SetMajorGrid(!majGrid);
             s_offlineChart.SetMinorGrid(!majGrid);
         }
@@ -755,74 +755,74 @@ static void RenderMachine() {
         switch (s_machineTab) {
             case 0: { // Networking
                 if (Card netCard("net_cfg_card", "Socket & Transport Configuration"); netCard) {
-                    InputField::Text("##bind_ip", "Listening Interface Address", s_bindAddress);
+                    InputField(s_bindAddress, {.label = "Listening Interface Address"});
                     ImGui::Spacing();
-                    InputField::Int("##bind_port", "Uplink TCP Port", s_bindPort);
+                    InputField(s_bindPort, {.label = "Uplink TCP Port"});
                     ImGui::Spacing();
-                    InputField::Float("##tcp_buf", "Socket Ring Buffer Size", s_tcpBufferSize, "KB");
+                    InputField(s_tcpBufferSize, {.label = "Socket Ring Buffer Size", .unit = "KB"});
                     ImGui::Spacing();
-                    Toggle::Render("tog_keepalive", s_keepaliveEnabled, "Enable TCP Keepalive Probes", "Verifies socket liveness every 15s");
-                    Toggle::Render("tog_zstd", s_compressionZstd, "Payload Compression (Zstandard)", "Compresses wire packets above 4 KB");
+                    Toggle(s_keepaliveEnabled, {.label = "Enable TCP Keepalive Probes", .sublabel = "Verifies socket liveness every 15s"});
+                    Toggle(s_compressionZstd, {.label = "Payload Compression (Zstandard)", .sublabel = "Compresses wire packets above 4 KB"});
                     ImGui::Spacing();
-                    Button("Apply Network Configuration", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
+                    Button({.label = "Apply Network Configuration", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
             case 1: { // Compute Architecture
                 if (Card compCard("comp_cfg_card", "Thread Concurrency & Core Allocation"); compCard) {
-                    InputField::Int("##workers", "Active Worker Thread Count", s_workerThreads);
+                    InputField(s_workerThreads, {.label = "Active Worker Thread Count"});
                     ImGui::Spacing();
-                    InputField::Text("##region", "Cluster Deployment Zone", s_clusterRegion);
+                    InputField(s_clusterRegion, {.label = "Cluster Deployment Zone"});
                     ImGui::Spacing();
-                    Toggle::Render("tog_numa", s_numaAffinity, "NUMA Socket Memory Pinning", "Allocates buffers strictly local to core");
+                    Toggle(s_numaAffinity, {.label = "NUMA Socket Memory Pinning", .sublabel = "Allocates buffers strictly local to core"});
                     ImGui::Spacing();
-                    Button("Apply Compute Settings", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
+                    Button({.label = "Apply Compute Settings", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
             case 2: { // AVX-512 SIMD
                 if (Card simdCard("simd_cfg_card", "Vectorization Engine Parameters"); simdCard) {
-                    Toggle::Render("tog_avx512", s_passportRdmaEnabled, "Enable AVX-512 FPU Instructions", "512-bit wide vector matrix operations");
+                    Toggle(s_passportRdmaEnabled, {.label = "Enable AVX-512 FPU Instructions", .sublabel = "512-bit wide vector matrix operations"});
                     ImGui::Spacing();
-                    InputField::Float("##tput_max", "Rated Maximum Bandwidth", s_passportMaxThroughput, "MB/s");
+                    InputField(s_passportMaxThroughput, {.label = "Rated Maximum Bandwidth", .unit = "MB/s"});
                     ImGui::Spacing();
-                    Button("Commit SIMD Pipeline", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
+                    Button({.label = "Commit SIMD Pipeline", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
             case 3: { // Buffer Pool
                 if (Card bufCard("buf_cfg_card", "Slab Allocator Quotas"); bufCard) {
-                    InputField::Float("##cache_quota", "Max L1 Memory Slab Size", s_cacheQuotaMb, "MB");
+                    InputField(s_cacheQuotaMb, {.label = "Max L1 Memory Slab Size", .unit = "MB"});
                     ImGui::Spacing();
-                    InputField::Float("##evict_th", "Eviction High-Watermark", s_evictionThreshold, "%");
+                    InputField(s_evictionThreshold, {.label = "Eviction High-Watermark", .unit = "%"});
                     ImGui::Spacing();
-                    Button("Flush & Reallocate Slabs", {.variant = UiVariant::Warning, .icon = Icon::Refresh, .width = 240.0f});
+                    Button({.label = "Flush & Reallocate Slabs", .variant = UiVariant::Warning, .icon = Icon::Refresh, .width = 240.0f});
                 }
                 break;
             }
             case 4: { // Storage NVMe
                 if (Card storageCard("storage_cfg_card", "Zero-Copy Disk Writer"); storageCard) {
-                    InputField::Int("##repl_f", "Replication Factor", s_replicationFactor);
+                    InputField(s_replicationFactor, {.label = "Replication Factor"});
                     ImGui::Spacing();
-                    Button("Sync Storage Buffers", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
+                    Button({.label = "Sync Storage Buffers", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
             case 5: { // Rate Limiter & PID
                 if (Card pidCard("pid_cfg_card", "Telemetry Stream PID Controller"); pidCard) {
-                    InputField::Float("##pid_kp", "Proportional Gain (Kp)", s_pidKp);
+                    InputField(s_pidKp, {.label = "Proportional Gain (Kp)"});
                     ImGui::Spacing();
-                    InputField::Float("##pid_ki", "Integral Gain (Ki)", s_pidKi);
+                    InputField(s_pidKi, {.label = "Integral Gain (Ki)"});
                     ImGui::Spacing();
-                    InputField::Float("##pid_kd", "Derivative Gain (Kd)", s_pidKd);
+                    InputField(s_pidKd, {.label = "Derivative Gain (Kd)"});
                     ImGui::Spacing();
-                    Button("Apply PID Calibration", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
+                    Button({.label = "Apply PID Calibration", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
             default: { // Diagnostics & Export
                 if (Card diagCard("diag_cfg_card", "Self-Test & Diagnostics"); diagCard) {
-                    Button("Run Cluster Diagnostic Self-Test", {.variant = UiVariant::Info, .icon = Icon::Target, .width = 260.0f});
+                    Button({.label = "Run Cluster Diagnostic Self-Test", .variant = UiVariant::Info, .icon = Icon::Target, .width = 260.0f});
                 }
                 break;
             }
@@ -866,12 +866,12 @@ static void RenderArchive() {
                 grid.SetColumn(4); grid.CellText(Fmt("%d", run.pointCount));
                 grid.SetColumn(5); Badge::Render(run.statusText, run.status);
                 grid.SetColumn(6);
-                if (Button("View", {.variant = UiVariant::Secondary, .size = UiSize::Mini, .width = 70.0f})) {
+                if (Button({.label = "View", .variant = UiVariant::Secondary, .size = UiSize::Mini, .width = 70.0f,
+                            .tooltip = "Open this run in Offline Analysis"})) {
                     s_selectedRunIndex = static_cast<int>(i);
                     s_currentScreen = NavScreen::Processing;
                     BuildOfflineAnalysisData(s_runs[i]);
                 }
-                Tooltip::OnLastItem("Open this run in Offline Analysis");
             }
         }
     }
@@ -887,7 +887,7 @@ static void RenderJournal() {
         ImGui::SameLine();
         SearchInput::Render("tbl_search_journal", s_searchJournal, "Filter log entries...", 220.0f * theme.GetScale());
         ImGui::SameLine();
-        if (Button("Clear Journal", {.variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
+        if (Button({.label = "Clear Journal", .variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
             s_journalLogs.clear();
         }
 
@@ -918,18 +918,18 @@ static void RenderJournal() {
 // ----------------------------------------------------------------------------
 static void RenderPassport() {
     if (Card passportCard("passport_full_card", "Node Hardware Specification & Identity"); passportCard) {
-        InputField::Text("##node_id", "Node Unique Identifier", s_passportNodeId);
+        InputField(s_passportNodeId, {.label = "Node Unique Identifier"});
         ImGui::Spacing();
-        InputField::Text("##fw_rev", "Firmware / Runtime Revision", s_passportFwRev);
+        InputField(s_passportFwRev, {.label = "Firmware / Runtime Revision"});
         ImGui::Spacing();
-        InputField::Text("##simd_arch", "SIMD Architecture Extensions", s_passportSimdArch);
+        InputField(s_passportSimdArch, {.label = "SIMD Architecture Extensions"});
         ImGui::Spacing();
-        InputField::Float("##max_tput", "Rated Maximum Bandwidth", s_passportMaxThroughput, "MB/s");
+        InputField(s_passportMaxThroughput, {.label = "Rated Maximum Bandwidth", .unit = "MB/s"});
         ImGui::Spacing();
-        InputField::Float("##min_lat", "Design Latency Lower Bound", s_passportMinLatency, "ms");
+        InputField(s_passportMinLatency, {.label = "Design Latency Lower Bound", .unit = "ms"});
         ImGui::Spacing();
-        Toggle::Render("tog_ecc", s_passportEccMemory, "ECC Memory Scrubbing Active", "Hardware parity correction enabled");
-        Toggle::Render("tog_rdma", s_passportRdmaEnabled, "Direct Memory Access (RDMA)", "Kernel bypass zero-copy network buffers");
+        Toggle(s_passportEccMemory, {.label = "ECC Memory Scrubbing Active", .sublabel = "Hardware parity correction enabled"});
+        Toggle(s_passportRdmaEnabled, {.label = "Direct Memory Access (RDMA)", .sublabel = "Kernel bypass zero-copy network buffers"});
     }
 }
 

@@ -237,9 +237,9 @@ public:
 
             RightAlign(totalW);
 
-            bool cancelled = Button(cancelText, {.variant = UiVariant::Secondary, .width = btnW / scale});
+            bool cancelled = Button({.label = cancelText, .variant = UiVariant::Secondary, .width = btnW / scale});
             ImGui::SameLine(0.0f, spacingX);
-            bool confirmed = Button(confirmText, {.variant = confirmVariant, .icon = confirmIcon,
+            bool confirmed = Button({.label = confirmText, .variant = confirmVariant, .icon = confirmIcon,
                                                  .width = btnW / scale, .disabled = !confirmEnabled});
 
             if (cancelled) {

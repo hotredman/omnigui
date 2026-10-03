@@ -54,7 +54,7 @@ public:
     void Label(const char* text, UiVariant variant = UiVariant::Secondary);
 
     // Кнопка высотой с рабочую область полосы (options.size игнорируется)
-    bool Button(const char* label, const ButtonOptions& options = {});
+    bool Button(const ButtonOptions& options);
 
 protected:
     BarZone(BarLayout* layout, bool active);

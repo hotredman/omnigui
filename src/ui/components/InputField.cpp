@@ -1,7 +1,9 @@
 #include "ui/components/InputField.hpp"
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
+#include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
 
 namespace {
@@ -62,314 +64,112 @@ void RenderUnitSuffix(const char* unit, const ImVec2& itemMin, const ImVec2& ite
     theme.PopFont();
 }
 
+// Общий каркас поля: подпись, стили рамки/шрифта, единица измерения.
+// draw рисует сам ImGui-виджет с идентификатором "##v" и возвращает true при изменении.
+template <typename DrawFn>
+bool RunField(const InputOptions& o, float defaultWidthBase, DrawFn&& draw)
+{
+    const UiTheme& theme = UiTheme::Get();
+    const InputFieldStyle& style = theme.input;
+
+    float w;
+    if (o.sizePx.x > 0.0f)                   w = o.sizePx.x;
+    else if (o.width == InputOptions::Fill)  w = ImGui::GetContentRegionAvail().x;
+    else if (o.width > 0.0f)                 w = theme.Scale(o.width);
+    else                                     w = theme.Scale(defaultWidthBase);
+
+    // Идентичность: явный key, иначе подпись
+    ImGui::PushID(o.key ? o.key : (o.label ? o.label : "input"));
+    ImGui::BeginGroup();
+
+    RenderFieldLabel(o.label, w, style);
+    ImGui::SetNextItemWidth(w);
+
+    float targetH = (o.sizePx.y > 0.0f) ? o.sizePx.y : theme.GetMetrics(o.size).height;
+    float fontSize = theme.Scale(style.valueFontSize);
+    float padY = std::max(2.0f, (targetH - fontSize) * 0.5f);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, theme.Scale(style.frameRounding));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(theme.Scale(style.framePaddingX), padY));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, style.borderSize);
+
+    ImU32 borderColor = (o.variant == UiVariant::Default) ? style.colBorder : theme.GetVariantStyle(o.variant).colBorder;
+
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor(style.colBg).Value);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImColor(borderColor).Value);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImColor(style.colText).Value);
+
+    ImFont* valFont = style.valueFont ? style.valueFont : theme.fontMedium;
+    theme.PushFont(valFont, style.valueFontSize);
+
+    bool changed = draw();
+
+    theme.PopFont();
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar(3);
+
+    RenderUnitSuffix(o.unit, ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), style, theme);
+
+    ImGui::EndGroup();
+    ImGui::PopID();
+    return changed;
+}
+
+// Опциональное число: пустая строка -> nullopt, иначе разбор strtof/strtod
+template <typename T, typename ParseFn>
+bool OptionalNumber(std::optional<T>& value, const InputOptions& o, ParseFn parse)
+{
+    return RunField(o, 160.0f, [&] {
+        char buf[64] = "";
+        if (value.has_value()) {
+            snprintf(buf, sizeof(buf), o.format ? o.format : "%.2f", *value);
+        }
+
+        bool changed = ImGui::InputTextWithHint("##v", o.hint ? o.hint : "", buf, sizeof(buf), ImGuiInputTextFlags_CharsDecimal);
+        if (changed) {
+            bool hasDigits = false;
+            for (int i = 0; buf[i] != '\0'; ++i) {
+                if (!std::isspace(static_cast<unsigned char>(buf[i]))) {
+                    hasDigits = true;
+                    break;
+                }
+            }
+            if (!hasDigits) {
+                value = std::nullopt;
+            } else {
+                char* end = nullptr;
+                T parsed = parse(buf, &end);
+                if (end != buf) {
+                    value = parsed;
+                }
+            }
+        }
+        return changed;
+    });
+}
+
 } // namespace
 
-bool InputField::Float(const char* id, const char* label, float& value, 
-                       const char* unit, float width, const char* format,
-                       float height, UiVariant variant)
-{
-    const UiTheme& theme = UiTheme::Get();
-    const InputFieldStyle& style = theme.input;
-
-    float w = (width > 0.0f) ? width : theme.Scale(160.0f);
-    ImGui::BeginGroup();
-
-    RenderFieldLabel(label, w, style);
-    ImGui::SetNextItemWidth(w);
-
-    float targetH = (height > 0.0f) ? height : theme.GetMetrics(UiSize::Medium).height;
-    float fontSize = theme.Scale(style.valueFontSize);
-    float padY = std::max(2.0f, (targetH - fontSize) * 0.5f);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, theme.Scale(style.frameRounding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(theme.Scale(style.framePaddingX), padY));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, style.borderSize);
-
-    ImU32 borderColor = (variant == UiVariant::Default) ? style.colBorder : theme.GetVariantStyle(variant).colBorder;
-
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor(style.colBg).Value);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImColor(borderColor).Value);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImColor(style.colText).Value);
-
-    ImFont* valFont = style.valueFont ? style.valueFont : theme.fontMedium;
-    theme.PushFont(valFont, style.valueFontSize);
-
-    bool changed = ImGui::InputFloat(id, &value, 0.0f, 0.0f, format);
-
-    theme.PopFont();
-    ImGui::PopStyleColor(3);
-    ImGui::PopStyleVar(3);
-
-    RenderUnitSuffix(unit, ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), style, theme);
-
-    ImGui::EndGroup();
-    return changed;
+bool InputField(float& value, const InputOptions& o) {
+    return RunField(o, 160.0f, [&] { return ImGui::InputFloat("##v", &value, 0.0f, 0.0f, o.format); });
 }
 
-bool InputField::Float(const char* id, const char* label, std::optional<float>& value, 
-                       const char* unit, float width, const char* format,
-                       float height, UiVariant variant)
-{
-    const UiTheme& theme = UiTheme::Get();
-    const InputFieldStyle& style = theme.input;
-
-    float w = (width > 0.0f) ? width : theme.Scale(160.0f);
-    ImGui::BeginGroup();
-
-    RenderFieldLabel(label, w, style);
-    ImGui::SetNextItemWidth(w);
-
-    float targetH = (height > 0.0f) ? height : theme.GetMetrics(UiSize::Medium).height;
-    float fontSize = theme.Scale(style.valueFontSize);
-    float padY = std::max(2.0f, (targetH - fontSize) * 0.5f);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, theme.Scale(style.frameRounding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(theme.Scale(style.framePaddingX), padY));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, style.borderSize);
-
-    ImU32 borderColor = (variant == UiVariant::Default) ? style.colBorder : theme.GetVariantStyle(variant).colBorder;
-
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor(style.colBg).Value);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImColor(borderColor).Value);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImColor(style.colText).Value);
-
-    ImFont* valFont = style.valueFont ? style.valueFont : theme.fontMedium;
-    theme.PushFont(valFont, style.valueFontSize);
-
-    char buf[64] = "";
-    if (value.has_value()) {
-        snprintf(buf, sizeof(buf), format ? format : "%.2f", *value);
-    }
-
-    bool changed = ImGui::InputTextWithHint(id, " — ", buf, sizeof(buf), ImGuiInputTextFlags_CharsDecimal);
-    if (changed) {
-        bool hasDigits = false;
-        for (int i = 0; buf[i] != '\0'; ++i) {
-            if (!std::isspace(static_cast<unsigned char>(buf[i]))) {
-                hasDigits = true;
-                break;
-            }
-        }
-        if (!hasDigits) {
-            value = std::nullopt;
-        } else {
-            char* end = nullptr;
-            float parsed = std::strtof(buf, &end);
-            if (end != buf) {
-                value = parsed;
-            }
-        }
-    }
-
-    theme.PopFont();
-    ImGui::PopStyleColor(3);
-    ImGui::PopStyleVar(3);
-
-    RenderUnitSuffix(unit, ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), style, theme);
-
-    ImGui::EndGroup();
-    return changed;
+bool InputField(double& value, const InputOptions& o) {
+    return RunField(o, 160.0f, [&] { return ImGui::InputDouble("##v", &value, 0.0, 0.0, o.format); });
 }
 
-bool InputField::Double(const char* id, const char* label, double& value, 
-                        const char* unit, float width, const char* format,
-                        float height, UiVariant variant)
-{
-    const UiTheme& theme = UiTheme::Get();
-    const InputFieldStyle& style = theme.input;
-
-    float w = (width > 0.0f) ? width : theme.Scale(160.0f);
-    ImGui::BeginGroup();
-
-    RenderFieldLabel(label, w, style);
-    ImGui::SetNextItemWidth(w);
-
-    float targetH = (height > 0.0f) ? height : theme.GetMetrics(UiSize::Medium).height;
-    float fontSize = theme.Scale(style.valueFontSize);
-    float padY = std::max(2.0f, (targetH - fontSize) * 0.5f);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, theme.Scale(style.frameRounding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(theme.Scale(style.framePaddingX), padY));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, style.borderSize);
-
-    ImU32 borderColor = (variant == UiVariant::Default) ? style.colBorder : theme.GetVariantStyle(variant).colBorder;
-
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor(style.colBg).Value);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImColor(borderColor).Value);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImColor(style.colText).Value);
-
-    ImFont* valFont = style.valueFont ? style.valueFont : theme.fontMedium;
-    theme.PushFont(valFont, style.valueFontSize);
-
-    bool changed = ImGui::InputDouble(id, &value, 0.0, 0.0, format);
-
-    theme.PopFont();
-    ImGui::PopStyleColor(3);
-    ImGui::PopStyleVar(3);
-
-    RenderUnitSuffix(unit, ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), style, theme);
-
-    ImGui::EndGroup();
-    return changed;
+bool InputField(int& value, const InputOptions& o) {
+    return RunField(o, 160.0f, [&] { return ImGui::InputInt("##v", &value, 0, 0); });
 }
 
-bool InputField::Double(const char* id, const char* label, std::optional<double>& value, 
-                        const char* unit, float width, const char* format,
-                        float height, UiVariant variant)
-{
-    const UiTheme& theme = UiTheme::Get();
-    const InputFieldStyle& style = theme.input;
-
-    float w = (width > 0.0f) ? width : theme.Scale(160.0f);
-    ImGui::BeginGroup();
-
-    RenderFieldLabel(label, w, style);
-    ImGui::SetNextItemWidth(w);
-
-    float targetH = (height > 0.0f) ? height : theme.GetMetrics(UiSize::Medium).height;
-    float fontSize = theme.Scale(style.valueFontSize);
-    float padY = std::max(2.0f, (targetH - fontSize) * 0.5f);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, theme.Scale(style.frameRounding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(theme.Scale(style.framePaddingX), padY));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, style.borderSize);
-
-    ImU32 borderColor = (variant == UiVariant::Default) ? style.colBorder : theme.GetVariantStyle(variant).colBorder;
-
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor(style.colBg).Value);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImColor(borderColor).Value);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImColor(style.colText).Value);
-
-    ImFont* valFont = style.valueFont ? style.valueFont : theme.fontMedium;
-    theme.PushFont(valFont, style.valueFontSize);
-
-    char buf[64] = "";
-    if (value.has_value()) {
-        snprintf(buf, sizeof(buf), format ? format : "%.2f", *value);
-    }
-
-    bool changed = ImGui::InputTextWithHint(id, " — ", buf, sizeof(buf), ImGuiInputTextFlags_CharsDecimal);
-    if (changed) {
-        bool hasDigits = false;
-        for (int i = 0; buf[i] != '\0'; ++i) {
-            if (!std::isspace(static_cast<unsigned char>(buf[i]))) {
-                hasDigits = true;
-                break;
-            }
-        }
-        if (!hasDigits) {
-            value = std::nullopt;
-        } else {
-            char* end = nullptr;
-            double parsed = std::strtod(buf, &end);
-            if (end != buf) {
-                value = parsed;
-            }
-        }
-    }
-
-    theme.PopFont();
-    ImGui::PopStyleColor(3);
-    ImGui::PopStyleVar(3);
-
-    RenderUnitSuffix(unit, ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), style, theme);
-
-    ImGui::EndGroup();
-    return changed;
+bool InputField(std::string& value, const InputOptions& o) {
+    return RunField(o, 200.0f, [&] { return ImGui::InputTextWithHint("##v", o.hint ? o.hint : "", &value); });
 }
 
-bool InputField::Int(const char* id, const char* label, int& value, 
-                     const char* unit, float width,
-                     float height, UiVariant variant)
-{
-    const UiTheme& theme = UiTheme::Get();
-    const InputFieldStyle& style = theme.input;
-
-    float w = (width > 0.0f) ? width : theme.Scale(160.0f);
-    ImGui::BeginGroup();
-
-    RenderFieldLabel(label, w, style);
-    ImGui::SetNextItemWidth(w);
-
-    float targetH = (height > 0.0f) ? height : theme.GetMetrics(UiSize::Medium).height;
-    float fontSize = theme.Scale(style.valueFontSize);
-    float padY = std::max(2.0f, (targetH - fontSize) * 0.5f);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, theme.Scale(style.frameRounding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(theme.Scale(style.framePaddingX), padY));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, style.borderSize);
-
-    ImU32 borderColor = (variant == UiVariant::Default) ? style.colBorder : theme.GetVariantStyle(variant).colBorder;
-
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor(style.colBg).Value);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImColor(borderColor).Value);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImColor(style.colText).Value);
-
-    ImFont* valFont = style.valueFont ? style.valueFont : theme.fontMedium;
-    theme.PushFont(valFont, style.valueFontSize);
-
-    bool changed = ImGui::InputInt(id, &value, 0, 0);
-
-    theme.PopFont();
-    ImGui::PopStyleColor(3);
-    ImGui::PopStyleVar(3);
-
-    RenderUnitSuffix(unit, ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), style, theme);
-
-    ImGui::EndGroup();
-    return changed;
+bool InputField(std::optional<float>& value, const InputOptions& o) {
+    return OptionalNumber(value, o, [](const char* s, char** end) { return std::strtof(s, end); });
 }
 
-bool InputField::Text(const char* id, const char* label, std::string& value, 
-                      const char* hint, float width, float height, UiVariant variant)
-{
-    const UiTheme& theme = UiTheme::Get();
-    const InputFieldStyle& style = theme.input;
-
-    float w = (width > 0.0f) ? width : theme.Scale(200.0f);
-    ImGui::BeginGroup();
-
-    RenderFieldLabel(label, w, style);
-    ImGui::SetNextItemWidth(w);
-
-    float targetH = (height > 0.0f) ? height : theme.GetMetrics(UiSize::Medium).height;
-    float fontSize = theme.Scale(style.valueFontSize);
-    float padY = std::max(2.0f, (targetH - fontSize) * 0.5f);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, theme.Scale(style.frameRounding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(theme.Scale(style.framePaddingX), padY));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, style.borderSize);
-
-    ImU32 borderColor = (variant == UiVariant::Default) ? style.colBorder : theme.GetVariantStyle(variant).colBorder;
-
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor(style.colBg).Value);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImColor(borderColor).Value);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImColor(style.colText).Value);
-
-    ImFont* valFont = style.valueFont ? style.valueFont : theme.fontMedium;
-    theme.PushFont(valFont, style.valueFontSize);
-
-    bool changed = ImGui::InputTextWithHint(id, hint ? hint : "", &value);
-
-    theme.PopFont();
-    ImGui::PopStyleColor(3);
-    ImGui::PopStyleVar(3);
-
-    ImGui::EndGroup();
-    return changed;
+bool InputField(std::optional<double>& value, const InputOptions& o) {
+    return OptionalNumber(value, o, [](const char* s, char** end) { return std::strtod(s, end); });
 }
-
-bool InputField::Combo(const char* id, const char* label, int& currentItem, 
-                       const char* const items[], int itemsCount, float width,
-                       float height, UiVariant variant)
-{
-    return ::Combo::Render(id, label, currentItem, items, itemsCount, width, height, variant);
-}
-
-bool InputField::Combo(const char* id, const char* label, int& currentItem, 
-                       const std::vector<std::string>& items, float width,
-                       float height, UiVariant variant)
-{
-    return ::Combo::Render(id, label, currentItem, items, width, height, variant);
-}
-

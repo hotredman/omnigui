@@ -31,6 +31,7 @@
 
 // Navigation & Structure
 #include "ui/components/Scope.hpp"
+#include "ui/components/IdScope.hpp"
 #include "ui/components/Bar.hpp"
 #include "ui/components/Header.hpp"
 #include "ui/components/Toolbar.hpp"

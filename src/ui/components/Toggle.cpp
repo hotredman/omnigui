@@ -3,17 +3,19 @@
 #include "imgui.h"
 #include <algorithm>
 
-bool Toggle::Render(const char* id, bool& value,
-                    const char* label,
-                    const char* sublabel,
-                    bool disabled,
-                    float width,
-                    float height,
-                    const ToggleStyle* customStyle)
+bool Toggle(bool& value, const ToggleOptions& options)
 {
-    DisabledScope disabledScope(disabled);
+    const char* label = options.label;
+    const char* sublabel = options.sublabel;
+
+    DisabledScope disabledScope(options.disabled);
     UiTheme& theme = UiTheme::Get();
-    const ToggleStyle& style = customStyle ? *customStyle : theme.toggle;
+    const ToggleStyle& style = options.style ? *options.style : theme.toggle;
+
+    // Геометрия: sizePx (контейнеры) перекрывает width; высота 0 — по стилю
+    const float width = (options.sizePx.x > 0.0f) ? options.sizePx.x
+                      : (options.width > 0.0f ? theme.Scale(options.width) : 0.0f);
+    const float height = options.sizePx.y;
     float scale = theme.GetScale();
 
     // 1. Опорные размеры с учётом масштабирования темы
@@ -62,7 +64,10 @@ bool Toggle::Render(const char* id, bool& value,
 
     // 3. Интерактивная область (InvisibleButton)
     ImVec2 cursorPos = ImGui::GetCursorScreenPos();
-    ImGui::InvisibleButton(id, ImVec2(finalW, finalH));
+    // Идентичность: явный key, иначе подпись
+    ImGui::PushID(options.key ? options.key : (label ? label : "toggle"));
+    ImGui::InvisibleButton("##toggle", ImVec2(finalW, finalH));
+    ImGui::PopID();
 
     bool isHovered = ImGui::IsItemHovered();
     bool isClicked = ImGui::IsItemClicked();

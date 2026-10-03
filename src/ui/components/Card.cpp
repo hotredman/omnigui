@@ -2,6 +2,8 @@
 #include "ui/components/DisabledScope.hpp"
 #include "ui/components/Button.hpp"
 #include "ui/components/InputField.hpp"
+#include "ui/components/Combo.hpp"
+#include "ui/components/Toggle.hpp"
 #include "ui/components/ValueDisplay.hpp"
 #include "ui/components/FlowLayout.hpp"
 #include "ui/components/GridLayout.hpp"
@@ -516,11 +518,11 @@ bool Card::Button(const char* label, Icon icon, UiVariant variant, RowHeight hei
     float h = ResolveHeight(height, RowHeight::Default());
     float w = 0.0f;
     if (col.IsAuto()) {
-        w = ButtonWidthPx(label, icon, height.IsCustom() ? UiTheme::Get().Scale(height.baselinePx) : 0.0f);
+        w = ButtonWidthPx({.label = label, .icon = icon}, height.IsCustom() ? UiTheme::Get().Scale(height.baselinePx) : 0.0f);
     }
     PrepareField(col, w);
 
-    bool clicked = ::ButtonPx(label, ImVec2(w, h), {.variant = variant, .icon = icon, .disabled = disabled});
+    bool clicked = ::ButtonPx(ImVec2(w, h), {.label = label, .variant = variant, .icon = icon, .disabled = disabled});
 
     FinishField(col);
     return clicked;
@@ -644,7 +646,7 @@ bool Card::AddFloat(const char* id, const char* label, float& value,
         RenderNoValue(id, label, w, h);
     } else {
         DisabledScope disabledScope(disabled);
-        changed = InputField::Float(id, label, value, unit, w, format, h, VariantOf(state));
+        changed = InputField(value, {.label = label, .unit = unit, .format = format, .variant = VariantOf(state), .key = id, .sizePx = {w, h}});
     }
     FinishField(col);
     return changed;
@@ -660,7 +662,7 @@ bool Card::AddFloat(const char* id, const char* label, std::optional<float>& val
     bool changed = false;
     {
         DisabledScope disabledScope(disabled);
-        changed = InputField::Float(id, label, value, unit, w, format, h);
+        changed = InputField(value, {.label = label, .unit = unit, .format = format, .key = id, .sizePx = {w, h}});
     }
     FinishField(col);
     return changed;
@@ -676,7 +678,7 @@ bool Card::AddDouble(const char* id, const char* label, double& value,
     bool changed = false;
     {
         DisabledScope disabledScope(disabled);
-        changed = InputField::Double(id, label, value, unit, w, format, h);
+        changed = InputField(value, {.label = label, .unit = unit, .format = format, .key = id, .sizePx = {w, h}});
     }
     FinishField(col);
     return changed;
@@ -692,7 +694,7 @@ bool Card::AddDouble(const char* id, const char* label, std::optional<double>& v
     bool changed = false;
     {
         DisabledScope disabledScope(disabled);
-        changed = InputField::Double(id, label, value, unit, w, format, h);
+        changed = InputField(value, {.label = label, .unit = unit, .format = format, .key = id, .sizePx = {w, h}});
     }
     FinishField(col);
     return changed;
@@ -733,7 +735,7 @@ bool Card::AddToggle(const char* id, bool& value,
     const UiTheme& theme = UiTheme::Get();
     float frameHeight = (m_currentRowHeight > 0.0f) ? m_currentRowHeight : theme.GetMetrics(UiSize::Medium).height;
 
-    bool changed = Toggle::Render(id, value, label, sublabel, disabled, w, frameHeight);
+    bool changed = ::Toggle(value, {.label = label, .sublabel = sublabel, .disabled = disabled, .key = id, .sizePx = {w, frameHeight}});
     if (state == FieldState::Modified) {
         // У переключателя нет рамки-варианта: изменённое отмечаем контуром вокруг него
         const float pad = theme.Scale(3.0f);
@@ -758,7 +760,7 @@ bool Card::AddInt(const char* id, const char* label, int& value,
     if (state == FieldState::NoValue)
         RenderNoValue(id, label, w, h);
     else
-        changed = InputField::Int(id, label, value, unit, w, h, VariantOf(state));
+        changed = InputField(value, {.label = label, .unit = unit, .variant = VariantOf(state), .key = id, .sizePx = {w, h}});
     FinishField(col);
     return changed;
 }
@@ -769,7 +771,7 @@ bool Card::AddText(const char* id, const char* label, std::string& value,
     float w = 0.0f;
     PrepareField(col, w);
     float h = ResolveHeight(height, RowHeight::Auto());
-    bool changed = InputField::Text(id, label, value, hint, w, h);
+    bool changed = InputField(value, {.label = label, .hint = hint, .key = id, .sizePx = {w, h}});
     FinishField(col);
     return changed;
 }
@@ -884,7 +886,7 @@ bool Card::AddComboImpl(FieldState state, const char* id, const char* label, int
     if (state == FieldState::NoValue)
         RenderNoValue(id, label, w, h);
     else
-        changed = InputField::Combo(id, label, currentItem, items, itemsCount, w, h, VariantOf(state));
+        changed = ::Combo(currentItem, items, itemsCount, {.label = label, .variant = VariantOf(state), .key = id, .sizePx = {w, h}});
     FinishField(col);
     return changed;
 }
@@ -900,7 +902,7 @@ bool Card::AddCombo(const char* id, const char* label, int& currentItem,
     if (state == FieldState::NoValue)
         RenderNoValue(id, label, w, h);
     else
-        changed = InputField::Combo(id, label, currentItem, items, w, h, VariantOf(state));
+        changed = ::Combo(currentItem, items, {.label = label, .variant = VariantOf(state), .key = id, .sizePx = {w, h}});
     FinishField(col);
     return changed;
 }
@@ -912,7 +914,7 @@ FieldState Card::StateOf(const void* field, std::size_t size) const {
 void Card::RenderNoValue(const char* id, const char* label, float width, float height) {
     DisabledScope off(true);
     std::string dash = "—";
-    InputField::Text(id, label ? label : "", dash, " — ", width, height);
+    InputField(dash, {.label = label ? label : "", .hint = " — ", .key = id, .sizePx = {width, height}});
 }
 
 // ============================================================================

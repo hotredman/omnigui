@@ -99,9 +99,9 @@ void BarZone::Label(const char* text, UiVariant variant) {
     theme.PopFont();
 }
 
-bool BarZone::Button(const char* label, const ButtonOptions& options) {
+bool BarZone::Button(const ButtonOptions& options) {
     if (!m_open) return false;
-    return ButtonPx(label, ImVec2(0.0f, m_layout->contentHeight), options);
+    return ButtonPx(ImVec2(0.0f, m_layout->contentHeight), options);
 }
 
 // ----------------------------------------------------------------------------

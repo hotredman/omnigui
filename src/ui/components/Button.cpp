@@ -1,7 +1,6 @@
 #include "ui/components/Button.hpp"
 #include "ui/components/DisabledScope.hpp"
 #include <algorithm>
-#include <cstdio>
 
 static const char* FindTextEnd(const char* text) {
     if (!text) return nullptr;
@@ -31,11 +30,16 @@ static ImFont* PickButtonFont(const UiTheme& theme, float h, float& fontPt) {
     return theme.fontMedium ? theme.fontMedium : theme.buttonFont;
 }
 
-bool Button(const char* label, const ButtonOptions& o) {
-    return ButtonPx(label, ImVec2(0.0f, 0.0f), o);
+bool Button(const ButtonOptions& o) {
+    return ButtonPx(ImVec2(0.0f, 0.0f), o);
 }
 
-bool ButtonPx(const char* label, ImVec2 size, const ButtonOptions& o) {
+bool Button(const char* label) {
+    return ButtonPx(ImVec2(0.0f, 0.0f), {.label = label});
+}
+
+bool ButtonPx(ImVec2 size, const ButtonOptions& o) {
+    const char* label = o.label;
     {
         // Незаданные оси берутся из options: ширина — width, высота — size
         const UiTheme& t = UiTheme::Get();
@@ -85,9 +89,14 @@ bool ButtonPx(const char* label, ImVec2 size, const ButtonOptions& o) {
     float w = (size.x > 0.0f) ? std::max(size.x, minW) : minW;
 
     ImVec2 screenPos = ImGui::GetCursorScreenPos();
-    ImGui::PushID(label ? label : "btn");
+    // Идентичность: явный key, иначе подпись, иначе иконка
+    if (o.key)         ImGui::PushID(o.key);
+    else if (label)    ImGui::PushID(label);
+    else               ImGui::PushID(static_cast<int>(icon.GetId()));
     bool clicked = ImGui::Button("##btn", ImVec2(w, h));
     ImGui::PopID();
+    if (o.tooltip && o.tooltip[0] != '\0' && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("%s", o.tooltip);
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImU32 textColor = (pushedColors > 0) ? ImGui::GetColorU32(style.colBtnText) : ImGui::GetColorU32(ImGuiCol_Text);
@@ -121,23 +130,13 @@ bool ButtonPx(const char* label, ImVec2 size, const ButtonOptions& o) {
     return clicked;
 }
 
-bool IconButton(const char* id, Icon icon, const ButtonOptions& options) {
-    const float s = UiTheme::Get().GetMetrics(options.size).height;
-    ButtonOptions o = options;
-    o.icon = icon;
-    if (id && id[0] == '#' && id[1] == '#') {
-        return ButtonPx(id, ImVec2(s, s), o);
-    }
-    char safeId[64];
-    std::snprintf(safeId, sizeof(safeId), "##%s", id ? id : "icon_btn");
-    return ButtonPx(safeId, ImVec2(s, s), o);
+float ButtonWidth(const ButtonOptions& options) {
+    return ButtonWidthPx(options, UiTheme::Get().GetMetrics(options.size).height);
 }
 
-float ButtonWidth(const char* label, const ButtonOptions& options) {
-    return ButtonWidthPx(label, options.icon, UiTheme::Get().GetMetrics(options.size).height);
-}
-
-float ButtonWidthPx(const char* label, Icon icon, float heightPx) {
+float ButtonWidthPx(const ButtonOptions& options, float heightPx) {
+    const char* label = options.label;
+    const Icon icon = options.icon;
     const UiTheme& theme = UiTheme::Get();
     float h = (heightPx > 0.0f) ? heightPx : theme.GetMetrics(UiSize::Medium).height;
 

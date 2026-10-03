@@ -30,7 +30,7 @@ public:
 
     bool Button(const char* label, Icon icon = Icon::None, UiVariant variant = UiVariant::Default, float baseWidth = 0.0f) {
         BeforeNextItem();
-        return ::Button(label, {.variant = variant, .icon = icon, .size = UiSize::Mini, .width = baseWidth});
+        return ::Button({.label = label, .variant = variant, .icon = icon, .size = UiSize::Mini, .width = baseWidth});
     }
 
     bool ToolButton(Icon icon, const char* tooltip = nullptr, UiVariant variant = UiVariant::Default) {

@@ -1,64 +1,40 @@
 #pragma once
 
 #include "ui/components/UiTheme.hpp"
-#include "ui/components/Combo.hpp"
+#include <imgui.h>
 #include <string>
-#include <vector>
 #include <optional>
-#include <type_traits>
 
-class InputField {
-public:
-    // Поле ввода числа с плавающей точкой и встроенной единицей измерения
-    static bool Float(const char* id, const char* label, float& value, 
-                      const char* unit = nullptr, float width = 0.0f, const char* format = "%.2f",
-                      float height = 0.0f, UiVariant variant = UiVariant::Default);
+// Параметры поля ввода (designated initializers):
+//
+//     InputField(rate, {.label = "Rate", .unit = "MB/s"});
+//     InputField(name, {.label = "Name", .hint = "Enter a name"});
+//
+// Идентичность выводится из подписи; без подписи (или для одинаковых подписей)
+// задаётся key либо область IdScope.
+struct InputOptions {
+    // Ширина на всю доступную ширину контейнера
+    static constexpr float Fill = -1.0f;
 
-    // Опциональное поле ввода числа с плавающей точкой (nullopt -> " — ")
-    static bool Float(const char* id, const char* label, std::optional<float>& value, 
-                      const char* unit = nullptr, float width = 0.0f, const char* format = "%.2f",
-                      float height = 0.0f, UiVariant variant = UiVariant::Default);
-
-    // Поле ввода числа двойной точности с плавающей точкой и встроенной единицей измерения
-    static bool Double(const char* id, const char* label, double& value, 
-                       const char* unit = nullptr, float width = 0.0f, const char* format = "%.2f",
-                       float height = 0.0f, UiVariant variant = UiVariant::Default);
-
-    // Опциональное поле ввода числа двойной точности (nullopt -> " — ")
-    static bool Double(const char* id, const char* label, std::optional<double>& value, 
-                       const char* unit = nullptr, float width = 0.0f, const char* format = "%.2f",
-                       float height = 0.0f, UiVariant variant = UiVariant::Default);
-
-    // Поле ввода целого числа
-    static bool Int(const char* id, const char* label, int& value, 
-                    const char* unit = nullptr, float width = 0.0f,
-                    float height = 0.0f, UiVariant variant = UiVariant::Default);
-
-    // Текстовое поле ввода с поддержкой placeholder/hint (по умолчанию " — ")
-    static bool Text(const char* id, const char* label, std::string& value, 
-                     const char* hint = " — ", float width = 0.0f,
-                     float height = 0.0f, UiVariant variant = UiVariant::Default);
-
-    // Выпадающий список (Combo)
-    static bool Combo(const char* id, const char* label, int& currentItem, 
-                      const char* const items[], int itemsCount, float width = 0.0f,
-                      float height = 0.0f, UiVariant variant = UiVariant::Default);
-
-    static bool Combo(const char* id, const char* label, int& currentItem, 
-                      const std::vector<std::string>& items, float width = 0.0f,
-                      float height = 0.0f, UiVariant variant = UiVariant::Default);
-
-    // Шаблонный Combo для строго типизированных Enum и массивов с автовыводом размера
-    template<typename EnumT, size_t N, std::enable_if_t<std::is_enum_v<EnumT>, int> = 0>
-    static bool Combo(const char* id, const char* label, EnumT& currentItem, 
-                      const char* const (&items)[N], float width = 0.0f,
-                      float height = 0.0f, UiVariant variant = UiVariant::Default)
-    {
-        int current = static_cast<int>(currentItem);
-        if (Combo(id, label, current, items, static_cast<int>(N), width, height, variant)) {
-            currentItem = static_cast<EnumT>(current);
-            return true;
-        }
-        return false;
-    }
+    const char* label   = nullptr;              // подпись над полем
+    const char* unit    = nullptr;              // единица измерения внутри поля справа
+    const char* format  = "%.2f";               // printf-формат для float/double
+    const char* hint    = " — ";                // подсказка пустого поля (текст, optional)
+    UiVariant   variant = UiVariant::Default;   // цвет рамки (например, Warning для изменённого значения)
+    UiSize      size    = UiSize::Medium;       // высота поля
+    float       width   = 0.0f;                 // базовые px (до масштаба); 0 — ширина по умолчанию; Fill — на всю ширину
+    const char* key     = nullptr;              // явная идентичность
+    ImVec2      sizePx  = {};                   // для контейнеров с посчитанной геометрией: итоговые px, перекрывают width и size
 };
+
+// Все перегрузки возвращают true в кадре изменения значения.
+// Число с плавающей точкой и встроенной единицей измерения
+bool InputField(float& value, const InputOptions& options = {});
+bool InputField(double& value, const InputOptions& options = {});
+// Целое число
+bool InputField(int& value, const InputOptions& options = {});
+// Текстовое поле с placeholder (options.hint)
+bool InputField(std::string& value, const InputOptions& options = {});
+// Опциональные числа (nullopt показывается как options.hint)
+bool InputField(std::optional<float>& value, const InputOptions& options = {});
+bool InputField(std::optional<double>& value, const InputOptions& options = {});
