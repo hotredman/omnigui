@@ -23,9 +23,13 @@ void ValueDisplay(const char* text, const ValueDisplayOptions& options)
         w = (avail > 0.0f) ? avail : theme.Scale(200.0f);
     }
 
+    // Высота: финальные px от контейнера либо высота поля ввода выбранного UiSize.
+    // Кегль при UiSize масштабируется от компактного стиля (рассчитан на 40 px)
     float h = options.sizePx.y;
+    float fontFactor = 1.0f;
     if (h <= 0.0f) {
-        h = theme.Scale(options.compact ? 40.0f : 80.0f);
+        h = theme.GetMetrics(options.size).height;
+        fontFactor = (h / theme.GetScale()) / 40.0f;
     }
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -43,11 +47,11 @@ void ValueDisplay(const char* text, const ValueDisplayOptions& options)
     bool isCompact = (h < theme.Scale(60.0f));
 
     ImFont* valFont = style.valueFont ? style.valueFont : (theme.displayBigFont ? theme.displayBigFont : theme.defaultFont);
-    float valFontSize = theme.Scale(isCompact ? style.valueCompactFontSize : style.valueFontSize);
+    float valFontSize = theme.Scale((isCompact ? style.valueCompactFontSize : style.valueFontSize) * fontFactor);
     ImVec2 valTextSize = valFont ? valFont->CalcTextSizeA(valFontSize, FLT_MAX, 0.0f, valStr) : ImGui::CalcTextSize(valStr);
 
     ImFont* unitFont = style.unitFont ? style.unitFont : theme.defaultFont;
-    float unitFontSize = theme.Scale(isCompact ? style.unitCompactFontSize : style.unitFontSize);
+    float unitFontSize = theme.Scale((isCompact ? style.unitCompactFontSize : style.unitFontSize) * fontFactor);
     const char* unitStr = unit ? unit : "";
     ImVec2 unitTextSize = (unitStr[0] != '\0') 
         ? (unitFont ? unitFont->CalcTextSizeA(unitFontSize, FLT_MAX, 0.0f, unitStr) : ImGui::CalcTextSize(unitStr)) 

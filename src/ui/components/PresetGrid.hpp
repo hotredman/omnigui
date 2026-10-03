@@ -10,6 +10,7 @@
 struct PresetGridOptions {
     const char* unit          = nullptr;   // единица измерения на табло
     int         columns       = 5;
+    UiSize      size          = UiSize::Medium;  // высота кнопок и табло по шкале UiSize
     bool        showDisplay   = true;      // табло текущего значения над сеткой
     const char* displayFormat = "%.1f";    // формат значения на табло
     const char* buttonFormat  = "%.4g";    // формат подписи кнопки пресета

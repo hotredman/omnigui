@@ -494,6 +494,7 @@ bool Card::PresetGridImpl(T& value, const std::vector<T>& presets, int columns, 
     const UiTheme& theme = UiTheme::Get();
     float dispH = o.size ? theme.GetMetrics(*o.size).height : theme.Scale(44.0f);
     bool changed = ::PresetGrid(value, presets, {.unit = o.unit, .columns = columns,
+                                                 .size = o.size.value_or(UiSize::Medium),
                                                  .displayFormat = o.format ? o.format : "%.1f",
                                                  .key = o.key, .sizePx = ImVec2(w, dispH)});
     FinishField(col);

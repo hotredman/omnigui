@@ -11,6 +11,7 @@
 //     TabBar(tabs, selected);
 //     TabBar(tabs, selected, {.separator = false, .variants = tabVariants});
 struct TabBarOptions {
+    UiSize             size      = UiSize::Medium;  // высота вкладок по шкале UiSize
     bool               separator = true;      // линия-разделитель под панелью
     const UiVariant*   variants  = nullptr;   // по вкладке; nullptr — все обычные
     const char*        key       = nullptr;   // идентичность; по умолчанию — подпись первой вкладки
@@ -56,6 +57,7 @@ bool TabBar(const std::vector<std::pair<EnumT, std::string>>& items, EnumT& curr
 }
 
 struct TabItemOptions {
+    UiSize             size     = UiSize::Medium;      // высота вкладки по шкале UiSize
     UiVariant          variant  = UiVariant::Default;  // не Default — цвет и подчёркивание вкладки
     bool               sameLine = false;               // продолжить строку (с зазором из стиля)
     const char*        key      = nullptr;             // идентичность; по умолчанию — label

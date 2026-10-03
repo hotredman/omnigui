@@ -5,11 +5,11 @@
 // Параметры табло значения (designated initializers):
 //
 //     ValueDisplay(42.5, {.unit = "Hz"});
-//     ValueDisplay(1280.0, {.unit = "points", .format = "%.0f", .compact = true});
+//     ValueDisplay(1280.0, {.unit = "points", .format = "%.0f", .size = UiSize::Small});
 struct ValueDisplayOptions {
     const char* unit    = nullptr;    // единица измерения
     const char* format  = "%.2f";     // printf-формат (только для числового значения)
-    bool        compact = false;      // низкое табло (мелкий шрифт)
+    UiSize      size    = UiSize::Medium; // высота и кегль по шкале UiSize (высота — как у полей ввода)
     const ValueDisplayStyle* style = nullptr;  // оверрайд стиля; nullptr — из темы
 
     // Внутренний механизм для контейнеров (Card, PresetGrid), которые сами считают

@@ -17,6 +17,7 @@ bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const
 
     auto tabOptions = [&](int i) {
         TabItemOptions o;
+        o.size = options.size;
         o.variant = variants ? variants[i] : UiVariant::Default;
         o.sameLine = i > 0;
         o.style = options.style;
@@ -41,7 +42,7 @@ bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const
     }
 
     // Полноценный адаптивный рендеринг через карусель со стрелками при переполнении
-    float tabH = theme.Scale(style.height);
+    float tabH = theme.GetMetrics(options.size).height;
     CarouselStyle cStyle = theme.carousel;
     cStyle.itemSpacing = theme.Scale(style.itemSpacing);
     cStyle.scrollStep = theme.Scale(160.0f);
@@ -120,15 +121,16 @@ bool TabItem(const char* label, bool isSelected, const TabItemOptions& options)
     }
 
     // Расчет габаритов
-    float tabH = (options.sizePx.y > 0.0f) ? options.sizePx.y : theme.Scale(style.height);
+    const float sizeFactor = theme.SizeFactor(options.size);
+    float tabH = (options.sizePx.y > 0.0f) ? options.sizePx.y : theme.GetMetrics(options.size).height;
     float tabW = options.sizePx.x;
 
     ImFont* font = style.font ? style.font : theme.defaultFont;
-    float fontSize = theme.Scale(style.fontSize);
+    float fontSize = theme.Scale(style.fontSize * sizeFactor);
 
     if (tabW <= 0.0f) {
         ImVec2 textSize = font ? font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, label) : ImGui::CalcTextSize(label);
-        tabW = textSize.x + theme.Scale(style.horizontalPadding * 2.0f);
+        tabW = textSize.x + theme.Scale(style.horizontalPadding * sizeFactor * 2.0f);
     }
 
     ImVec2 pos = ImGui::GetCursorScreenPos();

@@ -652,9 +652,9 @@ static void RenderProcessing() {
         Spacer();
 
         if (Card metaCard("Run Metadata"); metaCard) {
-            ValueDisplay(static_cast<double>(activeRun.pointCount), {.unit = "points", .format = "%.0f", .compact = true});
+            ValueDisplay(static_cast<double>(activeRun.pointCount), {.unit = "points", .format = "%.0f"});
             Spacer();
-            ValueDisplay(activeRun.durationS, {.unit = "s", .format = "%.1f", .compact = true});
+            ValueDisplay(activeRun.durationS, {.unit = "s", .format = "%.1f"});
         }
     }
 }

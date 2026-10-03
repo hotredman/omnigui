@@ -11,6 +11,8 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
     const UiTheme& theme = UiTheme::Get();
     const PresetGridStyle& style = options.style ? *options.style : theme.presetGrid;
     const char* unit = options.unit;
+    const ControlMetrics metrics = theme.GetMetrics(options.size);
+    const float sizeFactor = theme.SizeFactor(options.size);
     const int columns = options.columns;
     const bool showDisplay = options.showDisplay;
     const char* displayFormat = options.displayFormat;
@@ -29,15 +31,15 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
 
     // 1. Информационное табло текущего значения
     if (showDisplay) {
-        float dispH = (options.sizePx.y > 0.0f) ? options.sizePx.y : theme.Scale(style.displayHeight);
+        float dispH = (options.sizePx.y > 0.0f) ? options.sizePx.y : metrics.height;
 
         ValueDisplayStyle dispStyle = theme.valueDisplay;
         dispStyle.valueFont = style.displayValFont ? style.displayValFont : theme.displayBigFont;
-        dispStyle.valueFontSize = style.displayValFontSize;
-        dispStyle.valueCompactFontSize = style.displayValFontSize;
+        dispStyle.valueFontSize = style.displayValFontSize * sizeFactor;
+        dispStyle.valueCompactFontSize = style.displayValFontSize * sizeFactor;
         dispStyle.unitFont = style.displayUnitFont ? style.displayUnitFont : theme.defaultFont;
-        dispStyle.unitFontSize = style.displayUnitFontSize;
-        dispStyle.unitCompactFontSize = style.displayUnitFontSize;
+        dispStyle.unitFontSize = style.displayUnitFontSize * sizeFactor;
+        dispStyle.unitCompactFontSize = style.displayUnitFontSize * sizeFactor;
 
         ValueDisplay(static_cast<double>(value),
                      {.unit = unit, .format = displayFormat, .style = &dispStyle, .sizePx = ImVec2(w, dispH)});
@@ -87,11 +89,11 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
     float rowSpacing = theme.Scale(style.rowSpacing);
     float btnW = std::floor((w - colSpacing * float(cols - 1)) / float(cols));
     btnW = std::max(16.0f, btnW);
-    float btnH = theme.Scale(style.btnHeight);
+    float btnH = metrics.height;
 
     ImFont* btnFont = style.btnFont ? style.btnFont : (theme.fontMedium ? theme.fontMedium : theme.defaultFont);
-    float fontSize = theme.Scale(style.btnFontSize);
-    theme.PushFont(btnFont, style.btnFontSize);
+    float fontSize = theme.Scale(style.btnFontSize * sizeFactor);
+    theme.PushFont(btnFont, style.btnFontSize * sizeFactor);
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(colSpacing, rowSpacing));
 
@@ -101,7 +103,7 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
     float glyphMidY = digitGlyph ? (digitGlyph->Y0 + digitGlyph->Y1) * 0.5f : (fontSize * 0.35f);
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    float rounding = theme.Scale(style.btnRounding);
+    float rounding = theme.Scale(style.btnRounding) * sizeFactor;
 
     for (size_t i = 0; i < presets.size(); ++i) {
         if (i > 0 && (i % cols != 0)) {
