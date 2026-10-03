@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ui/components/Scope.hpp"
 #include <imgui.h>
 
 // ============================================================================
@@ -12,13 +13,10 @@
 // клавиатуры), отпускается — правка не продолжается внутри выключенной
 // области. ImGui сам отпускает только элемент под указателем мыши.
 // ============================================================================
-class DisabledScope {
+class DisabledScope : public Scope {
 public:
     explicit DisabledScope(bool disabled);
     ~DisabledScope();
-
-    DisabledScope(const DisabledScope&) = delete;
-    DisabledScope& operator=(const DisabledScope&) = delete;
 
     // Точка отрисовки — внутри выключенной области (любой вложенности)
     static bool Active();

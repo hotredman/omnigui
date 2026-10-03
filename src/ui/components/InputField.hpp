@@ -12,7 +12,7 @@
 //
 // Идентичность выводится из подписи; без подписи (или для одинаковых подписей)
 // задаётся key либо область IdScope.
-struct InputOptions {
+struct InputFieldOptions {
     const char* label   = nullptr;              // подпись над полем
     const char* unit    = nullptr;              // единица измерения внутри поля справа
     const char* format  = "%.2f";               // printf-формат для float/double
@@ -26,12 +26,12 @@ struct InputOptions {
 
 // Все перегрузки возвращают true в кадре изменения значения.
 // Число с плавающей точкой и встроенной единицей измерения
-bool InputField(float& value, const InputOptions& options = {});
-bool InputField(double& value, const InputOptions& options = {});
+bool InputField(float& value, const InputFieldOptions& options = {});
+bool InputField(double& value, const InputFieldOptions& options = {});
 // Целое число
-bool InputField(int& value, const InputOptions& options = {});
+bool InputField(int& value, const InputFieldOptions& options = {});
 // Текстовое поле с placeholder (options.hint)
-bool InputField(std::string& value, const InputOptions& options = {});
+bool InputField(std::string& value, const InputFieldOptions& options = {});
 // Опциональные числа (nullopt показывается как options.hint)
-bool InputField(std::optional<float>& value, const InputOptions& options = {});
-bool InputField(std::optional<double>& value, const InputOptions& options = {});
+bool InputField(std::optional<float>& value, const InputFieldOptions& options = {});
+bool InputField(std::optional<double>& value, const InputFieldOptions& options = {});

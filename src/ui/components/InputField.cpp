@@ -67,7 +67,7 @@ void RenderUnitSuffix(const char* unit, const ImVec2& itemMin, const ImVec2& ite
 // Общий каркас поля: подпись, стили рамки/шрифта, единица измерения.
 // draw рисует сам ImGui-виджет с идентификатором "##v" и возвращает true при изменении.
 template <typename DrawFn>
-bool RunField(const InputOptions& o, float defaultWidthBase, DrawFn&& draw)
+bool RunField(const InputFieldOptions& o, float defaultWidthBase, DrawFn&& draw)
 {
     const UiTheme& theme = UiTheme::Get();
     const InputFieldStyle& style = theme.input;
@@ -117,7 +117,7 @@ bool RunField(const InputOptions& o, float defaultWidthBase, DrawFn&& draw)
 
 // Опциональное число: пустая строка -> nullopt, иначе разбор strtof/strtod
 template <typename T, typename ParseFn>
-bool OptionalNumber(std::optional<T>& value, const InputOptions& o, ParseFn parse)
+bool OptionalNumber(std::optional<T>& value, const InputFieldOptions& o, ParseFn parse)
 {
     return RunField(o, 160.0f, [&] {
         char buf[64] = "";
@@ -150,26 +150,26 @@ bool OptionalNumber(std::optional<T>& value, const InputOptions& o, ParseFn pars
 
 } // namespace
 
-bool InputField(float& value, const InputOptions& o) {
+bool InputField(float& value, const InputFieldOptions& o) {
     return RunField(o, 160.0f, [&] { return ImGui::InputFloat("##v", &value, 0.0f, 0.0f, o.format); });
 }
 
-bool InputField(double& value, const InputOptions& o) {
+bool InputField(double& value, const InputFieldOptions& o) {
     return RunField(o, 160.0f, [&] { return ImGui::InputDouble("##v", &value, 0.0, 0.0, o.format); });
 }
 
-bool InputField(int& value, const InputOptions& o) {
+bool InputField(int& value, const InputFieldOptions& o) {
     return RunField(o, 160.0f, [&] { return ImGui::InputInt("##v", &value, 0, 0); });
 }
 
-bool InputField(std::string& value, const InputOptions& o) {
+bool InputField(std::string& value, const InputFieldOptions& o) {
     return RunField(o, 200.0f, [&] { return ImGui::InputTextWithHint("##v", o.hint ? o.hint : "", &value); });
 }
 
-bool InputField(std::optional<float>& value, const InputOptions& o) {
+bool InputField(std::optional<float>& value, const InputFieldOptions& o) {
     return OptionalNumber(value, o, [](const char* s, char** end) { return std::strtof(s, end); });
 }
 
-bool InputField(std::optional<double>& value, const InputOptions& o) {
+bool InputField(std::optional<double>& value, const InputFieldOptions& o) {
     return OptionalNumber(value, o, [](const char* s, char** end) { return std::strtod(s, end); });
 }

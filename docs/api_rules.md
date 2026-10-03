@@ -18,6 +18,7 @@ OmniKit is built on a handful of rules that apply to every component. If you kno
 * `explicit operator bool` means "the area is open and you can draw in it".
 * A scope cannot be copied or moved. Create it on the stack and use it within one frame.
 * Child areas are scopes too: `if (auto left = bar.Left()) { ... }`.
+* `Card` has its own 12-column grid (`card.Col(...)`, `.col = Col::Half()` in field options) because its rows take their height from `UiSize`. Free-form layouts use `ColumnLayout`.
 
 ```cpp
 if (Card card({.title = "Network"}); card) {

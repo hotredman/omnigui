@@ -30,7 +30,7 @@ template <typename T>
 struct TableColumn {
     std::string id;                                     // Уникальный идентификатор столбца
     std::string header;                                 // Заголовок столбца
-    float width = 0.0f;                                 // Ширина в пикселях (или вес растяжения)
+    float width = 0.0f;                                 // Базовые px, масштабируются (или вес растяжения)
     ColumnWidthMode widthMode = ColumnWidthMode::Fixed; // Режим ширины
     ColumnAlign align = ColumnAlign::Left;              // Выравнивание
     bool sortable = true;                               // Разрешена ли сортировка по клику

@@ -4,6 +4,7 @@
 
 DisabledScope::DisabledScope(bool disabled) {
     ImGui::BeginDisabled(disabled);
+    m_open = true;
     m_activeAliveBefore = ImGui::GetCurrentContext()->ActiveIdIsAlive;
 }
 
