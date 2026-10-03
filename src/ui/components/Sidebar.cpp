@@ -3,16 +3,7 @@
 #include <imgui.h>
 #include <cmath>
 
-Sidebar::Sidebar() {
-}
-
-Sidebar::~Sidebar() {
-    if (m_beginCalled) {
-        End();
-    }
-}
-
-bool Sidebar::Begin(float posY, float height) {
+Sidebar::Sidebar(float posY, float height) {
     const UiTheme& theme = UiTheme::Get();
     const SidebarStyle& style = theme.sidebar;
 
@@ -37,7 +28,6 @@ bool Sidebar::Begin(float posY, float height) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(style.colBg).Value);
 
-    m_beginCalled = true;
     m_open = ImGui::Begin("##SidebarWindow", nullptr, flags);
     if (m_open) {
         // Правая вертикальная разделительная линия
@@ -49,17 +39,13 @@ bool Sidebar::Begin(float posY, float height) {
             1.0f
         );
     }
-    return m_open;
 }
 
-void Sidebar::End() {
-    if (m_beginCalled) {
-        ImGui::End();
-        ImGui::PopStyleColor();
-        ImGui::PopStyleVar(3);
-        m_beginCalled = false;
-        m_open = false;
-    }
+Sidebar::~Sidebar() {
+    // ImGui::End() обязателен независимо от результата Begin
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(3);
 }
 
 bool Sidebar::AddItem(const char* id, const char* label, Icon icon, bool isActive) {

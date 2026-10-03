@@ -3,17 +3,20 @@
 #include <imgui.h>
 #include <string>
 
+#include "ui/components/Scope.hpp"
 #include "ui/components/UiTheme.hpp"
 #include "ui/components/Icon.hpp"
 
-class Sidebar {
+// Боковая навигационная панель (Sidebar). RAII-область: конструктор открывает
+// окно, деструктор закрывает.
+//
+//     if (auto sidebar = Sidebar()) { ... }
+class Sidebar : public Scope {
 public:
-    Sidebar();
+    // По умолчанию геометрия рассчитывается из UiTheme::Get():
+    // posY < 0 — под Header и TopBar, height < 0 — до строки состояния
+    explicit Sidebar(float posY = -1.0f, float height = -1.0f);
     ~Sidebar();
-
-    // Открывает панель сайдбара (по умолчанию рассчитывает геометрию из UiTheme::Get())
-    bool Begin(float posY = -1.0f, float height = -1.0f);
-    void End();
 
     // 1. Добавление пункта меню с векторной иконкой
     bool AddItem(const char* id, const char* label, Icon icon, bool isActive = false);
@@ -55,6 +58,4 @@ private:
     float m_width = 190.0f;
     float m_height = 0.0f;
     float m_posY = 0.0f;
-    bool m_open = false;
-    bool m_beginCalled = false;
 };

@@ -65,6 +65,7 @@ set(OMNIKIT_SOURCES
     src/ui/components/FilterBar.cpp
     src/ui/components/FlowLayout.cpp
     src/ui/components/GridLayout.cpp
+    src/ui/components/Bar.cpp
     src/ui/components/Header.cpp
     src/ui/components/Icon.cpp
     src/ui/components/Indicator.cpp
@@ -93,6 +94,9 @@ set(OMNIKIT_SOURCES
 )
 
 add_library(omnikit STATIC ${OMNIKIT_SOURCES})
+# C++20 нужен ради designated initializers в опциях компонентов: Button("Save", {.variant = ...});
+# остальной код (в т.ч. сторонний) остаётся на 17
+target_compile_features(omnikit PUBLIC cxx_std_20)
 target_include_directories(omnikit PUBLIC src)
 target_link_libraries(omnikit PUBLIC imgui)
 

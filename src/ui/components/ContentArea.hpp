@@ -1,29 +1,26 @@
 #pragma once
 
+#include "ui/components/Scope.hpp"
 #include "ui/components/UiTheme.hpp"
 #include <imgui.h>
 
-// Универсальный компонент рабочей области окна (ContentArea)
-// Автоматически рассчитывает геометрию относительно Header, ProjectBar и Sidebar.
-// Гарантирует сбалансированность жизненного цикла Begin/End и снятие стилей ImGui.
-class ContentArea {
+// Универсальный компонент рабочей области окна (ContentArea). RAII-область:
+// конструктор открывает окно, деструктор закрывает и снимает стили ImGui.
+// По умолчанию геометрия рассчитывается относительно Header, Toolbar, Sidebar
+// и StatusBar:
+//
+//     if (auto content = ContentArea()) { ... }
+class ContentArea : public Scope {
 public:
-    ContentArea(const ContentAreaStyle* customStyle = nullptr);
+    // Геометрия каркаса: posX = SidebarWidth, posY = HeaderHeight + TopBarHeight,
+    // размер до нижнего правого угла (над строкой состояния)
+    explicit ContentArea(const ContentAreaStyle* customStyle = nullptr);
+
+    // Произвольная геометрия; значения < 0 берутся из каркаса
+    ContentArea(float posX, float posY, float width, float height,
+                const ContentAreaStyle* customStyle = nullptr);
+
     ~ContentArea();
-
-    ContentArea(const ContentArea&) = delete;
-    ContentArea& operator=(const ContentArea&) = delete;
-
-    // Открывает окно рабочей зоны с автоматическим вычислением геометрии каркаса
-    // (posX = SidebarWidth, posY = HeaderHeight + TopBarHeight, размер до нижнего правого угла)
-    bool Begin(float customPosX = -1.0f,
-               float customPosY = -1.0f,
-               float customWidth = -1.0f,
-               float customHeight = -1.0f,
-               const ContentAreaStyle* customStyle = nullptr);
-
-    // Закрывает окно рабочей зоны и восстанавливает стек стилей ImGui
-    void End();
 
     // Размеры рабочей области
     float GetPosX() const { return m_posX; }
@@ -33,12 +30,12 @@ public:
     ImVec2 GetAvailableSize() const;
 
 private:
+    void Open(float posX, float posY, float width, float height,
+              const ContentAreaStyle* customStyle);
+
     const ContentAreaStyle* m_style = nullptr;
     float m_posX = 0.0f;
     float m_posY = 0.0f;
     float m_width = 0.0f;
     float m_height = 0.0f;
-
-    bool m_open = false;
-    bool m_beginCalled = false;
 };

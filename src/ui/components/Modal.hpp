@@ -237,10 +237,10 @@ public:
 
             RightAlign(totalW);
 
-            bool cancelled = Button::Secondary(cancelText, Icon::None, UiSize::Medium, btnW / scale);
+            bool cancelled = Button(cancelText, {.variant = UiVariant::Secondary, .width = btnW / scale});
             ImGui::SameLine(0.0f, spacingX);
-            bool confirmed = Button::Render(confirmText, confirmVariant, confirmIcon, UiSize::Medium,
-                                            btnW / scale, !confirmEnabled);
+            bool confirmed = Button(confirmText, {.variant = confirmVariant, .icon = confirmIcon,
+                                                 .width = btnW / scale, .disabled = !confirmEnabled});
 
             if (cancelled) {
                 m_parent->Close();

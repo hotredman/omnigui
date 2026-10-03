@@ -58,12 +58,7 @@ static int s_selectedRunIndex = 0;
 static int s_indicatorsCount = 5;
 
 // Component instances (strictly decoupled, self-docking design system shell)
-static Header s_header;
-static Toolbar s_toolbar;
-static Sidebar s_sidebar;
 static SidebarMenu s_sidebarMenu;
-static ContentArea s_contentArea;
-static StatusBar s_statusBar;
 static std::vector<std::unique_ptr<Indicator>> s_indicators;
 
 // Charts
@@ -323,11 +318,11 @@ void Init() {
 // 1. TOP HEADER (MIRRORING evo-machine-cpp MainWindow::RenderHeader)
 // ----------------------------------------------------------------------------
 static void RenderHeader(double elapsed) {
-    if (s_header.Begin()) {
+    if (auto header = Header()) {
         const UiTheme& theme = UiTheme::Get();
 
         // 1.1 Left Zone: Font scale Aa, Sun/Moon theme toggle, and DeviceStatus
-        if (auto left = s_header.Left()) {
+        if (auto left = header.Left()) {
             float btnSize = 36.0f;
 
             // Aa Scale button
@@ -383,7 +378,7 @@ static void RenderHeader(double elapsed) {
         }
 
         // 1.2 Right Zone: Indicator count selector (evaluated before Center so Center knows exact width)
-        if (auto right = s_header.Right()) {
+        if (auto right = header.Right()) {
             float btnSize = 36.0f;
             char countTip[64];
             std::snprintf(countTip, sizeof(countTip), "Active Indicators (%d)", s_indicatorsCount);
@@ -404,7 +399,7 @@ static void RenderHeader(double elapsed) {
         }
 
         // 1.3 Center Zone: Telemetry carousel
-        if (auto center = s_header.Center()) {
+        if (auto center = header.Center()) {
             // Update live values in persistent indicators
             double liveTput = s_deviceStreaming ? (84.6 + 4.8 * std::sin(elapsed * 2.2)) : 0.0;
             double liveLat = s_deviceStreaming ? (14.2 + 2.1 * std::cos(elapsed * 1.5)) : 0.0;
@@ -427,8 +422,6 @@ static void RenderHeader(double elapsed) {
                 }
             }
         }
-
-        s_header.End();
     }
 }
 
@@ -436,29 +429,27 @@ static void RenderHeader(double elapsed) {
 // 2. SESSION / PROJECT TOOLBAR (MIRRORING evo-machine-cpp ProjectBar)
 // ----------------------------------------------------------------------------
 static void RenderToolbar() {
-    if (s_toolbar.Begin()) {
+    if (auto toolbar = Toolbar()) {
         const UiTheme& theme = UiTheme::Get();
 
         // 2.1 Left Zone: "Session:" label
-        if (auto left = s_toolbar.Left()) {
+        if (auto left = toolbar.Left()) {
             left.Label("Session:");
         }
 
         // 2.2 Center / Fill Zone: Editable title
-        if (auto fill = s_toolbar.Fill()) {
+        if (auto fill = toolbar.Fill()) {
             s_editableSessionTitle.Render("##SessionTitleLabel", s_sessionTitle, fill.Width(), theme.fontBold);
         }
 
         // 2.3 Right Zone: "New Session" button
-        if (auto right = s_toolbar.Right()) {
-            if (Button::Primary("New Session", Icon::Plus, 0.0f, theme.toolbar.ContentHeight())) {
+        if (auto right = toolbar.Right()) {
+            if (right.Button("New Session", {.variant = UiVariant::Primary, .icon = Icon::Plus})) {
                 s_sessionTitle = "Telemetry Ingestion Session - " + FormatCurrentClock();
                 s_liveChart1.Clear();
                 s_liveStartTime = std::chrono::steady_clock::now();
             }
         }
-
-        s_toolbar.End();
     }
 }
 
@@ -466,7 +457,7 @@ static void RenderToolbar() {
 // 3. SIDEBAR NAVIGATION (MIRRORING evo-machine-cpp MainWindow::RenderSidebar)
 // ----------------------------------------------------------------------------
 static void RenderSidebar() {
-    if (s_sidebar.Begin()) {
+    if (auto sidebar = Sidebar()) {
         // Fixed navigation items
         s_sidebarMenu.Item("Live Stream",      Icon::Gamepad,   NavScreen::RemoteControl, s_currentScreen);
         s_sidebarMenu.Item("Offline Analysis", Icon::LineChart, NavScreen::Processing,    s_currentScreen);
@@ -528,8 +519,6 @@ static void RenderSidebar() {
             }
             s_sidebarMenu.EndScrollRegion();
         }
-
-        s_sidebar.End();
     }
 }
 
@@ -605,18 +594,17 @@ static void RenderRemoteControl() {
     // 2. Right Area: SidePanel Remote Control actions
     if (SidePanel panel("##RemoteSidePanel", 260.0f, SidePanel::Side::Right); panel) {
         if (Card actionCard("pult_card", "Stream Actions"); actionCard) {
-            float btnW = ImGui::GetContentRegionAvail().x;
-            if (Button::Render("START STREAM", UiVariant::Success, ImVec2(btnW, 40.0f * theme.GetScale()), Icon(Icon::Play))) {
+            if (Button("START STREAM", {.variant = UiVariant::Success, .icon = Icon::Play, .size = UiSize::Large, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Running;
                 s_deviceStreaming = true;
             }
             ImGui::Spacing();
-            if (Button::Render("PAUSE FEED", UiVariant::Warning, ImVec2(btnW, 36.0f * theme.GetScale()), Icon(Icon::Pause))) {
+            if (Button("PAUSE FEED", {.variant = UiVariant::Warning, .icon = Icon::Pause, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
             }
             ImGui::Spacing();
-            if (Button::Render("STOP & RESET", UiVariant::Danger, ImVec2(btnW, 36.0f * theme.GetScale()), Icon(Icon::Square))) {
+            if (Button("STOP & RESET", {.variant = UiVariant::Danger, .icon = Icon::Square, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
                 s_liveChart1.Clear();
@@ -637,8 +625,7 @@ static void RenderRemoteControl() {
         ImGui::Spacing();
 
         if (Card calibCard("calib_card", "Baseline & Zero"); calibCard) {
-            float btnW = ImGui::GetContentRegionAvail().x;
-            if (Button::Render("Tare / Zero Baseline", UiVariant::Secondary, ImVec2(btnW, 34.0f * theme.GetScale()), Icon(Icon::Zero))) {
+            if (Button("Tare / Zero Baseline", {.variant = UiVariant::Secondary, .icon = Icon::Zero, .width = ButtonOptions::Fill})) {
                 s_liveChart1.Clear();
                 s_liveChart2.Clear();
                 s_liveChart3.Clear();
@@ -676,12 +663,12 @@ static void RenderProcessing() {
         Badge::Render(activeRun.statusText, activeRun.status);
 
         ImGui::SameLine(chartAreaW - 240.0f * theme.GetScale());
-        if (Button::Render("Reset Zoom", UiVariant::Secondary, Icon(Icon::Refresh), UiSize::Small)) {
+        if (Button("Reset Zoom", {.variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
             s_offlineChart.ResetZoom();
         }
         ImGui::SameLine();
         bool majGrid = s_offlineChart.GetOptions().majorGrid;
-        if (Button::Render(majGrid ? "Grid: ON" : "Grid: OFF", UiVariant::Secondary, Icon::None, UiSize::Small)) {
+        if (Button(majGrid ? "Grid: ON" : "Grid: OFF", {.variant = UiVariant::Secondary, .size = UiSize::Small})) {
             s_offlineChart.SetMajorGrid(!majGrid);
             s_offlineChart.SetMinorGrid(!majGrid);
         }
@@ -777,7 +764,7 @@ static void RenderMachine() {
                     Toggle::Render("tog_keepalive", s_keepaliveEnabled, "Enable TCP Keepalive Probes", "Verifies socket liveness every 15s");
                     Toggle::Render("tog_zstd", s_compressionZstd, "Payload Compression (Zstandard)", "Compresses wire packets above 4 KB");
                     ImGui::Spacing();
-                    Button::Render("Apply Network Configuration", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                    Button("Apply Network Configuration", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
@@ -789,7 +776,7 @@ static void RenderMachine() {
                     ImGui::Spacing();
                     Toggle::Render("tog_numa", s_numaAffinity, "NUMA Socket Memory Pinning", "Allocates buffers strictly local to core");
                     ImGui::Spacing();
-                    Button::Render("Apply Compute Settings", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                    Button("Apply Compute Settings", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
@@ -799,7 +786,7 @@ static void RenderMachine() {
                     ImGui::Spacing();
                     InputField::Float("##tput_max", "Rated Maximum Bandwidth", s_passportMaxThroughput, "MB/s");
                     ImGui::Spacing();
-                    Button::Render("Commit SIMD Pipeline", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                    Button("Commit SIMD Pipeline", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
@@ -809,7 +796,7 @@ static void RenderMachine() {
                     ImGui::Spacing();
                     InputField::Float("##evict_th", "Eviction High-Watermark", s_evictionThreshold, "%");
                     ImGui::Spacing();
-                    Button::Render("Flush & Reallocate Slabs", UiVariant::Warning, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Refresh));
+                    Button("Flush & Reallocate Slabs", {.variant = UiVariant::Warning, .icon = Icon::Refresh, .width = 240.0f});
                 }
                 break;
             }
@@ -817,7 +804,7 @@ static void RenderMachine() {
                 if (Card storageCard("storage_cfg_card", "Zero-Copy Disk Writer"); storageCard) {
                     InputField::Int("##repl_f", "Replication Factor", s_replicationFactor);
                     ImGui::Spacing();
-                    Button::Render("Sync Storage Buffers", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                    Button("Sync Storage Buffers", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
@@ -829,13 +816,13 @@ static void RenderMachine() {
                     ImGui::Spacing();
                     InputField::Float("##pid_kd", "Derivative Gain (Kd)", s_pidKd);
                     ImGui::Spacing();
-                    Button::Render("Apply PID Calibration", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                    Button("Apply PID Calibration", {.variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
             }
             default: { // Diagnostics & Export
                 if (Card diagCard("diag_cfg_card", "Self-Test & Diagnostics"); diagCard) {
-                    Button::Render("Run Cluster Diagnostic Self-Test", UiVariant::Info, ImVec2(260.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Target));
+                    Button("Run Cluster Diagnostic Self-Test", {.variant = UiVariant::Info, .icon = Icon::Target, .width = 260.0f});
                 }
                 break;
             }
@@ -879,7 +866,7 @@ static void RenderArchive() {
                 grid.SetColumn(4); grid.CellText(Fmt("%d", run.pointCount));
                 grid.SetColumn(5); Badge::Render(run.statusText, run.status);
                 grid.SetColumn(6);
-                if (Button::Render("View", UiVariant::Secondary, ImVec2(70.0f * theme.GetScale(), 22.0f * theme.GetScale()), Icon::None, false)) {
+                if (Button("View", {.variant = UiVariant::Secondary, .size = UiSize::Mini, .width = 70.0f})) {
                     s_selectedRunIndex = static_cast<int>(i);
                     s_currentScreen = NavScreen::Processing;
                     BuildOfflineAnalysisData(s_runs[i]);
@@ -900,7 +887,7 @@ static void RenderJournal() {
         ImGui::SameLine();
         SearchInput::Render("tbl_search_journal", s_searchJournal, "Filter log entries...", 220.0f * theme.GetScale());
         ImGui::SameLine();
-        if (Button::Render("Clear Journal", UiVariant::Secondary, Icon(Icon::Refresh), UiSize::Small)) {
+        if (Button("Clear Journal", {.variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
             s_journalLogs.clear();
         }
 
@@ -980,7 +967,7 @@ static void RenderSeries() {
 // 11. MAIN CONTENT ROUTER (ContentArea)
 // ----------------------------------------------------------------------------
 static void RenderContent() {
-    if (s_contentArea.Begin()) {
+    if (auto content = ContentArea()) {
         switch (s_currentScreen) {
             case NavScreen::RemoteControl:
                 RenderRemoteControl();
@@ -1004,7 +991,6 @@ static void RenderContent() {
                 RenderSeries();
                 break;
         }
-        s_contentArea.End();
     }
 }
 
@@ -1012,19 +998,17 @@ static void RenderContent() {
 // 12. BOTTOM STATUS BAR (StatusBar)
 // ----------------------------------------------------------------------------
 static void RenderStatusBar() {
-    if (s_statusBar.Begin()) {
-        s_statusBar.Text("Uplink: 10.0.4.12:9050 (Active • 1.2 ms)", UiVariant::Success);
-        s_statusBar.Separator();
+    if (auto status = StatusBar()) {
+        status.Text("Uplink: 10.0.4.12:9050 (Active • 1.2 ms)", UiVariant::Success);
+        status.Separator();
 
         std::string curMsg = (s_deviceState == DeviceState::Running)
                            ? "System nominal • Real-time pipeline active and streaming"
                            : "Standby • Stream paused by operator";
-        s_statusBar.Text(curMsg, s_deviceState == DeviceState::Running ? UiVariant::Default : UiVariant::Warning);
+        status.Text(curMsg, s_deviceState == DeviceState::Running ? UiVariant::Default : UiVariant::Warning);
 
-        s_statusBar.Separator();
-        s_statusBar.Text("OmniGUI v1.0.7 | " + FormatCurrentClock(), UiVariant::Secondary);
-
-        s_statusBar.End();
+        status.Separator();
+        status.Text("OmniGUI v1.0.7 | " + FormatCurrentClock(), UiVariant::Secondary);
     }
 }
 

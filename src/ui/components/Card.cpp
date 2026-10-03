@@ -516,11 +516,11 @@ bool Card::Button(const char* label, Icon icon, UiVariant variant, RowHeight hei
     float h = ResolveHeight(height, RowHeight::Default());
     float w = 0.0f;
     if (col.IsAuto()) {
-        w = ::Button::CalculateWidth(label, icon, height);
+        w = ButtonWidthPx(label, icon, height.IsCustom() ? UiTheme::Get().Scale(height.baselinePx) : 0.0f);
     }
     PrepareField(col, w);
 
-    bool clicked = ::Button::Render(label, variant, ImVec2(w, h), icon, disabled);
+    bool clicked = ::ButtonPx(label, ImVec2(w, h), {.variant = variant, .icon = icon, .disabled = disabled});
 
     FinishField(col);
     return clicked;

@@ -1,25 +1,26 @@
 #include "ui/components/ContentArea.hpp"
 #include <algorithm>
 
-ContentArea::ContentArea(const ContentAreaStyle* customStyle)
-    : m_style(customStyle)
+ContentArea::ContentArea(const ContentAreaStyle* customStyle) {
+    Open(-1.0f, -1.0f, -1.0f, -1.0f, customStyle);
+}
+
+ContentArea::ContentArea(float posX, float posY, float width, float height,
+                         const ContentAreaStyle* customStyle)
 {
+    Open(posX, posY, width, height, customStyle);
 }
 
 ContentArea::~ContentArea() {
-    if (m_beginCalled) {
-        End();
-    }
+    // ImGui::End() обязателен независимо от результата Begin
+    ImGui::End();
 }
 
-bool ContentArea::Begin(float customPosX,
-                        float customPosY,
-                        float customWidth,
-                        float customHeight,
-                        const ContentAreaStyle* customStyle)
+void ContentArea::Open(float customPosX, float customPosY, float customWidth, float customHeight,
+                       const ContentAreaStyle* customStyle)
 {
     const UiTheme& theme = UiTheme::Get();
-    m_style = customStyle ? customStyle : (m_style ? m_style : &theme.contentArea);
+    m_style = customStyle ? customStyle : &theme.contentArea;
 
     ImGuiIO& io = ImGui::GetIO();
 
@@ -50,18 +51,8 @@ bool ContentArea::Begin(float customPosX,
 
     // Отступы — только окну рабочей области (в содержимое не протекают)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(theme.Scale(m_style->paddingX), theme.Scale(m_style->paddingY)));
-    m_beginCalled = true;
     m_open = ImGui::Begin("##ContentAreaWindow", nullptr, flags);
     ImGui::PopStyleVar();
-    return m_open;
-}
-
-void ContentArea::End() {
-    if (m_beginCalled) {
-        ImGui::End();
-        m_beginCalled = false;
-        m_open = false;
-    }
 }
 
 ImVec2 ContentArea::GetAvailableSize() const {

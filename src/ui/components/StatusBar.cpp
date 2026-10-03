@@ -5,19 +5,6 @@
 StatusBar::StatusBar(const StatusBarStyle* customStyle)
     : m_customStyle(customStyle)
 {
-}
-
-StatusBar::~StatusBar() {
-    if (!m_ended) {
-        End();
-    }
-}
-
-bool StatusBar::Begin() {
-    if (m_open) return m_open;
-    m_ended = false;
-    m_hasItems = false;
-
     const UiTheme& theme = UiTheme::Get();
     ImGuiIO& io = ImGui::GetIO();
     m_height = theme.Scale(Style().height);
@@ -44,22 +31,13 @@ bool StatusBar::Begin() {
             pos, ImVec2(pos.x + io.DisplaySize.x, pos.y), Style().colTopLine,
             Style().separatorSize);
     }
-    return m_open;
 }
 
-void StatusBar::End() {
-    if (m_ended) return;
-
+StatusBar::~StatusBar() {
+    // ImGui::End() обязателен независимо от результата Begin
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
-
-    m_ended = true;
-    m_open = false;
-}
-
-float StatusBar::GetHeight() const {
-    return m_height > 0.0f ? m_height : UiTheme::Get().Scale(Style().height);
 }
 
 void StatusBar::NextItem() {
