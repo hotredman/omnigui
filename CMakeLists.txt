@@ -5,6 +5,7 @@ project(omnigui CXX C)
 set(DEMO_APP_SOURCES
     examples/demo/OmniKitShowcase.cpp
     examples/demo/pages/TestRunPage.cpp
+    examples/demo/pages/CalcAreaPage.cpp
 )
 
 # Единый стандарт C++20 для всего проекта (designated initializers в опциях компонентов)

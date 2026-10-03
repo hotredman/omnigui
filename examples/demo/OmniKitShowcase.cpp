@@ -2,6 +2,7 @@
 #include "omnikit.hpp"
 #include "core/TimeUtil.hpp"
 #include "pages/TestRunPage.hpp"
+#include "pages/CalcAreaPage.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -21,7 +22,8 @@ namespace {
 
 // Экраны навигации (пункты верхней части сайдбара)
 enum class NavScreen {
-    TestRun = 0,   // Прогон: вкладки с пультом и графиком
+    TestRun = 0, // Прогон: вкладки с пультом и графиком
+    CalcArea,    // Расчет площади сечения образца (CalcAreaPage)
 };
 
 // Узлы дерева сайдбара: проект → серия → прогон
@@ -53,6 +55,9 @@ bool s_scaleMenuOpen = false;
 bool s_countMenuOpen = false;
 int s_indicatorsCount = 4;
 std::vector<std::unique_ptr<Indicator>> s_indicators;
+
+EditableLabel s_demoEditableLabel;
+std::string   s_demoLabelValue = "Experiment #42";
 
 auto s_lastFrame = std::chrono::steady_clock::now();
 
@@ -218,13 +223,29 @@ void RenderHeader() {
 }
 
 // ----------------------------------------------------------------------------
-// 2. Sidebar: навигация по экранам и дерево проектов
+// 2. Toolbar: панель инструментов под Header с редактируемой меткой
+// ----------------------------------------------------------------------------
+void RenderToolbar() {
+    if (auto toolbar = Toolbar()) {
+        if (auto left = toolbar.Left()) {
+            s_demoEditableLabel.Render(s_demoLabelValue, {
+                .widthPx = -1.0f,
+                .role = TextRole::Body,
+                .defaultValue = [] { return std::string("Experiment #42"); }
+            });
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 3. Sidebar: навигация по экранам и дерево проектов
 // ----------------------------------------------------------------------------
 void RenderSidebar() {
-    const float topPx = UiTheme::Get().HeaderHeight();
+    const float topPx = UiTheme::Get().HeaderHeight() + UiTheme::Get().ToolbarHeight();
 
     if (auto sidebar = Sidebar({.posYPx = topPx})) {
         sidebar.Item({.label = "Test Run", .icon = Icon::Gamepad}, NavScreen::TestRun, s_screen);
+        sidebar.Item({.label = "Calc Area", .icon = Icon::Clipboard}, NavScreen::CalcArea, s_screen);
 
         sidebar.Spacer();
         sidebar.Separator();
@@ -263,22 +284,25 @@ void RenderSidebar() {
 }
 
 // ----------------------------------------------------------------------------
-// 3. Content: страница выбранного экрана
+// 4. Content: страница выбранного экрана
 // ----------------------------------------------------------------------------
 void RenderContent() {
-    const float topPx = UiTheme::Get().HeaderHeight();
+    const float topPx = UiTheme::Get().HeaderHeight() + UiTheme::Get().ToolbarHeight();
 
     if (auto content = ContentArea({.posYPx = topPx})) {
         switch (s_screen) {
             case NavScreen::TestRun:
                 RenderTestRunPage();
                 break;
+            case NavScreen::CalcArea:
+                RenderCalcAreaPage();
+                break;
         }
     }
 }
 
 // ----------------------------------------------------------------------------
-// 4. StatusBar: связь, сообщение оператора, время
+// 5. StatusBar: связь, сообщение оператора, время
 // ----------------------------------------------------------------------------
 void RenderStatusBar() {
     const Session& session = GetSession();
@@ -314,6 +338,7 @@ void RenderUI(float main_scale) {
     UpdateStream(dt);
 
     RenderHeader();
+    RenderToolbar();
     RenderSidebar();
     RenderContent();
     RenderStatusBar();
