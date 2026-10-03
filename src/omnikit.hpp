@@ -51,7 +51,6 @@
 #include "ui/components/List.hpp"
 #include "ui/components/Table.hpp"
 #include "ui/components/TableCell.hpp"
-#include "ui/components/VirtualTable.hpp"
 #include "ui/components/FilterBar.hpp"
 
 // Popups & Scopes

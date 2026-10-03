@@ -2,29 +2,34 @@
 
 #include "ui/components/UiTheme.hpp"
 #include <imgui.h>
-#include <string>
 
-// Семантический баннер статуса или фонового процесса
-class StatusBanner {
-public:
-    static void Progress(const std::string& message, float progress = -1.0f) {
-        const UiTheme& theme = UiTheme::Get();
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImColor(theme.palette.accent).Value);
-        if (progress >= 0.0f) {
-            ImGui::Text("%s: %.0f%%...", message.c_str(), progress * 100.0f);
-        } else {
-            ImGui::Text("%s...", message.c_str());
-        }
-        ImGui::PopStyleColor();
-        ImGui::Spacing();
-    }
-
-    static void Warning(const std::string& message) {
-        const UiTheme& theme = UiTheme::Get();
-        ImGui::PushStyleColor(ImGuiCol_Text, theme.GetVariantStyle(UiVariant::Warning).colText);
-        ImGui::TextWrapped("%s", message.c_str());
-        ImGui::PopStyleColor();
-        ImGui::Spacing();
-    }
+// Параметры баннера статуса
+struct StatusBannerOptions {
+    UiVariant variant  = UiVariant::Primary;   // Primary — акцентный цвет темы
+    bool      busy     = false;                // фоновый процесс: добавляет «...»
+    float     progress = -1.0f;                // 0..1; <0 — прогресс неизвестен (только с busy)
 };
+
+// Семантический баннер статуса или фонового процесса:
+//
+//     StatusBanner("Loading", {.busy = true, .progress = 0.42f});   // «Loading: 42%...»
+//     StatusBanner("Low disk space", {.variant = UiVariant::Warning});
+inline void StatusBanner(const char* message, const StatusBannerOptions& options = {}) {
+    const UiTheme& theme = UiTheme::Get();
+    const ImVec4 color = (options.variant == UiVariant::Primary)
+        ? ImColor(theme.palette.accent).Value
+        : ImColor(theme.GetVariantStyle(options.variant).colText).Value;
+
+    ImGui::PushStyleColor(ImGuiCol_Text, color);
+    if (options.busy) {
+        if (options.progress >= 0.0f) {
+            ImGui::Text("%s: %.0f%%...", message, options.progress * 100.0f);
+        } else {
+            ImGui::Text("%s...", message);
+        }
+    } else {
+        ImGui::TextWrapped("%s", message);
+    }
+    ImGui::PopStyleColor();
+    ImGui::Spacing();
+}

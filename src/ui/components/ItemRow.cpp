@@ -10,12 +10,13 @@
 
 static std::unordered_map<std::string, float> s_itemRowHeightCache;
 
-ItemRow::ItemRow(const char* id) {
+ItemRow::ItemRow(const ItemRowOptions& options) {
+    const char* id = options.key;
     m_id = (id && id[0] != '\0') ? id : "item";
     ImGui::PushID(m_id.c_str());
     m_open = true;
     m_actionCount = 0;
-    m_totalActionsExpected = 1;
+    m_totalActionsExpected = std::max(1, options.actions);
 
     const UiTheme& theme = UiTheme::Get();
     const ItemRowStyle& st = theme.itemRow;
@@ -43,14 +44,11 @@ ItemRow::ItemRow(const char* id) {
     ImGui::SetCursorScreenPos(ImVec2(m_startPos.x + m_padX, m_startPos.y + m_padY));
 }
 
-ItemRow::ItemRow(const std::string& id)
-    : ItemRow(id.c_str()) {}
-
 ItemRow::~ItemRow() {
-    End();
+    Finish();
 }
 
-void ItemRow::End() {
+void ItemRow::Finish() {
     if (!m_open) return;
 
     DrawBadges();
@@ -98,7 +96,9 @@ void ItemRow::End() {
     m_open = false;
 }
 
-void ItemRow::Title(const std::string& name, const std::string& symbol, const std::string& unitDisplay) {
+void ItemRow::Title(const std::string& name, const ItemRowTitleOptions& options) {
+    const std::string symbol = options.symbol ? options.symbol : "";
+    const std::string unitDisplay = options.unit ? options.unit : "";
     const UiTheme& theme = UiTheme::Get();
     const ItemRowStyle& st = theme.itemRow;
 
@@ -130,9 +130,9 @@ void ItemRow::Title(const std::string& name, const std::string& symbol, const st
     m_titleRowHeight = std::max(theme.Scale(22.0f), ImGui::GetItemRectMax().y - m_titleRowTopY);
 }
 
-void ItemRow::Badge(const char* text, UiVariant variant) {
+void ItemRow::Badge(const char* text, const ItemRowBadgeOptions& options) {
     if (!text || text[0] == '\0') return;
-    m_badges.push_back({std::string(text), variant});
+    m_badges.push_back({std::string(text), options.variant});
 }
 
 void ItemRow::DrawBadges() {
@@ -179,15 +179,10 @@ void ItemRow::DrawBadges() {
     }
 }
 
-void ItemRow::RightActions(int totalActions) {
-    if (totalActions > 0) {
-        m_totalActionsExpected = totalActions;
-    }
-}
-
-bool ItemRow::Action(Icon icon, const char* tooltip, UiVariant variant, bool disabled, int totalActions) {
-    if (totalActions > m_totalActionsExpected) {
-        m_totalActionsExpected = totalActions;
+bool ItemRow::Action(const ItemRowActionOptions& options) {
+    // Действий больше, чем заявлено в ItemRowOptions::actions, — расширяем слот
+    if (m_actionCount + 1 > m_totalActionsExpected) {
+        m_totalActionsExpected = m_actionCount + 1;
     }
 
     const UiTheme& theme = UiTheme::Get();
@@ -208,7 +203,7 @@ bool ItemRow::Action(Icon icon, const char* tooltip, UiVariant variant, bool dis
     char btnId[32];
     std::snprintf(btnId, sizeof(btnId), "##act_%d", m_actionCount + 1);
 
-    bool clicked = ToolButton({.icon = icon, .variant = variant, .size = UiSize::Small, .tooltip = tooltip, .disabled = disabled, .key = btnId});
+    bool clicked = ToolButton({.icon = options.icon, .variant = options.variant, .size = UiSize::Small, .tooltip = options.tooltip, .disabled = options.disabled, .key = btnId});
 
     ImGui::SetCursorPos(savedLeftPos);
     m_actionCount++;
@@ -245,8 +240,8 @@ void ItemRow::Formula(const std::string& symbol, const std::string& expression) 
     theme.PopFont();
 }
 
-bool ItemRow::Tags(const std::vector<std::string>& tags, std::string* outClickedTag) {
-    if (tags.empty()) return false;
+std::optional<std::string> ItemRow::Tags(const std::vector<std::string>& tags) {
+    if (tags.empty()) return std::nullopt;
     const UiTheme& theme = UiTheme::Get();
     const ItemRowStyle& st = theme.itemRow;
 
@@ -258,13 +253,5 @@ bool ItemRow::Tags(const std::vector<std::string>& tags, std::string* outClicked
     float rightArea = m_totalActionsExpected * theme.Scale(st.actionBtnWidth) + theme.Scale(16.0f);
     float maxWrapW = std::max(theme.Scale(100.0f), m_availW - m_padX * 2.0f - rightArea);
 
-    if (auto clicked = TagList(tags, {.maxWidthPx = maxWrapW})) {
-        if (outClickedTag) *outClickedTag = *clicked;
-        return true;
-    }
-    return false;
-}
-
-void ItemRow::Status(const char* text, UiVariant variant) {
-    Badge(text, variant);
+    return TagList(tags, {.maxWidthPx = maxWrapW});
 }

@@ -1,7 +1,7 @@
 # OmniGUI
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![C++ Standard](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B17)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
 [![ImGui](https://img.shields.io/badge/fork-imgui--hooked-orange.svg)](https://github.com/hotredman/imgui-hooked)
 [![ThorVG](https://img.shields.io/badge/vector-ThorVG-purple.svg)](https://github.com/thorvg/thorvg)
 [![SDL3](https://img.shields.io/badge/window-SDL3-red.svg)](https://github.com/libsdl-org/SDL)
@@ -67,6 +67,7 @@ if (Card card("Machine Configuration"); card) {
 }
 ```
 
+* **API rules:** every component is a widget function with an options struct, an RAII scope, or a stateful object. See [`docs/api_rules.md`](docs/api_rules.md).
 * **Design Tokens & Theming:** Switch instantly between Dark and Light mode via `UiTheme::Get().SetMode(ThemeMode::Dark / Light)`.
 * **Semantic Variants:** Full system color scaling for `Primary`, `Success`, `Warning`, `Danger`, `Secondary`, `Info`.
 * **High-Speed Telemetry Charts:** Dedicated `RealtimeChart` and `AnalysisChart` with LTTB decimation.
@@ -124,7 +125,7 @@ scripts\run_wasm.cmd
 
 ### Prerequisites
 * CMake 3.20+
-* C++17 compliant compiler (MSVC 2022, GCC 11+, or Clang 13+)
+* C++20 compliant compiler (MSVC 2022, GCC 11+, or Clang 13+)
 * Git with submodules
 
 ### Clone & Build (Desktop)
@@ -151,8 +152,9 @@ OmniGUI includes a comprehensive multi-tier test suite:
 2. **`test_frame_dedup`** &mdash; Verification of frame deduplication in both vector and triangle mesh modes.
 3. **`test_lttb`** &mdash; LTTB downsampling accuracy and peak preservation benchmarks.
 4. **`test_modal`** &mdash; Modal dimming background ordering verification.
-5. **`test_dom`** &mdash; 16-step unit test verifying DOM tree serialization, two-way event synchronization, stacking order, and `IDomTransport` bridges.
-6. **`tests/e2e/e2e_runner.mjs`** &mdash; End-to-end headless browser test using Chrome DevTools Protocol (CDP) auditing 7,800+ element pairs with 100.00% coordinate parity and 100.0% visual style parity.
+5. **`test_components`** &mdash; Headless render of every refactored component; in Debug builds ImGui asserts on unbalanced ID/Begin/End stacks.
+6. **`test_dom`** &mdash; 16-step unit test verifying DOM tree serialization, two-way event synchronization, stacking order, and `IDomTransport` bridges.
+7. **`tests/e2e/e2e_runner.mjs`** &mdash; End-to-end headless browser test using Chrome DevTools Protocol (CDP) auditing 7,800+ element pairs with 100.00% coordinate parity and 100.0% visual style parity.
 
 ---
 

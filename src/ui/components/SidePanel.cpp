@@ -119,14 +119,15 @@ void SidePanel::RenderSplitter() {
 }
 
 float SidePanel::GetTotalWidth() const {
-    return CalcTotalWidth(m_width, m_resizable, m_style);
+    return CalcTotalWidth(m_width, m_resizable, &m_style);
 }
 
-float SidePanel::CalcTotalWidth(float width, bool resizable, const SidePanelStyle& style) {
+float SidePanel::CalcTotalWidth(float width, bool resizable, const SidePanelStyle* style) {
     const UiTheme& theme = UiTheme::Get();
+    const SidePanelStyle& st = style ? *style : theme.sidePanel;
     float total = theme.Scale(width);
     if (resizable) {
-        total += theme.Scale(style.splitterWidth);
+        total += theme.Scale(st.splitterWidth);
     }
     return total;
 }

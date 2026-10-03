@@ -175,6 +175,11 @@ if (NOT EMSCRIPTEN)
     )
     target_link_libraries(test_modal PRIVATE imthorgui)
 
+    add_executable(test_components
+        tests/test_components.cpp
+    )
+    target_link_libraries(test_components PRIVATE imthorgui)
+
     add_executable(test_httplib
         tests/test_httplib.cpp
     )
@@ -192,6 +197,7 @@ if (NOT EMSCRIPTEN)
     add_test(NAME visual_diff COMMAND visual_diff)
     add_test(NAME lttb COMMAND test_lttb)
     add_test(NAME modal COMMAND test_modal)
+    add_test(NAME components COMMAND test_components)
 
 else()
     # ========================================================

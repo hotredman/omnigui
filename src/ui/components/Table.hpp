@@ -45,14 +45,37 @@ struct TableColumn {
     std::function<void(const T& item, int rowIndex)> renderCell;
 };
 
+// Постоянные параметры таблицы Table<T> (designated initializers)
+struct TableOptions {
+    const char* key = nullptr;          // идентичность; nullptr — по адресу объекта таблицы
+    float rowHeight = 0.0f;             // базовые px; 0 — theme.table.rowHeight
+    bool saveSettings = false;          // сохранять порядок/ширины колонок в ini ImGui
+    const char* emptyTitle = nullptr;   // заголовок пустого состояния; nullptr — по умолчанию
+    const char* emptySubtitle = nullptr;
+};
+
+// Размер области таблицы в кадре; базовые px, 0 — всё свободное место контейнера
+struct TableRenderOptions {
+    float width = 0.0f;
+    float height = 0.0f;
+};
+
 // Высокопроизводительная виртуализированная таблица (Table<T>)
 // Способна отображать десятки и сотни тысяч строк с 60+ FPS благодаря ImGuiListClipper
 // и индексной буферизации (фильтрация и сортировка оперируют массивом индексов без копирования моделей)
+//
+// Stateful-объект: хранит данные, колонки, поиск и сортировку между кадрами; создаётся один раз
+// (член класса приложения), в кадре вызывается Render. Идентичность — по адресу объекта или key.
+//
+//     Table<Row> table({.rowHeight = 32});
+//     table.AddColumn({.id = "name", .header = "Name", .width = 200, .renderCell = [](const Row& r, int) { ... }});
+//     table.SetItems(rows);
+//     table.Render({.height = 300});
 template <typename T>
 class Table {
 public:
-    Table(std::string tableId = "##Table")
-        : m_tableId(std::move(tableId)) {}
+    explicit Table(const TableOptions& options = {})
+        : m_options(options) {}
 
     // Добавление столбцов
     void AddColumn(TableColumn<T> col) {
@@ -91,21 +114,11 @@ public:
 
     const std::string& GetSearchQuery() const { return m_searchQuery; }
 
-    // Настройка пустых состояний
-    void SetEmptyMessage(std::string title, std::string subtitle = "") {
-        m_emptyTitle = std::move(title);
-        m_emptySubtitle = std::move(subtitle);
-    }
-
     // Принудительная сортировка программно
     void SortByColumn(int columnIndex, bool ascending) {
         m_sortColumnIndex = columnIndex;
         m_sortAscending = ascending;
         ApplySort();
-    }
-
-    void SetRowHeight(float height) {
-        m_customRowHeight = height;
     }
 
     void SetColumnVisible(size_t index, bool visible) {
@@ -127,24 +140,23 @@ public:
         return index < m_columns.size() ? m_columns[index].visible : false;
     }
 
-    void SetSaveSettings(bool save) {
-        m_saveSettings = save;
-    }
-
     // Основной цикл отрисовки
-    void Render(float availWidth = 0.0f, float availHeight = 0.0f) {
+    void Render(const TableRenderOptions& options = {}) {
         UiTheme& theme = UiTheme::Get();
         const TableStyle& ts = theme.table;
         float scale = theme.GetScale();
-        float rowHeight = (m_customRowHeight > 0.0f) ? theme.Scale(m_customRowHeight) : theme.Scale(ts.rowHeight);
+        float rowHeight = (m_options.rowHeight > 0.0f) ? theme.Scale(m_options.rowHeight) : theme.Scale(ts.rowHeight);
 
-        ImVec2 size(availWidth, availHeight);
+        ImVec2 size(theme.Scale(options.width), theme.Scale(options.height));
         if (size.x <= 0.0f) size.x = ImGui::GetContentRegionAvail().x;
         if (size.y <= 0.0f) size.y = ImGui::GetContentRegionAvail().y;
+
+        if (m_options.key) ImGui::PushID(m_options.key); else ImGui::PushID(this);
 
         // Пустое состояние
         if (m_filteredIndices.empty()) {
             RenderEmptyState(size);
+            ImGui::PopID();
             return;
         }
 
@@ -158,7 +170,7 @@ public:
                                ImGuiTableFlags_Hideable |
                                ImGuiTableFlags_Sortable;
 
-        if (!m_saveSettings) {
+        if (!m_options.saveSettings) {
             flags |= ImGuiTableFlags_NoSavedSettings;
         }
 
@@ -176,7 +188,7 @@ public:
         // Подложка тела — окну прокрутки, которое создаёт BeginTable
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ts.colBodyBg);
         const bool tableOpen =
-            ImGui::BeginTable(m_tableId.c_str(), static_cast<int>(m_columns.size()), flags, size);
+            ImGui::BeginTable("##Table", static_cast<int>(m_columns.size()), flags, size);
         ImGui::PopStyleColor();
         if (tableOpen) {
             // Настройка столбцов
@@ -248,6 +260,7 @@ public:
 
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(7);
+        ImGui::PopID();
     }
 
 private:
@@ -310,14 +323,14 @@ private:
         ImGui::Dummy(ImVec2(0.0f, iconSize + 12.0f * scale));
 
         // Title
-        std::string title = !m_emptyTitle.empty() ? m_emptyTitle :
+        std::string title = m_options.emptyTitle ? m_options.emptyTitle :
             (m_searchQuery.empty() ? "No records" : "No results found");
         ImVec2 titleSz = ImGui::CalcTextSize(title.c_str());
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - titleSz.x) * 0.5f);
         ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", title.c_str());
 
         // Subtitle
-        std::string sub = !m_emptySubtitle.empty() ? m_emptySubtitle :
+        std::string sub = m_options.emptySubtitle ? m_options.emptySubtitle :
             (m_searchQuery.empty() ? "No items available in the dataset" : "Try adjusting your search filter");
         ImVec2 subSz = ImGui::CalcTextSize(sub.c_str());
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - subSz.x) * 0.5f);
@@ -326,25 +339,17 @@ private:
         ImGui::EndChild();
     }
 
-    std::string m_tableId;
+    TableOptions m_options;
     std::vector<TableColumn<T>> m_columns;
     std::vector<T> m_items;
     std::vector<int> m_filteredIndices;
 
     FilterPredicate m_filterPredicate;
     std::string m_searchQuery;
-    std::string m_emptyTitle;
-    std::string m_emptySubtitle;
 
     int m_sortColumnIndex = -1;
     bool m_sortAscending = true;
-    float m_customRowHeight = 0.0f;
-    bool m_saveSettings = false;
 };
-
-// Псевдоним для полной обратной совместимости
-template <typename T>
-using VirtualTable = Table<T>;
 
 // Параметры табличной сетки (designated initializers):
 //

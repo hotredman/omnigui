@@ -1,41 +1,50 @@
 #pragma once
 
+#include "ui/components/Scope.hpp"
 #include "ui/components/Button.hpp"
 #include "ui/components/ToolButton.hpp"
 #include "ui/components/UiTheme.hpp"
 #include <imgui.h>
+#include <algorithm>
 
-// Контейнер группы действий в строке таблицы (автоматический UiSize::Mini, изоляция ID и отступы)
-class ActionGroup {
+// Параметры группы действий
+struct ActionGroupOptions {
+    float topOffset = -1.0f;   // базовые px; <0 — выровнять по центру строки таблицы
+};
+
+// Группа действий в строке таблицы (автоматический UiSize::Mini и отступы).
+// RAII-область без собственного ID: в циклах оборачивайте строки в IdScope.
+//
+//     IdScope row(i);
+//     if (ActionGroup actions; actions) {
+//         if (actions.Button({.label = "Edit"})) { ... }
+//         if (actions.ToolButton({.icon = Icon::Trash, .tooltip = "Delete"})) { ... }
+//     }
+class ActionGroup : public Scope {
 public:
-    explicit ActionGroup(int id, float topOffset = -1.0f)
-        : m_pushedId(true)
-    {
+    explicit ActionGroup(const ActionGroupOptions& options = {}) {
         const UiTheme& theme = UiTheme::Get();
-        float offset = (topOffset >= 0.0f) ? topOffset : std::max(0.0f, (theme.table.rowHeight - 26.0f) * 0.5f - theme.table.cellPaddingY);
+        float offset = (options.topOffset >= 0.0f)
+            ? options.topOffset
+            : std::max(0.0f, (theme.table.rowHeight - 26.0f) * 0.5f - theme.table.cellPaddingY);
         if (offset > 0.0f) {
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + theme.Scale(offset));
         }
-        ImGui::PushID(id);
+        m_open = true;
     }
+    ~ActionGroup() = default;
 
-    ~ActionGroup() {
-        if (m_pushedId) {
-            ImGui::PopID();
-        }
-    }
-
-    ActionGroup(const ActionGroup&) = delete;
-    ActionGroup& operator=(const ActionGroup&) = delete;
-
-    bool Button(const char* label, Icon icon = Icon::None, UiVariant variant = UiVariant::Default, float baseWidth = 0.0f) {
+    // size принудительно UiSize::Mini
+    bool Button(ButtonOptions options) {
         BeforeNextItem();
-        return ::Button({.label = label, .variant = variant, .icon = icon, .size = UiSize::Mini, .width = baseWidth});
+        options.size = UiSize::Mini;
+        return ::Button(options);
     }
 
-    bool ToolButton(Icon icon, const char* tooltip = nullptr, UiVariant variant = UiVariant::Default) {
+    bool ToolButton(ToolButtonOptions options) {
         BeforeNextItem();
-        return ::ToolButton({.icon = icon, .variant = variant, .size = UiSize::Mini, .tooltip = tooltip});
+        options.size = UiSize::Mini;
+        return ::ToolButton(options);
     }
 
 private:
@@ -47,6 +56,5 @@ private:
         m_itemCount++;
     }
 
-    bool m_pushedId = false;
     int m_itemCount = 0;
 };

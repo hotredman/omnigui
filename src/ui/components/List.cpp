@@ -2,18 +2,9 @@
 #include <imgui.h>
 #include <algorithm>
 
-List::List() {
-}
-
-List::~List() {
-    if (m_childActive) {
-        End();
-    }
-}
-
-bool List::Begin(const char* id, float width, float height, const ListStyle* customStyle) {
+List::List(const ListOptions& options) {
     const UiTheme& theme = UiTheme::Get();
-    m_style = customStyle ? customStyle : &theme.list;
+    m_style = options.style ? options.style : &theme.list;
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
                              ImGuiWindowFlags_NoResize |
@@ -24,22 +15,22 @@ bool List::Begin(const char* id, float width, float height, const ListStyle* cus
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, theme.Scale(m_style->itemSpacing)));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ImColor(m_style->colBg).Value);
 
-    m_childActive = true;
-    bool isVisible = ImGui::BeginChild(id, ImVec2(width, height), false, flags);
-    return isVisible;
+    const ImVec2 size(options.width > 0.0f ? theme.Scale(options.width) : 0.0f,
+                      options.height > 0.0f ? theme.Scale(options.height) : 0.0f);
+    m_open = ImGui::BeginChild(options.key ? options.key : "##List", size, false, flags);
 }
 
-void List::End() {
-    if (m_childActive) {
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
-        ImGui::PopStyleVar(2);
-        m_childActive = false;
-        m_style = nullptr;
-    }
+List::~List() {
+    // EndChild обязателен независимо от результата BeginChild
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
 }
 
-void List::Header(const char* title, const char* actionIcon, bool* outActionClicked, const char* badgeText) {
+bool List::Header(const char* title, const ListHeaderOptions& options) {
+    const char* actionIcon = options.actionIcon;
+    const char* badgeText = options.badge;
+    bool actionClicked = false;
     const UiTheme& theme = UiTheme::Get();
     const ListStyle& st = m_style ? *m_style : theme.list;
 
@@ -66,7 +57,7 @@ void List::Header(const char* title, const char* actionIcon, bool* outActionClic
         ImGui::SetCursorScreenPos(ImVec2(rightPos, pos.y + (headerH - btnSize) * 0.5f));
         ImGui::PushID(title);
         if (ImGui::SmallButton(actionIcon)) {
-            if (outActionClicked) *outActionClicked = true;
+            actionClicked = true;
         }
         ImGui::PopID();
     }
@@ -87,107 +78,19 @@ void List::Header(const char* title, const char* actionIcon, bool* outActionClic
     theme.PopFont();
     ImGui::SetCursorScreenPos(ImVec2(pos.x, pos.y + headerH));
     ImGui::Dummy(ImVec2(0.0f, 0.0f));
+    return actionClicked;
 }
 
-bool List::Item(const char* id,
-                const char* label,
-                bool isSelected,
-                const char* rightText,
-                Icon icon,
-                ImU32 iconColor,
-                float height)
+bool List::Item(const ListItemOptions& options)
 {
-    const UiTheme& theme = UiTheme::Get();
-    const ListStyle& st = m_style ? *m_style : theme.list;
-
-    float itemH = (height > 0.0f) ? height : theme.Scale(st.itemHeight);
-    float availW = ImGui::GetContentRegionAvail().x;
-    ImVec2 pos = ImGui::GetCursorScreenPos();
-
-    // Невидимая кнопка для захвата ввода
-    ImGui::PushID(id);
-    bool pressed = ImGui::InvisibleButton("##list_item", ImVec2(availW, itemH));
-    ImGui::PopID();
-    bool isHovered = ImGui::IsItemHovered();
-
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-    float radius = theme.Scale(st.cornerRadius);
-
-    // 1. Подложка выделения или наведения
-    if (isSelected) {
-        dl->AddRectFilled(pos, ImVec2(pos.x + availW, pos.y + itemH), st.colItemSelectedBg, radius);
-
-        // Акцентная полоска слева
-        float barW = theme.Scale(st.activeBarWidth);
-        float barPadY = theme.Scale(4.0f);
-        dl->AddRectFilled(ImVec2(pos.x, pos.y + barPadY),
-                          ImVec2(pos.x + barW, pos.y + itemH - barPadY),
-                          st.colActiveBar, barW * 0.5f);
-    } else if (isHovered) {
-        dl->AddRectFilled(pos, ImVec2(pos.x + availW, pos.y + itemH), st.colItemHoverBg, radius);
-    }
-
-    float padX = theme.Scale(st.paddingX);
-    float curX = pos.x + padX;
-
-    // 2. Иконка или цветная LED точка статуса
-    if (icon.IsValid()) {
-        float icoSize = theme.Scale(st.iconSize);
-        ImVec2 icoCenter(curX + icoSize * 0.5f, pos.y + itemH * 0.5f);
-        ImU32 col = (iconColor != 0) ? iconColor : (isSelected ? st.colTextSelected : st.colText);
-        icon.Draw(dl, icoCenter, icoSize, col);
-        curX += icoSize + theme.Scale(8.0f);
-    } else if (iconColor != 0) {
-        float dotRadius = theme.Scale(3.5f);
-        dl->AddCircleFilled(ImVec2(curX + dotRadius, pos.y + itemH * 0.5f), dotRadius, iconColor);
-        curX += dotRadius * 2.0f + theme.Scale(8.0f);
-    }
-
-    // 3. Текст элемента
-    ImFont* font = st.itemFont ? st.itemFont : theme.fontMedium;
-    theme.PushFont(font, st.itemFontSize);
-
-    ImU32 textCol = isSelected ? st.colTextSelected : (isHovered ? st.colText : st.colText);
-    ImVec2 labelSize = ImGui::CalcTextSize(label);
-    float textY = pos.y + (itemH - labelSize.y) * 0.5f;
-
-    // Ограничиваем клипированием ширину текста, если справа есть метка
-    float maxTextW = availW - (curX - pos.x) - padX;
-    if (rightText && rightText[0] != '\0') {
-        ImVec2 rSize = ImGui::CalcTextSize(rightText);
-        maxTextW -= (rSize.x + theme.Scale(10.0f));
-    }
-    if (maxTextW < 20.0f) maxTextW = 20.0f;
-
-    dl->PushClipRect(ImVec2(curX, pos.y), ImVec2(curX + maxTextW, pos.y + itemH), true);
-    dl->AddText(ImVec2(curX, textY), textCol, label);
-    dl->PopClipRect();
-
-    theme.PopFont();
-
-    // 4. Текст справа (время, метрика, доп. инфо)
-    if (rightText && rightText[0] != '\0') {
-        ImFont* subFont = st.subFont ? st.subFont : theme.fontRegular;
-        theme.PushFont(subFont, st.subFontSize);
-        ImVec2 rSize = ImGui::CalcTextSize(rightText);
-        float rX = pos.x + availW - padX - rSize.x;
-        float rY = pos.y + (itemH - rSize.y) * 0.5f;
-        dl->AddText(ImVec2(rX, rY), isSelected ? st.colTextSelected : st.colTextMuted, rightText);
-        theme.PopFont();
-    }
-
-    return pressed;
-}
-
-bool List::ItemEx(const char* id,
-                  const char* label,
-                  const char* sublabel,
-                  bool isSelected,
-                  const char* rightText,
-                  Icon icon,
-                  ImU32 iconColor,
-                  float height)
-{
+    const char* label = options.label ? options.label : "";
+    const char* id = options.key ? options.key : label;
+    const char* sublabel = options.sublabel;
+    const bool isSelected = options.selected;
+    const char* rightText = options.rightText;
+    const Icon icon = options.icon;
+    const ImU32 iconColor = options.iconColor;
+    const float height = options.height > 0.0f ? UiTheme::Get().Scale(options.height) : 0.0f;
     const UiTheme& theme = UiTheme::Get();
     const ListStyle& st = m_style ? *m_style : theme.list;
 

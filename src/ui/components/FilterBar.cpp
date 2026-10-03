@@ -2,22 +2,11 @@
 #include <algorithm>
 #include <cmath>
 
-FilterBar::FilterBar(const char* id, float baseHeight)
-    : m_id(id)
-    , m_baseHeight(baseHeight)
+
+FilterBar::FilterBar(const FilterBarOptions& options)
+    : m_id(options.key)
+    , m_baseHeight(options.height)
 {
-}
-
-FilterBar::~FilterBar() {
-    if (m_open && !m_ended) {
-        End();
-    }
-}
-
-bool FilterBar::Begin() {
-    if (m_open) return m_open;
-    m_ended = false;
-
     const UiTheme& theme = UiTheme::Get();
     float bh = (m_baseHeight > 0.0f) ? m_baseHeight : theme.filterBar.height;
     m_actualHeight = theme.Scale(bh);
@@ -30,20 +19,15 @@ bool FilterBar::Begin() {
     m_rightWidth = *storage->GetFloatRef(m_storageId + 1, theme.Scale(460.0f));
 
     m_open = true;
-    return m_open;
 }
 
-void FilterBar::End() {
-    if (m_ended || !m_open) return;
-
+FilterBar::~FilterBar() {
     const UiTheme& theme = UiTheme::Get();
     // Переводим курсор вниз на высоту панели + стандартный зазор до таблицы
     ImGui::SetCursorPos(ImVec2(m_startPos.x, m_startPos.y + m_actualHeight + theme.SpacingSmall()));
-
-    m_ended = true;
-    m_open = false;
+    // ImGui требует submit-элемента после SetCursorPos, иначе границы окна не растут
+    ImGui::Dummy(ImVec2(0.0f, 0.0f));
 }
-
 float FilterBar::GetStretchWidth(float minWidth) const {
     const UiTheme& theme = UiTheme::Get();
     float gap = theme.Scale(theme.filterBar.stretchGap);
@@ -68,12 +52,13 @@ void FilterBar::NextGroup() {
     ImGui::SameLine(0.0f, theme.Scale(theme.filterBar.groupSpacing));
 }
 
-void FilterBar::Spacing(float spacingPx) {
+void FilterBar::Spacing(float spacing) {
     const UiTheme& theme = UiTheme::Get();
-    ImGui::SameLine(0.0f, theme.Scale(spacingPx));
+    ImGui::SameLine(0.0f, theme.Scale(spacing));
 }
 
-void FilterBar::Label(const char* text, UiVariant variant) {
+void FilterBar::Label(const char* text, const FilterBarLabelOptions& options) {
+    const UiVariant variant = options.variant;
     if (!text || text[0] == '\0') return;
 
     const UiTheme& theme = UiTheme::Get();
@@ -103,26 +88,18 @@ void FilterBar::Label(const char* text, UiVariant variant) {
     ImGui::SameLine(0.0f, theme.Scale(theme.filterBar.labelSpacing));
 }
 
-FilterBar::LeftScope FilterBar::Left() {
-    return LeftScope(this);
-}
-
-FilterBar::RightScope FilterBar::Right() {
-    return RightScope(this);
-}
-
-FilterBar::LeftScope::LeftScope(FilterBar* parent)
-    : m_parent(parent)
-    , m_active(parent && parent->m_open)
+FilterBar::LeftScope::LeftScope(FilterBar& parent)
+    : m_parent(&parent)
 {
-    if (m_active) {
+    m_open = parent.m_open;
+    if (m_open) {
         ImGui::SetCursorPos(m_parent->m_startPos);
         ImGui::BeginGroup();
     }
 }
 
 FilterBar::LeftScope::~LeftScope() {
-    if (m_active && m_parent) {
+    if (m_open) {
         ImGui::EndGroup();
         float w = ImGui::GetItemRectSize().x;
         m_parent->m_leftWidth = w;
@@ -131,30 +108,11 @@ FilterBar::LeftScope::~LeftScope() {
     }
 }
 
-FilterBar::LeftScope::LeftScope(LeftScope&& other) noexcept
-    : m_parent(other.m_parent)
-    , m_active(other.m_active)
+FilterBar::RightScope::RightScope(FilterBar& parent)
+    : m_parent(&parent)
 {
-    other.m_parent = nullptr;
-    other.m_active = false;
-}
-
-FilterBar::LeftScope& FilterBar::LeftScope::operator=(LeftScope&& other) noexcept {
-    if (this != &other) {
-        if (m_active && m_parent) ImGui::EndGroup();
-        m_parent = other.m_parent;
-        m_active = other.m_active;
-        other.m_parent = nullptr;
-        other.m_active = false;
-    }
-    return *this;
-}
-
-FilterBar::RightScope::RightScope(FilterBar* parent)
-    : m_parent(parent)
-    , m_active(parent && parent->m_open)
-{
-    if (m_active) {
+    m_open = parent.m_open;
+    if (m_open) {
         const UiTheme& theme = UiTheme::Get();
         float gap = (m_parent->m_leftWidth > 0.0f) ? theme.Scale(theme.filterBar.stretchGap) : 0.0f;
         float minRightX = m_parent->m_startPos.x + m_parent->m_leftWidth + gap;
@@ -166,30 +124,11 @@ FilterBar::RightScope::RightScope(FilterBar* parent)
 }
 
 FilterBar::RightScope::~RightScope() {
-    if (m_active && m_parent) {
+    if (m_open) {
         ImGui::EndGroup();
         float w = ImGui::GetItemRectSize().x;
         m_parent->m_rightWidth = w;
         ImGuiStorage* storage = ImGui::GetStateStorage();
         *storage->GetFloatRef(m_parent->m_storageId + 1, 0.0f) = w;
     }
-}
-
-FilterBar::RightScope::RightScope(RightScope&& other) noexcept
-    : m_parent(other.m_parent)
-    , m_active(other.m_active)
-{
-    other.m_parent = nullptr;
-    other.m_active = false;
-}
-
-FilterBar::RightScope& FilterBar::RightScope::operator=(RightScope&& other) noexcept {
-    if (this != &other) {
-        if (m_active && m_parent) ImGui::EndGroup();
-        m_parent = other.m_parent;
-        m_active = other.m_active;
-        other.m_parent = nullptr;
-        other.m_active = false;
-    }
-    return *this;
 }

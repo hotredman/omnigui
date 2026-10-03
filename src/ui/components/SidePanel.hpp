@@ -49,7 +49,7 @@ public:
     static float CalcTotalWidth(
         float width,
         bool resizable = false,
-        const SidePanelStyle& style = UiTheme::Get().sidePanel
+        const SidePanelStyle* style = nullptr   // nullptr — стиль из темы
     );
 
 private:
