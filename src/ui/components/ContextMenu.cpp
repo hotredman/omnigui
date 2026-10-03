@@ -9,6 +9,7 @@ ContextMenu::ContextMenu(bool& isOpen, const ContextMenuOptions& options)
     , m_style(options.style ? *options.style : UiTheme::Get().contextMenu)
 {
     ImGui::PushID(&isOpen);
+    m_idPushed = true;
 
     // Флаг «попап уже запрашивался» отличает «только что открыли» от «закрыт кликом снаружи»
     bool* requested = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("##ctx_requested"), false);
@@ -27,11 +28,40 @@ ContextMenu::ContextMenu(bool& isOpen, const ContextMenuOptions& options)
         *requested = true;
     }
 
-    const UiTheme& theme = UiTheme::Get();
     if (options.pos) {
         ImGui::SetNextWindowPos(*options.pos, ImGuiCond_Appearing);
     }
 
+    PushStyle();
+    m_open = ImGui::BeginPopup(kPopupName);
+    if (!m_open) {
+        PopStyle();
+    }
+}
+
+ContextMenu::ContextMenu(LastItemTag, const ContextMenuOptions& options)
+    : m_style(options.style ? *options.style : UiTheme::Get().contextMenu)
+{
+    // Идентичность — последний элемент (правый клик по нему открывает меню)
+    PushStyle();
+    m_open = ImGui::BeginPopupContextItem();
+    if (!m_open) {
+        PopStyle();
+    }
+}
+
+ContextMenu::~ContextMenu() {
+    if (m_open) {
+        ImGui::EndPopup();
+        PopStyle();
+    }
+    if (m_idPushed) {
+        ImGui::PopID();
+    }
+}
+
+void ContextMenu::PushStyle() {
+    const UiTheme& theme = UiTheme::Get();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(theme.Scale(m_style.windowPaddingX), theme.Scale(m_style.windowPaddingY)));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(theme.Scale(8.0f), theme.Scale(m_style.itemSpacingY)));
     ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding, theme.Scale(m_style.cornerRadius));
@@ -39,22 +69,13 @@ ContextMenu::ContextMenu(bool& isOpen, const ContextMenuOptions& options)
 
     ImGui::PushStyleColor(ImGuiCol_PopupBg, m_style.colBg);
     ImGui::PushStyleColor(ImGuiCol_Border, m_style.colBorder);
-
-    m_open = ImGui::BeginPopup(kPopupName);
-    if (!m_open) {
-        ImGui::PopStyleColor(2);
-        ImGui::PopStyleVar(4);
-    }
 }
 
-ContextMenu::~ContextMenu() {
-    if (m_open) {
-        ImGui::EndPopup();
-        ImGui::PopStyleColor(2);
-        ImGui::PopStyleVar(4);
-    }
-    ImGui::PopID();
+void ContextMenu::PopStyle() {
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(4);
 }
+
 void ContextMenu::Header(const std::string& text) {
     if (!m_open) return;
 
@@ -104,7 +125,7 @@ bool ContextMenu::Item(const std::string& label, const MenuItemOptions& options)
     if (ImGui::InvisibleButton("##ctx_item", itemSize)) {
         if (enabled) {
             clicked = true;
-            *m_openRef = false;
+            if (m_openRef) *m_openRef = false;
             ImGui::CloseCurrentPopup();
         }
     }

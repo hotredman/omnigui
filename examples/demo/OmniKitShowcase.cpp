@@ -125,16 +125,6 @@ static bool s_passportEccMemory = true;
 static bool s_passportRdmaEnabled = true;
 static bool s_machineAvx512Enabled = true;
 
-// printf-style formatting into std::string (for TableGrid::CellText and similar)
-static std::string Fmt(const char* format, ...) {
-    char buf[128];
-    va_list args;
-    va_start(args, format);
-    std::vsnprintf(buf, sizeof(buf), format, args);
-    va_end(args);
-    return std::string(buf);
-}
-
 // Formatting helper for clock
 static std::string FormatCurrentClock() {
     auto nowTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -349,7 +339,7 @@ static void RenderHeader(double elapsed) {
                 }
             }
 
-            ImGui::SameLine(0.0f, theme.Scale(6.0f));
+            SameLine(6);
 
             // Theme toggle (Sun / Moon)
             const bool isDark = (theme.mode == ThemeMode::Dark);
@@ -359,10 +349,7 @@ static void RenderHeader(double elapsed) {
                 UiTheme::Get().SetMode(isDark ? ThemeMode::Light : ThemeMode::Dark);
             }
 
-            ImGui::SameLine(0.0f, theme.Scale(10.0f));
-
-            // Align cursor for DeviceStatus with header content baseline
-            ImGui::SetCursorPosY(theme.Scale(theme.header.paddingY));
+            SameLine(10);
 
             const bool running = s_deviceConnected && s_deviceState == DeviceState::Running;
             if (DeviceStatus("Cluster Uplink 07",
@@ -422,7 +409,7 @@ static void RenderHeader(double elapsed) {
 
             if (Carousel carousel("##HeaderTelemetryCarousel", ImVec2(center.Width(), center.Height())); carousel) {
                 for (size_t i = 0; i < s_indicators.size() && i < static_cast<size_t>(s_indicatorsCount); ++i) {
-                    if (i > 0) ImGui::SameLine();
+                    if (i > 0) SameLine();
                     s_indicators[i]->Render();
                 }
             }
@@ -492,23 +479,21 @@ static void RenderSidebar() {
                 }
 
                 // Tooltip
-                if (ImGui::IsItemHovered()) {
-                    ImGui::BeginTooltip();
-                    ImGui::Text("%s", run.title.c_str());
-                    ImGui::TextDisabled("Started: %s | Duration: %.1f s", run.timestamp.c_str(), run.durationS);
-                    ImGui::TextDisabled("Peak: %.1f MB/s | Latency: %.1f ms", run.peakThroughput, run.avgLatency);
+                if (ItemTooltip tip; tip) {
+                    Text(run.title);
+                    Text(Format("Started: %s | Duration: %.1f s", run.timestamp.c_str(), run.durationS), {.role = TextRole::Muted});
+                    Text(Format("Peak: %.1f MB/s | Latency: %.1f ms", run.peakThroughput, run.avgLatency), {.role = TextRole::Muted});
                     Badge(run.statusText, {.variant = run.status});
-                    ImGui::EndTooltip();
                 }
 
-                // Context menu
-                if (ImGui::BeginPopupContextItem()) {
-                    if (ImGui::MenuItem("Open in Analysis")) {
+                // Context menu (right click on the row)
+                if (ContextMenu menu(ContextMenu::OnLastItem); menu) {
+                    if (menu.Item("Open in Analysis")) {
                         s_selectedRunIndex = static_cast<int>(i);
                         s_currentScreen = NavScreen::Processing;
                         BuildOfflineAnalysisData(s_runs[i]);
                     }
-                    if (ImGui::MenuItem("Delete Run", nullptr, false, run.status != UiVariant::Primary)) {
+                    if (menu.Item("Delete Run", {.disabled = run.status == UiVariant::Primary})) {
                         s_runs.erase(s_runs.begin() + i);
                         if (s_selectedRunIndex >= static_cast<int>(s_runs.size())) {
                             s_selectedRunIndex = static_cast<int>(s_runs.size()) - 1;
@@ -516,10 +501,8 @@ static void RenderSidebar() {
                         if (s_selectedRunIndex >= 0) {
                             BuildOfflineAnalysisData(s_runs[s_selectedRunIndex]);
                         }
-                        ImGui::EndPopup();
                         break;
                     }
-                    ImGui::EndPopup();
                 }
             }
             s_sidebarMenu.EndScrollRegion();
@@ -531,16 +514,10 @@ static void RenderSidebar() {
 // 4. SCREEN 1: REMOTE CONTROL & REAL-TIME STREAM
 // ----------------------------------------------------------------------------
 static void RenderRemoteControl() {
-    const UiTheme& theme = UiTheme::Get();
-    float availW = ImGui::GetContentRegionAvail().x;
-    float availH = ImGui::GetContentRegionAvail().y;
-
-    float sideOccupiedW = SidePanel::CalcTotalWidth(260.0f, false);
-    float graphAreaW = std::max(50.0f, availW - sideOccupiedW - theme.SpacingMedium());
+    SplitView split({.sideWidth = 260.0f});
 
     // 1. Left Area: Animated Real-time Chart
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImColor(theme.card.colBg).Value);
-    if (ImGui::BeginChild("##LiveGraphArea", ImVec2(graphAreaW, availH), true)) {
+    if (auto main = split.Main({.cardBackground = true})) {
         // Single combo to select number of graphs to display: 1, 2, 3, 4
         const char* const graphCountOptions[] = {
             "1 Graph",
@@ -550,65 +527,38 @@ static void RenderRemoteControl() {
         };
         Combo(s_realtimeLayout, graphCountOptions, 4, {.width = 160.0f, .key = "graph_count"});
 
-        ImGui::Spacing();
+        Spacer();
 
-        ImVec2 graphSize = ImGui::GetContentRegionAvail();
-        float spacing = theme.SpacingMedium();
-
-        if (s_realtimeLayout == 0) {
-            // 1 Graph: Single chart filling the entire available graph space (Throughput)
-            s_liveChart1.Render("##LiveChart1", graphSize);
-        } else if (s_realtimeLayout == 1) {
-            // 2 Graphs: Dual stacked charts (Top: Throughput, Bottom: Latency)
-            float halfH = std::max(50.0f, (graphSize.y - spacing) * 0.5f);
-            s_liveChart1.Render("##LiveChart1", ImVec2(graphSize.x, halfH));
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + spacing);
-            s_liveChart2.Render("##LiveChart2", ImVec2(graphSize.x, halfH));
-        } else if (s_realtimeLayout == 2) {
-            // 3 Graphs: Top full width (Throughput), Bottom split dual (Left: Latency, Right: Memory)
-            float halfW = std::max(50.0f, (graphSize.x - spacing) * 0.5f);
-            float halfH = std::max(50.0f, (graphSize.y - spacing) * 0.5f);
-
-            s_liveChart1.Render("##LiveChart1", ImVec2(graphSize.x, halfH));
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + spacing);
-            s_liveChart2.Render("##LiveChart2", ImVec2(halfW, halfH));
-            ImGui::SameLine(0.0f, spacing);
-            s_liveChart3.Render("##LiveChart3", ImVec2(halfW, halfH));
-        } else {
-            // 4 Graphs: Quad 2x2 grid
-            // Top: Throughput (left) & Latency (right)
-            // Bottom: Memory (left) & Packets (right)
-            float halfW = std::max(50.0f, (graphSize.x - spacing) * 0.5f);
-            float halfH = std::max(50.0f, (graphSize.y - spacing) * 0.5f);
-
-            s_liveChart1.Render("##LiveChart1", ImVec2(halfW, halfH));
-            ImGui::SameLine(0.0f, spacing);
-            s_liveChart2.Render("##LiveChart2", ImVec2(halfW, halfH));
-
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + spacing);
-            s_liveChart3.Render("##LiveChart3", ImVec2(halfW, halfH));
-            ImGui::SameLine(0.0f, spacing);
-            s_liveChart4.Render("##LiveChart4", ImVec2(halfW, halfH));
+        // Chart tiles: 1 graph - full area; 2 - stacked; 3 - top full width + two below; 4 - 2x2
+        RealtimeChart* const charts[] = { &s_liveChart1, &s_liveChart2, &s_liveChart3, &s_liveChart4 };
+        const char* const chartIds[] = { "##LiveChart1", "##LiveChart2", "##LiveChart3", "##LiveChart4" };
+        const int count = s_realtimeLayout + 1;
+        const int cols = count >= 3 ? 2 : 1;
+        const int rows = count >= 2 ? 2 : 1;
+        GridLayout grid(cols, rows);
+        for (int i = 0; i < count; ++i) {
+            const bool wide = (count == 3 && i == 0);
+            const int col = (count == 3) ? std::max(0, i - 1) : i % cols;
+            const int row = (count == 3) ? (i == 0 ? 0 : 1) : i / cols;
+            if (auto cell = grid.Cell(col, row, wide ? 2 : 1)) {
+                charts[i]->Render(chartIds[i], cell.Size());
+            }
         }
     }
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
-
-    ImGui::SameLine();
 
     // 2. Right Area: SidePanel Remote Control actions
-    if (SidePanel panel("##RemoteSidePanel", 260.0f, SidePanel::Side::Right); panel) {
+    if (auto panel = split.Side()) {
         if (Card actionCard("Stream Actions"); actionCard) {
             if (Button({.label = "START STREAM", .variant = UiVariant::Success, .icon = Icon::Play, .size = UiSize::Large, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Running;
                 s_deviceStreaming = true;
             }
-            ImGui::Spacing();
+            Spacer();
             if (Button({.label = "PAUSE FEED", .variant = UiVariant::Warning, .icon = Icon::Pause, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
             }
-            ImGui::Spacing();
+            Spacer();
             if (Button({.label = "STOP & RESET", .variant = UiVariant::Danger, .icon = Icon::Square, .width = ButtonOptions::Fill})) {
                 s_deviceState = DeviceState::Idle;
                 s_deviceStreaming = false;
@@ -625,14 +575,14 @@ static void RenderRemoteControl() {
             s_liveStartTime = std::chrono::steady_clock::now();
         }
 
-        ImGui::Spacing();
+        Spacer();
 
         if (Card jogCard("Sampling Frequency"); jogCard) {
             static const std::vector<float> freqs = { 20.0f, 50.0f, 100.0f, 250.0f, 500.0f };
             PresetGrid(s_streamRateJog, freqs, {.unit = "Hz", .columns = 3});
         }
 
-        ImGui::Spacing();
+        Spacer();
 
         if (Card calibCard("Baseline & Zero"); calibCard) {
             if (Button({.label = "Tare / Zero Baseline", .variant = UiVariant::Secondary, .icon = Icon::Zero, .width = ButtonOptions::Fill})) {
@@ -644,7 +594,7 @@ static void RenderRemoteControl() {
             }
 
             // Hold button: true only while pressed (Card::HoldButton); streams ~4x faster while held
-            ImGui::Spacing();
+            Spacer();
             s_boostHeld = calibCard.HoldButton({.label = "Hold to Boost Stream", .variant = UiVariant::Info, .icon = Icon::Play,
                                                .col = Col::Full(), .disabled = !s_deviceStreaming});
             Tooltip::OnLastItem(s_deviceStreaming ? "Samples ~4x faster while the button is held"
@@ -657,44 +607,33 @@ static void RenderRemoteControl() {
 // 5. SCREEN 2: OFFLINE DATASET ANALYSIS (AnalysisChart with Zoom & Pan)
 // ----------------------------------------------------------------------------
 static void RenderProcessing() {
-    const UiTheme& theme = UiTheme::Get();
-    float availW = ImGui::GetContentRegionAvail().x;
-    float availH = ImGui::GetContentRegionAvail().y;
-
     const auto& activeRun = s_runs[s_selectedRunIndex];
-    float sideOccupiedW = SidePanel::CalcTotalWidth(280.0f, false);
-    float chartAreaW = std::max(50.0f, availW - sideOccupiedW - theme.SpacingMedium());
+    SplitView split({.sideWidth = 280.0f});
 
     // 1. Left Area: Interactive Zoomable AnalysisChart
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImColor(theme.card.colBg).Value);
-    if (ImGui::BeginChild("##OfflineChartContainer", ImVec2(chartAreaW, availH), true)) {
-        ImGui::TextColored(ImColor(theme.palette.accent).Value, "%s", activeRun.title.c_str());
-        ImGui::SameLine();
+    if (auto main = split.Main({.cardBackground = true})) {
+        Text(activeRun.title, {.variant = UiVariant::Primary});
+        SameLine();
         Badge(activeRun.statusText, {.variant = activeRun.status});
 
-        ImGui::SameLine(chartAreaW - 240.0f * theme.GetScale());
+        AlignRight(240);
         if (Button({.label = "Reset Zoom", .variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
             s_offlineChart.ResetZoom();
         }
-        ImGui::SameLine();
+        SameLine();
         bool majGrid = s_offlineChart.GetOptions().majorGrid;
         if (Button({.label = majGrid ? "Grid: ON" : "Grid: OFF", .variant = UiVariant::Secondary, .size = UiSize::Small})) {
             s_offlineChart.SetMajorGrid(!majGrid);
             s_offlineChart.SetMinorGrid(!majGrid);
         }
 
-        ImGui::Spacing();
+        Spacer();
 
-        ImVec2 chartSz = ImGui::GetContentRegionAvail();
-        s_offlineChart.Render("##OfflineDatasetAnalysisChart", chartSz);
+        s_offlineChart.Render("##OfflineDatasetAnalysisChart", main.Available());
     }
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
-
-    ImGui::SameLine();
 
     // 2. Right Area: Metrics Evaluation & Run Metadata
-    if (SidePanel sideP("##AnalysisSideMetrics", 280.0f, SidePanel::Side::Right); sideP) {
+    if (auto side = split.Side()) {
         if (Card metricsCard("Calculated Indicators"); metricsCard) {
             std::vector<TableGrid::Column> cols = {
                 { "Indicator", ColumnWidthMode::Stretch, 1.0f },
@@ -705,37 +644,37 @@ static void RenderProcessing() {
             opts.height = 170.0f;
             if (TableGrid grid("MetricsTable", cols, opts); grid) {
                 grid.NextRow();
-                grid.SetColumn(0); ImGui::Text("Peak Throughput");
-                grid.SetColumn(1); ImGui::Text("%.1f MB/s", activeRun.peakThroughput);
-                ImGui::SameLine(); TableCell::MetricStatus("ok");
+                grid.SetColumn(0); Text("Peak Throughput");
+                grid.SetColumn(1); Text(Format("%.1f MB/s", activeRun.peakThroughput));
+                SameLine(); TableCell::MetricStatus("ok");
 
                 grid.NextRow();
-                grid.SetColumn(0); ImGui::Text("Mean Latency");
-                grid.SetColumn(1); ImGui::Text("%.1f ms", activeRun.avgLatency);
-                ImGui::SameLine(); TableCell::MetricStatus("ok");
+                grid.SetColumn(0); Text("Mean Latency");
+                grid.SetColumn(1); Text(Format("%.1f ms", activeRun.avgLatency));
+                SameLine(); TableCell::MetricStatus("ok");
 
                 grid.NextRow();
-                grid.SetColumn(0); ImGui::Text("P99 Latency");
-                grid.SetColumn(1); ImGui::Text("%.1f ms", activeRun.p99Latency);
-                ImGui::SameLine(); TableCell::MetricStatus(activeRun.p99Latency > 30.0 ? "manual_needed" : "ok");
+                grid.SetColumn(0); Text("P99 Latency");
+                grid.SetColumn(1); Text(Format("%.1f ms", activeRun.p99Latency));
+                SameLine(); TableCell::MetricStatus(activeRun.p99Latency > 30.0 ? "manual_needed" : "ok");
 
                 grid.NextRow();
-                grid.SetColumn(0); ImGui::Text("Efficiency Factor");
-                grid.SetColumn(1); ImGui::Text("%.1f %%", activeRun.efficiency);
-                ImGui::SameLine(); TableCell::MetricStatus("ok");
+                grid.SetColumn(0); Text("Efficiency Factor");
+                grid.SetColumn(1); Text(Format("%.1f %%", activeRun.efficiency));
+                SameLine(); TableCell::MetricStatus("ok");
 
                 grid.NextRow();
-                grid.SetColumn(0); ImGui::Text("Anomaly Classifier");
-                grid.SetColumn(1); ImGui::Text("%s", activeRun.anomaly.c_str());
-                ImGui::SameLine(); TableCell::MetricStatus(activeRun.anomaly == "Nominal" ? "ok" : "empty");
+                grid.SetColumn(0); Text("Anomaly Classifier");
+                grid.SetColumn(1); Text(activeRun.anomaly);
+                SameLine(); TableCell::MetricStatus(activeRun.anomaly == "Nominal" ? "ok" : "empty");
             }
         }
 
-        ImGui::Spacing();
+        Spacer();
 
         if (Card metaCard("Run Metadata"); metaCard) {
             ValueDisplay(static_cast<double>(activeRun.pointCount), {.unit = "points", .format = "%.0f", .compact = true});
-            ImGui::Spacing();
+            Spacer();
             ValueDisplay(activeRun.durationS, {.unit = "s", .format = "%.1f", .compact = true});
         }
     }
@@ -745,7 +684,6 @@ static void RenderProcessing() {
 // 6. SCREEN 3: SYSTEM & HARDWARE CONFIGURATION
 // ----------------------------------------------------------------------------
 static void RenderMachine() {
-    const UiTheme& theme = UiTheme::Get();
     const char* machineTabs[] = {
         "Networking",
         "Compute Arch",
@@ -758,9 +696,9 @@ static void RenderMachine() {
     };
     TabBar(machineTabs, s_machineTab);
 
-    ImGui::Spacing();
+    Spacer();
 
-    ImGui::BeginChild("##MachineTabScrollRegion", ImVec2(0, 0), false, ImGuiWindowFlags_None);
+    if (Panel tab({.key = "machine_tab", .border = false}); tab)
     {
         switch (s_machineTab) {
             case 0: { // Networking
@@ -789,9 +727,9 @@ static void RenderMachine() {
             case 2: { // AVX-512 SIMD
                 if (Card simdCard("Vectorization Engine Parameters"); simdCard) {
                     Toggle(s_machineAvx512Enabled, {.label = "Enable AVX-512 FPU Instructions", .sublabel = "512-bit wide vector matrix operations"});
-                    ImGui::Spacing();
+                    Spacer();
                     InputField(s_passportMaxThroughput, {.label = "Rated Maximum Bandwidth", .unit = "MB/s"});
-                    ImGui::Spacing();
+                    Spacer();
                     Button({.label = "Commit SIMD Pipeline", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
@@ -808,7 +746,7 @@ static void RenderMachine() {
             case 4: { // Storage NVMe
                 if (Card storageCard("Zero-Copy Disk Writer"); storageCard) {
                     InputField(s_replicationFactor, {.label = "Replication Factor"});
-                    ImGui::Spacing();
+                    Spacer();
                     Button({.label = "Sync Storage Buffers", .variant = UiVariant::Primary, .icon = Icon::Check, .width = 240.0f});
                 }
                 break;
@@ -832,7 +770,6 @@ static void RenderMachine() {
             }
         }
     }
-    ImGui::EndChild();
 }
 
 // ----------------------------------------------------------------------------
@@ -842,7 +779,7 @@ static void RenderArchive() {
     const UiTheme& theme = UiTheme::Get();
     if (Card archiveCard("Telemetry Dataset Archive"); archiveCard) {
         SearchInput(s_searchArchive, {.hint = "Search datasets by name or run ID...", .key = "archive"});
-        ImGui::Spacing();
+        Spacer();
 
         std::vector<TableGrid::Column> cols = {
             { "ID", ColumnWidthMode::Fixed, 65.0f },
@@ -866,8 +803,8 @@ static void RenderArchive() {
                 grid.SetColumn(0); grid.CellText(run.id);
                 grid.SetColumn(1); grid.CellText(run.title);
                 grid.SetColumn(2); grid.CellText(run.timestamp, theme.palette.textMuted);
-                grid.SetColumn(3); grid.CellText(Fmt("%.1f s", run.durationS));
-                grid.SetColumn(4); grid.CellText(Fmt("%d", run.pointCount));
+                grid.SetColumn(3); grid.CellText(Format("%.1f s", run.durationS));
+                grid.SetColumn(4); grid.CellText(Format("%d", run.pointCount));
                 grid.SetColumn(5); Badge(run.statusText, {.variant = run.status});
                 grid.SetColumn(6);
                 if (Button({.label = "View", .variant = UiVariant::Secondary, .size = UiSize::Mini, .width = 70.0f,
@@ -885,35 +822,29 @@ static void RenderArchive() {
 // 8. SCREEN 5: EVENT JOURNAL (Terminal Log Stream)
 // ----------------------------------------------------------------------------
 static void RenderJournal() {
-    const UiTheme& theme = UiTheme::Get();
     if (Card journalCard("Real-Time Event & Operator Journal"); journalCard) {
-        ImGui::Checkbox("Auto-scroll", &s_autoScrollJournal);
-        ImGui::SameLine();
+        Toggle(s_autoScrollJournal, {.label = "Auto-scroll"});
+        SameLine();
         SearchInput(s_searchJournal, {.hint = "Filter log entries...", .width = 220, .key = "journal"});
-        ImGui::SameLine();
+        SameLine();
         if (Button({.label = "Clear Journal", .variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
             s_journalLogs.clear();
         }
 
-        ImGui::Spacing();
+        Spacer();
 
-        ImGui::BeginChild("JournalTerminalShell", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-        {
+        if (Panel log({.key = "journal_log", .scroll = PanelScroll::Always, .stickToEnd = s_autoScrollJournal}); log) {
             for (const auto& entry : s_journalLogs) {
                 if (!s_searchJournal.empty() && entry.message.find(s_searchJournal) == std::string::npos) {
                     continue;
                 }
-                ImGui::TextColored(ImColor(theme.palette.textMuted).Value, "[%s]", entry.timeStr.c_str());
-                ImGui::SameLine();
+                Text(Format("[%s]", entry.timeStr.c_str()), {.role = TextRole::Muted});
+                SameLine();
                 Badge(entry.level.c_str(), {.variant = entry.variant});
-                ImGui::SameLine();
-                ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", entry.message.c_str());
-            }
-            if (s_autoScrollJournal && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-                ImGui::SetScrollHereY(1.0f);
+                SameLine();
+                Text(entry.message);
             }
         }
-        ImGui::EndChild();
     }
 }
 
@@ -923,15 +854,15 @@ static void RenderJournal() {
 static void RenderPassport() {
     if (Card passportCard("Node Hardware Specification & Identity"); passportCard) {
         InputField(s_passportNodeId, {.label = "Node Unique Identifier"});
-        ImGui::Spacing();
+        Spacer();
         InputField(s_passportFwRev, {.label = "Firmware / Runtime Revision"});
-        ImGui::Spacing();
+        Spacer();
         InputField(s_passportSimdArch, {.label = "SIMD Architecture Extensions"});
-        ImGui::Spacing();
+        Spacer();
         InputField(s_passportMaxThroughput, {.label = "Rated Maximum Bandwidth", .unit = "MB/s"});
-        ImGui::Spacing();
+        Spacer();
         InputField(s_passportMinLatency, {.label = "Design Latency Lower Bound", .unit = "ms"});
-        ImGui::Spacing();
+        Spacer();
         Toggle(s_passportEccMemory, {.label = "ECC Memory Scrubbing Active", .sublabel = "Hardware parity correction enabled"});
         Toggle(s_passportRdmaEnabled, {.label = "Direct Memory Access (RDMA)", .sublabel = "Kernel bypass zero-copy network buffers"});
     }
@@ -941,7 +872,6 @@ static void RenderPassport() {
 // 10. SCREEN 7: BATCH ANALYTICS (Series Evaluation Matrix)
 // ----------------------------------------------------------------------------
 static void RenderSeries() {
-    const UiTheme& theme = UiTheme::Get();
     if (Card seriesCard("Cluster Nodes Comparative Analytics"); seriesCard) {
         std::vector<TableGrid::Column> cols = {
             { "Node Identifier", ColumnWidthMode::Stretch, 1.0f },
@@ -956,11 +886,11 @@ static void RenderSeries() {
             for (size_t i = 0; i < s_runs.size(); ++i) {
                 const auto& run = s_runs[i];
                 grid.NextRow(static_cast<int>(i));
-                grid.SetColumn(0); ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", run.title.c_str());
-                grid.SetColumn(1); ImGui::Text("%.1f", run.peakThroughput);
-                grid.SetColumn(2); ImGui::Text("%.2f", run.avgLatency);
-                grid.SetColumn(3); ImGui::Text("%.2f", run.p99Latency);
-                grid.SetColumn(4); ImGui::Text("%.1f %%", run.efficiency);
+                grid.SetColumn(0); Text(run.title);
+                grid.SetColumn(1); Text(Format("%.1f", run.peakThroughput));
+                grid.SetColumn(2); Text(Format("%.2f", run.avgLatency));
+                grid.SetColumn(3); Text(Format("%.2f", run.p99Latency));
+                grid.SetColumn(4); Text(Format("%.1f %%", run.efficiency));
                 grid.SetColumn(5); Badge(run.statusText, {.variant = run.status});
             }
         }

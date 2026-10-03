@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ui/components/Scope.hpp"
 #include <imgui.h>
 
 // ============================================================================
@@ -14,3 +15,21 @@ inline void OnLastItem(const char* text) {
 }
 
 }  // namespace Tooltip
+
+// Развёрнутая подсказка для последнего элемента (RAII-область): содержимое —
+// любые компоненты. Для простого текста используйте Tooltip::OnLastItem.
+//
+//     Button({.label = "Run"});
+//     if (ItemTooltip tip; tip) {
+//         Text("Started: 10:14");
+//         Badge("COMPLETED", {.variant = UiVariant::Success});
+//     }
+class ItemTooltip : public Scope {
+public:
+    ItemTooltip() {
+        if (ImGui::IsItemHovered()) m_open = ImGui::BeginTooltip();
+    }
+    ~ItemTooltip() {
+        if (m_open) ImGui::EndTooltip();
+    }
+};

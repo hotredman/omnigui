@@ -31,10 +31,21 @@ struct MenuItemOptions {
 //         menu.Header("SCALE");
 //         if (menu.Item("100%", {.selected = true})) { ... }
 //     }
+//
+// Второй режим — контекстное меню последнего элемента (правый клик), флаг не нужен:
+//
+//     s_sidebarMenu.Item(...);
+//     if (ContextMenu menu(ContextMenu::OnLastItem); menu) {
+//         if (menu.Item("Delete")) { ... }
+//     }
 // ============================================================================
 class ContextMenu : public Scope {
 public:
+    struct LastItemTag {};
+    static constexpr LastItemTag OnLastItem{};
+
     explicit ContextMenu(bool& isOpen, const ContextMenuOptions& options = {});
+    explicit ContextMenu(LastItemTag, const ContextMenuOptions& options = {});
     ~ContextMenu();
 
     // Компоненты меню
@@ -43,7 +54,11 @@ public:
     void Separator();
 
 private:
-    bool* m_openRef = nullptr;
+    void PushStyle();
+    void PopStyle();
+
+    bool* m_openRef = nullptr;    // nullptr в режиме OnLastItem
+    bool m_idPushed = false;
     ContextMenuStyle m_style;
     int m_itemCounter = 0;
 };

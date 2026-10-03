@@ -29,3 +29,9 @@ struct TextOptions {
 // Выводит строку текста в текущую позицию раскладки
 void Text(const char* text, const TextOptions& options = {});
 void Text(const std::string& text, const TextOptions& options = {});
+
+// printf-форматирование в std::string: Text(Format("%.1f MB/s", v), {.role = TextRole::Muted})
+#if defined(__GNUC__)
+__attribute__((format(printf, 1, 2)))
+#endif
+std::string Format(const char* format, ...);

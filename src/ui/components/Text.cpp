@@ -1,5 +1,7 @@
 #include "ui/components/Text.hpp"
 #include <cmath>
+#include <cstdarg>
+#include <cstdio>
 
 namespace {
 
@@ -67,4 +69,20 @@ void Text(const char* text, const TextOptions& o) {
 
 void Text(const std::string& text, const TextOptions& options) {
     Text(text.c_str(), options);
+}
+
+std::string Format(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    va_list copy;
+    va_copy(copy, args);
+    const int len = std::vsnprintf(nullptr, 0, format, copy);
+    va_end(copy);
+    std::string out;
+    if (len > 0) {
+        out.resize(static_cast<size_t>(len));
+        std::vsnprintf(out.data(), out.size() + 1, format, args);
+    }
+    va_end(args);
+    return out;
 }

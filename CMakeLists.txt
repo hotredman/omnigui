@@ -73,6 +73,7 @@ set(OMNIKIT_SOURCES
     src/ui/components/ItemRow.cpp
     src/ui/components/Text.cpp
     src/ui/components/List.cpp
+    src/ui/components/Panel.cpp
     src/ui/components/PresetGrid.cpp
     src/ui/components/SearchInput.cpp
     src/ui/components/Sidebar.cpp

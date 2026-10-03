@@ -13,6 +13,9 @@
 #include "ui/components/FlowLayout.hpp"
 #include "ui/components/GridLayout.hpp"
 #include "ui/components/ContentArea.hpp"
+#include "ui/components/Layout.hpp"
+#include "ui/components/Panel.hpp"
+#include "ui/components/SplitView.hpp"
 #include "ui/components/PresetGrid.hpp"
 
 // Core Widgets
