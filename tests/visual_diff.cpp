@@ -1,3 +1,4 @@
+#include "core/Assets.hpp"
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -98,18 +99,18 @@ int main(int argc, char* argv[]) {
 
     ImGui::StyleColorsDark();
 
-    const char* font_path = "C:/Windows/Fonts/segoeui.ttf";
+    const std::string font_path = Assets::DefaultFontPath();
     ImFontConfig cfg;
     cfg.OversampleH = 1;
     cfg.OversampleV = 1;
-    io.Fonts->AddFontFromFileTTF(font_path, 18.0f, &cfg, io.Fonts->GetGlyphRangesCyrillic());
+    io.Fonts->AddFontFromFileTTF(font_path.c_str(), 18.0f, &cfg, io.Fonts->GetGlyphRangesCyrillic());
 
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
     ImGuiExt::IRenderer* vector_renderer = ImGuiExt::CreateThorVGRenderer();
     vector_renderer->Init(width, height);
-    vector_renderer->LoadFontFile(font_path);
+    vector_renderer->LoadFontFile(font_path.c_str());
 
     // Warm-up 3 frames so ImGui window sizes and positions settle
     for (int i = 0; i < 3; ++i) {

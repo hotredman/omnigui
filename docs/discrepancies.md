@@ -12,12 +12,12 @@
 | Metric | Value |
 | :--- | :---: |
 | Frame Resolution | **1280 x 720** (921600 px) |
-| Exact Match (RGB diff = 0) | **569865** (61.83%) |
-| Within AA Tolerance (diff <= 32) | **347381** (37.69%) |
-| **Total Visual Match** | **917246** (**99.53%**) |
-| Beyond AA Tolerance | **4354** (0.47%) |
-| Average Channel Discrepancy | **0.92 / 255** |
-| Maximum Channel Discrepancy | **224 / 255** |
+| Exact Match (RGB diff = 0) | **569606** (61.81%) |
+| Within AA Tolerance (diff <= 32) | **345697** (37.51%) |
+| **Total Visual Match** | **915303** (**99.32%**) |
+| Beyond AA Tolerance | **6297** (0.68%) |
+| Average Channel Discrepancy | **1.27 / 255** |
+| Maximum Channel Discrepancy | **239 / 255** |
 
 ## 3. Discrepancy Analysis
 

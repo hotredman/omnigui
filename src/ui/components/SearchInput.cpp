@@ -1,5 +1,6 @@
 #include "ui/components/SearchInput.hpp"
 #include "ui/components/ToolButton.hpp"
+#include "ui/components/Utf8Text.hpp"
 #include <imgui.h>
 #include <algorithm>
 
@@ -37,7 +38,7 @@ bool SearchInput(std::string& query, const SearchInputOptions& options) {
     theme.PushFont(m.font, m.fontSize);
 
     char buf[256];
-    strncpy_s(buf, sizeof(buf), query.c_str(), _TRUNCATE);
+    CopyTruncated(buf, sizeof(buf), query);
 
     bool changed = false;
     if (ImGui::InputTextWithHint("##input", hint ? hint : "Search...", buf, sizeof(buf))) {

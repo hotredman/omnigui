@@ -83,7 +83,7 @@ public:
     // Text & font
     virtual bool LoadFont(const char* name, const void* data, size_t size) = 0;
     virtual bool LoadFontFile(const char* path) = 0;
-    virtual void DrawText(const char* text_utf8, float x, float y, Color col, const char* font_name = nullptr, float font_size = 0.0f, float wrap_width = 0.0f) = 0;
+    virtual void DrawTextUtf8(const char* text_utf8, float x, float y, Color col, const char* font_name = nullptr, float font_size = 0.0f, float wrap_width = 0.0f) = 0;
     virtual bool MeasureGlyph(const char* utf8_char, const char* font_name, float font_size, GlyphMetricsInfo& out_metrics) = 0;
     virtual bool MeasureText(const char* text_utf8, const char* font_name, float font_size, float& out_w, float& out_h) = 0;
 

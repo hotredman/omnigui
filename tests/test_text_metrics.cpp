@@ -1,3 +1,4 @@
+#include "core/Assets.hpp"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -34,7 +35,7 @@ int main() {
     ImGuiContext* ctx = ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
-    const char* font_path = "C:/Windows/Fonts/segoeui.ttf";
+    const std::string font_path = Assets::DefaultFontPath();
     float font_size = 18.0f;
 
     ImFontConfig cfg;
@@ -43,12 +44,8 @@ int main() {
     cfg.PixelSnapH = false;
 
     // Build with full Cyrillic + Latin glyph ranges
-    ImFont* font = io.Fonts->AddFontFromFileTTF(font_path, font_size, &cfg, io.Fonts->GetGlyphRangesCyrillic());
-    if (!font) {
-        // Fallback to Arial if Segoe UI isn't available
-        font_path = "C:/Windows/Fonts/arial.ttf";
-        font = io.Fonts->AddFontFromFileTTF(font_path, font_size, &cfg, io.Fonts->GetGlyphRangesCyrillic());
-    }
+    ImFont* font = font_path.empty() ? nullptr
+        : io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_size, &cfg, io.Fonts->GetGlyphRangesCyrillic());
 
     if (!font) {
         std::cerr << "[ERROR] Failed to load TTF font for ImGui\n";
@@ -69,7 +66,7 @@ int main() {
         return 1;
     }
 
-    bool font_loaded = renderer->LoadFontFile(font_path);
+    bool font_loaded = renderer->LoadFontFile(font_path.c_str());
     if (!font_loaded) {
         std::cerr << "[ERROR] Failed to load font in ThorVG: " << font_path << "\n";
         delete renderer;

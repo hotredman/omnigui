@@ -4,38 +4,14 @@
 #include <algorithm>
 #include <string>
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#endif
-
 UiTheme& UiTheme::Get() {
     static UiTheme instance;
     return instance;
 }
 
 UiTheme::UiTheme() {
-    scale = SystemScale();
+    scale = 1.0f;   // масштаб задаёт приложение (SetScale), библиотека ОС не опрашивает
     ApplyPalette();
-}
-
-float UiTheme::SystemScale() {
-#ifdef _WIN32
-    // Реальный DPI монитора из настроек Windows
-    HKEY hKey;
-    if (RegOpenKeyExA(HKEY_CURRENT_USER, "Control Panel\\Desktop\\WindowMetrics", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-        DWORD dpi = 0;
-        DWORD size = sizeof(dpi);
-        const LONG status = RegQueryValueExA(hKey, "AppliedDPI", nullptr, nullptr, reinterpret_cast<LPBYTE>(&dpi), &size);
-        RegCloseKey(hKey);
-        if (status == ERROR_SUCCESS && dpi >= 96 && dpi <= 384) {
-            return static_cast<float>(dpi) / 96.0f;
-        }
-    }
-#endif
-    return 1.0f;
 }
 
 void UiTheme::SetMode(ThemeMode m) {
@@ -294,7 +270,7 @@ void UiTheme::ApplyPalette() {
 void UiTheme::LoadFonts() {
     ImGuiIO& io = ImGui::GetIO();
 
-    auto loadTypeface = [&](const std::string& assetRelPath, const std::string& fallbackPath) -> ImFont* {
+    auto loadTypeface = [&](const std::string& assetRelPath) -> ImFont* {
         std::string fullPath = Assets::Resolve(assetRelPath);
         ImFont* font = nullptr;
         // В Dear ImGui 1.92+ номинальный размер 16px задает font->LegacySize.
@@ -302,15 +278,12 @@ void UiTheme::LoadFonts() {
         if (!fullPath.empty()) {
             font = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), 16.0f);
         }
-        if (!font && !fallbackPath.empty()) {
-            font = io.Fonts->AddFontFromFileTTF(fallbackPath.c_str(), 16.0f);
-        }
         return font;
     };
 
-    fontRegular = loadTypeface("fonts/Roboto-Regular.ttf", "C:\\Windows\\Fonts\\segoeui.ttf");
-    fontMedium  = loadTypeface("fonts/Roboto-Medium.ttf", "C:\\Windows\\Fonts\\segoeuib.ttf");
-    fontBold    = loadTypeface("fonts/Roboto-Bold.ttf", "C:\\Windows\\Fonts\\segoeuib.ttf");
+    fontRegular = loadTypeface("fonts/Roboto-Regular.ttf");
+    fontMedium  = loadTypeface("fonts/Roboto-Medium.ttf");
+    fontBold    = loadTypeface("fonts/Roboto-Bold.ttf");
 
     if (!fontRegular) fontRegular = io.Fonts->AddFontDefault();
     if (!fontMedium)  fontMedium  = fontRegular;

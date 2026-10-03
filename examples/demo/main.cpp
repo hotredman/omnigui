@@ -5,11 +5,8 @@
 #include <iomanip>
 #include <cmath>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <psapi.h>
-#endif
+#include "core/Assets.hpp"
+#include "core/ProcessStats.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -48,28 +45,15 @@ struct PerformanceMetrics {
     uint64_t display_skipped_frames = 0;
     std::chrono::steady_clock::time_point last_display_update_time{};
 
-#ifdef _WIN32
-    ULARGE_INTEGER last_kernel_time{0};
-    ULARGE_INTEGER last_user_time{0};
     std::chrono::steady_clock::time_point last_cpu_check_time{};
+    double last_process_cpu_sec = 0.0;
     int num_processors = 1;
-#endif
 
     void Init() {
         last_display_update_time = std::chrono::steady_clock::now();
-#ifdef _WIN32
-        SYSTEM_INFO sys_info;
-        GetSystemInfo(&sys_info);
-        num_processors = (int)sys_info.dwNumberOfProcessors;
-
-        FILETIME ftCreation, ftExit, ftKernel, ftUser;
-        GetProcessTimes(GetCurrentProcess(), &ftCreation, &ftExit, &ftKernel, &ftUser);
-        last_kernel_time.LowPart = ftKernel.dwLowDateTime;
-        last_kernel_time.HighPart = ftKernel.dwHighDateTime;
-        last_user_time.LowPart = ftUser.dwLowDateTime;
-        last_user_time.HighPart = ftUser.dwHighDateTime;
+        num_processors = ProcessStats::ProcessorCount();
+        last_process_cpu_sec = ProcessStats::ProcessCpuSeconds();
         last_cpu_check_time = std::chrono::steady_clock::now();
-#endif
     }
 
     void Update(double frame_time_ms, double work_time_ms, double gpu_time_ms, double current_fps) {
@@ -96,36 +80,19 @@ struct PerformanceMetrics {
             }
         }
 
-#ifdef _WIN32
-        PROCESS_MEMORY_COUNTERS_EX pmc;
-        if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
-            ram_working_set_mb = (double)pmc.WorkingSetSize / (1024.0 * 1024.0);
-            ram_peak_working_set_mb = (double)pmc.PeakWorkingSetSize / (1024.0 * 1024.0);
-        }
+        const ProcessStats::Memory mem = ProcessStats::GetMemory();
+        ram_working_set_mb = mem.workingSetMb;
+        ram_peak_working_set_mb = mem.peakWorkingSetMb;
 
         double elapsed_sec = std::chrono::duration<double>(now - last_cpu_check_time).count();
         if (elapsed_sec >= 0.5) {
-            FILETIME ftCreation, ftExit, ftKernel, ftUser;
-            if (GetProcessTimes(GetCurrentProcess(), &ftCreation, &ftExit, &ftKernel, &ftUser)) {
-                ULARGE_INTEGER cur_kernel, cur_user;
-                cur_kernel.LowPart = ftKernel.dwLowDateTime;
-                cur_kernel.HighPart = ftKernel.dwHighDateTime;
-                cur_user.LowPart = ftUser.dwLowDateTime;
-                cur_user.HighPart = ftUser.dwHighDateTime;
-
-                ULONGLONG kernel_diff = cur_kernel.QuadPart - last_kernel_time.QuadPart;
-                ULONGLONG user_diff = cur_user.QuadPart - last_user_time.QuadPart;
-                ULONGLONG total_diff = kernel_diff + user_diff;
-
-                double proc_time_sec = (double)total_diff / 10000000.0;
-                cpu_usage_percent = (proc_time_sec / (elapsed_sec * num_processors)) * 100.0;
-
-                last_kernel_time = cur_kernel;
-                last_user_time = cur_user;
+            const double cur_cpu_sec = ProcessStats::ProcessCpuSeconds();
+            if (cur_cpu_sec >= 0.0) {
+                cpu_usage_percent = ((cur_cpu_sec - last_process_cpu_sec) / (elapsed_sec * num_processors)) * 100.0;
+                last_process_cpu_sec = cur_cpu_sec;
                 last_cpu_check_time = now;
             }
         }
-#endif
     }
 };
 
@@ -162,20 +129,14 @@ struct BenchmarkSession {
     std::vector<BenchmarkSample> samples;
     std::vector<BenchmarkResult> all_results;
 
-#ifdef _WIN32
-    FILETIME start_kernel_time{0, 0};
-    FILETIME start_user_time{0, 0};
-#endif
+    double start_thread_cpu_sec = -1.0;
 
     void Start(const std::string& session_name, double duration) {
         name = session_name;
         duration_sec = duration;
         samples.clear();
         samples.reserve((size_t)(duration * 200));
-#ifdef _WIN32
-        FILETIME ftCreation, ftExit;
-        GetThreadTimes(GetCurrentThread(), &ftCreation, &ftExit, &start_kernel_time, &start_user_time);
-#endif
+        start_thread_cpu_sec = ProcessStats::ThreadCpuSeconds();
         start_time = std::chrono::steady_clock::now();
         running = true;
         std::cout << "\n>>> Starting benchmark: " << name << " (" << duration_sec << "s) <<<\n";
@@ -211,18 +172,11 @@ struct BenchmarkSession {
 
         double thread_cpu_time_ms = 0.0;
         double thread_cpu_percent = 0.0;
-#ifdef _WIN32
-        FILETIME ftCreation, ftExit, cur_kernel, cur_user;
-        GetThreadTimes(GetCurrentThread(), &ftCreation, &ftExit, &cur_kernel, &cur_user);
-        ULARGE_INTEGER sk, su, ck, cu;
-        sk.LowPart = start_kernel_time.dwLowDateTime; sk.HighPart = start_kernel_time.dwHighDateTime;
-        su.LowPart = start_user_time.dwLowDateTime;   su.HighPart = start_user_time.dwHighDateTime;
-        ck.LowPart = cur_kernel.dwLowDateTime;         ck.HighPart = cur_kernel.dwHighDateTime;
-        cu.LowPart = cur_user.dwLowDateTime;           cu.HighPart = cur_user.dwHighDateTime;
-        ULONGLONG thread_time_100ns = (ck.QuadPart - sk.QuadPart) + (cu.QuadPart - su.QuadPart);
-        thread_cpu_time_ms = (double)thread_time_100ns / 10000.0;
-        thread_cpu_percent = (thread_cpu_time_ms / (actual_duration * 1000.0)) * 100.0;
-#endif
+        const double cur_thread_cpu_sec = ProcessStats::ThreadCpuSeconds();
+        if (cur_thread_cpu_sec >= 0.0 && start_thread_cpu_sec >= 0.0) {
+            thread_cpu_time_ms = (cur_thread_cpu_sec - start_thread_cpu_sec) * 1000.0;
+            thread_cpu_percent = (thread_cpu_time_ms / (actual_duration * 1000.0)) * 100.0;
+        }
 
         size_t rendered_frames = 0;
         double sum_cpu = 0, sum_ram = 0, sum_worktime = 0, sum_totaltime = 0, sum_gputime = 0;
@@ -552,17 +506,14 @@ int main(int argc, char* argv[]) {
     style.ScaleAllSizes(main_scale);
 
     // Load clean TrueType font supporting Cyrillic + Latin glyph ranges
-    const char* font_path = "C:/Windows/Fonts/segoeui.ttf";
+    const std::string font_path = Assets::Resolve("fonts/Roboto-Regular.ttf");
     float font_size = 19.0f * main_scale;
     ImFontConfig cfg;
     cfg.OversampleH = 1;
     cfg.OversampleV = 1;
     cfg.PixelSnapH = false;
-    ImFont* font = io.Fonts->AddFontFromFileTTF(font_path, font_size, &cfg, io.Fonts->GetGlyphRangesCyrillic());
-    if (!font) {
-        font_path = "C:/Windows/Fonts/arial.ttf";
-        font = io.Fonts->AddFontFromFileTTF(font_path, font_size, &cfg, io.Fonts->GetGlyphRangesCyrillic());
-    }
+    ImFont* font = font_path.empty() ? nullptr
+        : io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_size, &cfg, io.Fonts->GetGlyphRangesCyrillic());
     if (!font) {
         font = io.Fonts->AddFontDefault();
     }
@@ -593,8 +544,8 @@ int main(int argc, char* argv[]) {
     int init_fb_w = 0, init_fb_h = 0;
     SDL_GetRenderOutputSize(renderer, &init_fb_w, &init_fb_h);
     vector_renderer->Init(init_fb_w, init_fb_h);
-    if (font) {
-        vector_renderer->LoadFontFile(font_path);
+    if (font && !font_path.empty()) {
+        vector_renderer->LoadFontFile(font_path.c_str());
     }
     ImGuiExt::SetVectorInterception(use_vector_backend);
 

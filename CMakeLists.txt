@@ -1,8 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
 project(omnigui CXX C)
 
-set(CMAKE_CXX_STANDARD 17)
+# Единый стандарт C++20 для всего проекта (designated initializers в опциях компонентов)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Одноконфигурационные генераторы (Ninja, Makefiles): по умолчанию Release
+if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
+# Исходники в UTF-8 (русские комментарии и литералы): MSVC иначе читает их в ANSI-кодовой странице
+if (MSVC)
+    add_compile_options(/utf-8 /Zc:__cplusplus)
+endif()
 
 # --- SDL3 (submodule) ---
 set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
@@ -50,6 +61,7 @@ endif()
 # --- OmniKit: Modern High-Level UI Component Library & Design System ---
 set(OMNIKIT_SOURCES
     src/core/Assets.cpp
+    src/core/ProcessStats.cpp
     src/core/units/Units.cpp
     src/ui/components/Badge.cpp
     src/ui/components/Button.cpp
@@ -94,8 +106,7 @@ set(OMNIKIT_SOURCES
 )
 
 add_library(omnikit STATIC ${OMNIKIT_SOURCES})
-# C++20 нужен ради designated initializers в опциях компонентов: Button("Save", {.variant = ...});
-# остальной код (в т.ч. сторонний) остаётся на 17
+# C++20 нужен ради designated initializers в опциях компонентов: Button({.label = "Save"});
 target_compile_features(omnikit PUBLIC cxx_std_20)
 target_include_directories(omnikit PUBLIC src)
 target_link_libraries(omnikit PUBLIC imgui)
@@ -173,6 +184,14 @@ if (NOT EMSCRIPTEN)
         tests/test_dom.cpp
     )
     target_link_libraries(test_dom PRIVATE imthorgui)
+
+    # --- ctest: те же проверки, что в scripts/run_tests.cmd ---
+    enable_testing()
+    add_test(NAME frame_dedup COMMAND test_frame_dedup)
+    add_test(NAME text_metrics COMMAND test_text_metrics)
+    add_test(NAME visual_diff COMMAND visual_diff)
+    add_test(NAME lttb COMMAND test_lttb)
+    add_test(NAME modal COMMAND test_modal)
 
 else()
     # ========================================================

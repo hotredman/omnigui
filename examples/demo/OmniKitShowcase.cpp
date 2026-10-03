@@ -1,5 +1,6 @@
 #include "OmniKitShowcase.hpp"
 #include "omnikit.hpp"
+#include "core/TimeUtil.hpp"
 #include <imgui.h>
 
 #include <cmath>
@@ -128,11 +129,7 @@ static bool s_machineAvx512Enabled = true;
 static std::string FormatCurrentClock() {
     auto nowTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::tm localTm{};
-#if defined(_WIN32)
-    localtime_s(&localTm, &nowTime);
-#else
-    localtime_r(&nowTime, &localTm);
-#endif
+    LocalTime(nowTime, localTm);
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%02d:%02d:%02d", localTm.tm_hour, localTm.tm_min, localTm.tm_sec);
     return std::string(buf);

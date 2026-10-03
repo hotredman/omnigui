@@ -1,5 +1,6 @@
 #include "ui/components/Icon.hpp"
 #include "core/Assets.hpp"
+#include "core/PathUtil.hpp"
 #if defined(OMNIGUI_USE_OPENGL)
 #define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
@@ -54,11 +55,11 @@ static TextureInfo LoadTextureFromFile(const std::string& filePath) {
 
     std::string path = filePath;
     std::error_code ec;
-    if (!std::filesystem::exists(std::filesystem::u8path(path), ec)) {
+    if (!std::filesystem::exists(PathFromUtf8(path), ec)) {
         path = Assets::Resolve(filePath);
     }
 
-    if (!path.empty() && std::filesystem::exists(std::filesystem::u8path(path), ec)) {
+    if (!path.empty() && std::filesystem::exists(PathFromUtf8(path), ec)) {
         int w = 0, h = 0, comp = 0;
         unsigned char* data = stbi_load(path.c_str(), &w, &h, &comp, 4);
         if (data) {

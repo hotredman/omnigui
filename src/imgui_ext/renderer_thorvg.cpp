@@ -1,5 +1,6 @@
 #include "imgui_ext/renderer.h"
 #include "imgui_ext/recorder.h"
+#include "core/Assets.hpp"
 #include "thorvg.h"
 
 #include <iostream>
@@ -10,13 +11,6 @@
 #include <chrono>
 #include <thread>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#ifdef DrawText
-#undef DrawText
-#endif
-#endif
 namespace ImGuiExt {
 
 class ThorVGRenderer : public IRenderer {
@@ -56,7 +50,7 @@ public:
 
     bool LoadFont(const char* name, const void* data, size_t size) override;
     bool LoadFontFile(const char* path) override;
-    void DrawText(const char* text_utf8, float x, float y, Color col, const char* font_name = nullptr, float font_size = 0.0f, float wrap_width = 0.0f) override;
+    void DrawTextUtf8(const char* text_utf8, float x, float y, Color col, const char* font_name = nullptr, float font_size = 0.0f, float wrap_width = 0.0f) override;
     bool MeasureGlyph(const char* utf8_char, const char* font_name, float font_size, GlyphMetricsInfo& out_metrics) override;
     bool MeasureText(const char* text_utf8, const char* font_name, float font_size, float& out_w, float& out_h) override;
 
@@ -119,20 +113,11 @@ bool ThorVGRenderer::Init(int width, int height) {
     }
     m_canvas->target(m_pixels.data(), width, width, height, tvg::ColorSpace::ABGR8888S);
 
-    // Try loading a high quality system font for ThorVG
-    const char* font_candidates[] = {
-        "C:/Windows/Fonts/segoeui.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-        "C:/Windows/Fonts/tahoma.ttf",
-        nullptr
-    };
-
-    for (int i = 0; font_candidates[i] != nullptr; ++i) {
-        if (LoadFontFile(font_candidates[i])) {
-            m_default_font_name = font_candidates[i];
-            m_font_loaded = true;
-            break;
-        }
+    // Базовый шрифт ThorVG: Roboto из assets (системные пути ОС не используются)
+    const std::string default_font = Assets::DefaultFontPath();
+    if (!default_font.empty() && LoadFontFile(default_font.c_str())) {
+        m_default_font_name = default_font;
+        m_font_loaded = true;
     }
 
     return true;
@@ -385,7 +370,7 @@ bool ThorVGRenderer::LoadFontFile(const char* path) {
     return res == tvg::Result::Success;
 }
 
-void ThorVGRenderer::DrawText(const char* text_utf8, float x, float y, Color col, const char* font_name, float font_size, float wrap_width) {
+void ThorVGRenderer::DrawTextUtf8(const char* text_utf8, float x, float y, Color col, const char* font_name, float font_size, float wrap_width) {
     if (col.a == 0 || !text_utf8 || text_utf8[0] == '\0') return;
 
     auto txt = tvg::Text::gen();
@@ -823,7 +808,7 @@ void ThorVGRenderer::RenderDrawData(ImDrawData* draw_data) {
                 float ty = (cmd.p1.y - m_display_pos.y) * m_display_scale.y;
                 float font_size = cmd.font_size * m_display_scale.y;
                 float wrap_width = cmd.wrap_width > 0.0f ? cmd.wrap_width * m_display_scale.x : 0.0f;
-                DrawText(text_str, tx, ty, Color::FromImU32(cmd.col), font_name, font_size, wrap_width);
+                DrawTextUtf8(text_str, tx, ty, Color::FromImU32(cmd.col), font_name, font_size, wrap_width);
                 break;
             }
             case CmdType::Image:

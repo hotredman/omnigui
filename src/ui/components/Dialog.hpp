@@ -3,6 +3,7 @@
 #include "ui/components/Button.hpp"
 #include "ui/components/UiTheme.hpp"
 #include "ui/components/Icon.hpp"
+#include "ui/components/Utf8Text.hpp"
 #include <imgui.h>
 #include <string>
 
@@ -139,7 +140,7 @@ inline bool PromptDialog(bool& isOpen, std::string& value, const PromptDialogOpt
         // Input field
         static char buf[256];
         if (ImGui::IsWindowAppearing()) {
-            strncpy_s(buf, sizeof(buf), value.c_str(), _TRUNCATE);
+            CopyTruncated(buf, sizeof(buf), value);
             ImGui::SetKeyboardFocusHere();
         }
 

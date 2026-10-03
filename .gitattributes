@@ -1,0 +1,14 @@
+# Единые окончания строк: в репозитории и при checkout — LF, кроме Windows-скриптов
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.sh  text eol=lf
+
+# Бинарные файлы
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary

@@ -1,3 +1,4 @@
+#include "core/Assets.hpp"
 #include <iostream>
 #include <chrono>
 #include <vector>
@@ -20,8 +21,8 @@ int main() {
     io.DisplaySize = ImVec2(2040, 1200);
     io.IniFilename = nullptr;
 
-    const char* font_path = "C:/Windows/Fonts/segoeui.ttf";
-    io.Fonts->AddFontFromFileTTF(font_path, 19.0f * 1.5f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
+    const std::string font_path = Assets::DefaultFontPath();
+    io.Fonts->AddFontFromFileTTF(font_path.c_str(), 19.0f * 1.5f, nullptr, io.Fonts->GetGlyphRangesCyrillic());
     io.DeltaTime = 1.0f / 60.0f;
     unsigned char* dummy_pixels = nullptr;
     int dummy_w = 0, dummy_h = 0;
@@ -29,7 +30,7 @@ int main() {
 
     auto* renderer = ImGuiExt::CreateThorVGRenderer();
     renderer->Init(2040, 1200);
-    renderer->LoadFontFile(font_path);
+    renderer->LoadFontFile(font_path.c_str());
 
     ImGuiExt::SetVectorInterception(true);
 

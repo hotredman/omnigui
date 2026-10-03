@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <cstddef>
+#include <cstring>
 #include <string>
 #include <string_view>
 
@@ -30,4 +33,14 @@ inline std::string Utf8ToUpper(std::string_view text) {
         out += static_cast<char>(lead);
     }
     return out;
+}
+
+// Копирует строку в char-буфер фиксированного размера: обрезает по границе символа UTF-8
+// и всегда ставит завершающий нуль (переносимая замена strncpy_s)
+inline void CopyTruncated(char* dst, std::size_t capacity, const std::string& src) {
+    if (!dst || capacity == 0) return;
+    std::size_t n = std::min(src.size(), capacity - 1);
+    while (n > 0 && n < src.size() && (static_cast<unsigned char>(src[n]) & 0xC0) == 0x80) --n;
+    std::memcpy(dst, src.data(), n);
+    dst[n] = '\0';
 }

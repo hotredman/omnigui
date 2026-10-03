@@ -1,35 +1,24 @@
 #include "core/Assets.hpp"
+#include "core/PathUtil.hpp"
 #include <filesystem>
 #include <vector>
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#endif
+#include <SDL3/SDL_filesystem.h>
 
 namespace Assets {
 
 static std::filesystem::path GetExecutableDir() {
-#ifdef _WIN32
-    std::vector<wchar_t> buffer(MAX_PATH);
-    DWORD len = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-    while (len == buffer.size()) {
-        buffer.resize(buffer.size() * 2);
-        len = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    // SDL_GetBasePath: каталог приложения на Windows, Linux и macOS (строка принадлежит SDL)
+    if (const char* base = SDL_GetBasePath()) {
+        return PathFromUtf8(base);
     }
-    if (len > 0) {
-        return std::filesystem::path(buffer.data()).parent_path();
-    }
-#endif
     return std::filesystem::current_path();
 }
 
 std::string Resolve(const std::string& relPath) {
     if (relPath.empty()) return "";
 
-    std::filesystem::path target = std::filesystem::u8path(relPath);
+    std::filesystem::path target = PathFromUtf8(relPath);
     if (target.is_absolute()) {
         std::error_code ec;
         if (std::filesystem::exists(target, ec)) {
@@ -61,6 +50,10 @@ std::string Resolve(const std::string& relPath) {
 
 bool Exists(const std::string& relPath) {
     return !Resolve(relPath).empty();
+}
+
+std::string DefaultFontPath() {
+    return Resolve("fonts/Roboto-Regular.ttf");
 }
 
 } // namespace Assets
