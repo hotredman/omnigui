@@ -4,29 +4,28 @@
 #include <algorithm>
 #include <cfloat>
 
-void ValueDisplay::Render(double value, const char* unit, float width, float height, 
-                          const char* format, const ValueDisplayStyle* customStyle)
+void ValueDisplay(double value, const ValueDisplayOptions& options)
 {
     char buf[64];
-    snprintf(buf, sizeof(buf), format ? format : "%.2f", value);
-    Render(buf, unit, width, height, customStyle);
+    snprintf(buf, sizeof(buf), options.format ? options.format : "%.2f", value);
+    ValueDisplay(buf, options);
 }
 
-void ValueDisplay::Render(const char* text, const char* unit, float width, float height, 
-                          const ValueDisplayStyle* customStyle)
+void ValueDisplay(const char* text, const ValueDisplayOptions& options)
 {
     const UiTheme& theme = UiTheme::Get();
-    const ValueDisplayStyle& style = customStyle ? *customStyle : theme.valueDisplay;
+    const ValueDisplayStyle& style = options.style ? *options.style : theme.valueDisplay;
+    const char* unit = options.unit;
 
-    float w = width;
+    float w = options.sizePx.x;
     if (w <= 0.0f) {
         float avail = ImGui::GetContentRegionAvail().x;
         w = (avail > 0.0f) ? avail : theme.Scale(200.0f);
     }
 
-    float h = height;
+    float h = options.sizePx.y;
     if (h <= 0.0f) {
-        h = theme.Scale(80.0f);
+        h = theme.Scale(options.compact ? 40.0f : 80.0f);
     }
 
     ImDrawList* dl = ImGui::GetWindowDrawList();

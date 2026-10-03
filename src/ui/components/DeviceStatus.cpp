@@ -4,7 +4,7 @@
 #include <cstring>
 #include <imgui.h>
 
-const char* DeviceStatus::GetDefaultStateText(DeviceState state) {
+const char* DeviceStateText(DeviceState state) {
     switch (state) {
         case DeviceState::Disconnected: return "DISCONNECTED";
         case DeviceState::Connecting:   return "CONNECTING";
@@ -16,7 +16,7 @@ const char* DeviceStatus::GetDefaultStateText(DeviceState state) {
     }
 }
 
-ImU32 DeviceStatus::GetStateLedColor(DeviceState state, const DeviceStatusStyle& style) {
+ImU32 DeviceStateColor(DeviceState state, const DeviceStatusStyle& style) {
     switch (state) {
         case DeviceState::Disconnected: return style.colLedDisconnected;
         case DeviceState::Connecting:   return style.colLedConnecting;
@@ -28,9 +28,9 @@ ImU32 DeviceStatus::GetStateLedColor(DeviceState state, const DeviceStatusStyle&
     }
 }
 
-float DeviceStatus::CalculateWidth(const std::vector<std::string>& titleCandidates,
-                                   const std::string& currentTitle,
-                                   const DeviceStatusStyle* customStyle)
+float DeviceStatusWidth(const std::vector<std::string>& titleCandidates,
+                        const std::string& currentTitle,
+                        const DeviceStatusStyle* customStyle)
 {
     const UiTheme& theme = UiTheme::Get();
     const DeviceStatusStyle& style = customStyle ? *customStyle : theme.deviceStatus;
@@ -68,7 +68,7 @@ float DeviceStatus::CalculateWidth(const std::vector<std::string>& titleCandidat
     };
 
     for (DeviceState st : allStates) {
-        const char* text = GetDefaultStateText(st);
+        const char* text = DeviceStateText(st);
         if (!text) continue;
         float w = statusFont
             ? statusFont->CalcTextSizeA(statusSize, FLT_MAX, 0.0f, text).x
@@ -93,30 +93,20 @@ float DeviceStatus::CalculateWidth(const std::vector<std::string>& titleCandidat
     return std::max(totalW, theme.Scale(style.width));
 }
 
-bool DeviceStatus::RenderAutoWidth(const char* deviceName,
-                                   DeviceState state,
-                                   const std::vector<std::string>& titleCandidates,
-                                   const char* statusText,
-                                   const char* buttonLabel,
-                                   std::function<void()> onAction,
-                                   const DeviceStatusStyle* customStyle)
+bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusOptions& options)
 {
-    float w = CalculateWidth(titleCandidates, deviceName ? deviceName : "", customStyle);
-    return Render(deviceName, state, statusText, buttonLabel, onAction, w, customStyle);
-}
-
-bool DeviceStatus::Render(const char* deviceName, 
-                          DeviceState state, 
-                          const char* statusText, 
-                          const char* buttonLabel,
-                          std::function<void()> onAction,
-                          float width,
-                          const DeviceStatusStyle* customStyle)
-{
+    const DeviceStatusStyle* customStyle = options.style;
+    const char* statusText = options.status;
+    const char* buttonLabel = options.action ? options.action : "[P]";
     const UiTheme& theme = UiTheme::Get();
     const DeviceStatusStyle& style = customStyle ? *customStyle : theme.deviceStatus;
 
-    float w = (width > 0.0f) ? width : theme.Scale(style.width);
+    float w = theme.Scale(style.width);
+    if (!options.titleCandidates.empty()) {
+        w = DeviceStatusWidth(options.titleCandidates, deviceName ? deviceName : "", customStyle);
+    } else if (options.width > 0.0f) {
+        w = theme.Scale(options.width);
+    }
     float h = theme.Scale(style.height);
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -132,7 +122,7 @@ bool DeviceStatus::Render(const char* deviceName,
     // 2. Светодиодный индикатор (LED)
     ImVec2 ledCenter(pos.x + theme.Scale(16.0f), pos.y + h * 0.5f);
     float ledR = theme.Scale(style.ledRadius);
-    ImU32 ledColor = GetStateLedColor(state, style);
+    ImU32 ledColor = DeviceStateColor(state, style);
     dl->AddCircleFilled(ledCenter, ledR, ledColor);
 
     // 3. Текстовая информация: Имя устройства + Статус
@@ -143,7 +133,7 @@ bool DeviceStatus::Render(const char* deviceName,
 
     const char* displayStatus = (statusText && statusText[0] != '\0') 
                                 ? statusText 
-                                : GetDefaultStateText(state);
+                                : DeviceStateText(state);
     ImFont* statusFont = style.statusFont ? style.statusFont : theme.defaultFont;
     float statusSize = theme.Scale(style.statusFontSize);
     ImVec2 textPos2(pos.x + theme.Scale(28.0f), pos.y + theme.Scale(26.0f));
@@ -151,8 +141,9 @@ bool DeviceStatus::Render(const char* deviceName,
 
     // 4. Кнопка действия (опционально)
     bool actionClicked = false;
-    if (buttonLabel && buttonLabel[0] != '\0') {
-        DisabledScope actionScope(!onAction);
+    ImGui::PushID(deviceName ? deviceName : "device");
+    if (options.showAction && buttonLabel[0] != '\0') {
+        DisabledScope actionScope(options.actionDisabled);
         float btnSize = theme.Scale(style.actionBtnSize);
         ImVec2 btnPos(pos.x + w - btnSize - theme.Scale(8.0f), pos.y + (h - btnSize) * 0.5f);
         ImGui::SetCursorScreenPos(btnPos);
@@ -174,11 +165,9 @@ bool DeviceStatus::Render(const char* deviceName,
         }
         if (clicked) {
             actionClicked = true;
-            if (onAction) {
-                onAction();
-            }
         }
     }
+    ImGui::PopID();
 
     // 5. Продвижение позиции курсора в потоке ImGui
     ImGui::SetCursorScreenPos(pos);

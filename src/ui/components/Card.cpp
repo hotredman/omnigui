@@ -546,7 +546,7 @@ void Card::AddValueDisplay(double value, const char* unit, const char* format, R
     float w = 0.0f;
     PrepareField(col, w);
     float h = ResolveHeight(height, RowHeight::Display());
-    ValueDisplay::Render(value, unit, w, h, format);
+    ValueDisplay(value, {.unit = unit, .format = format, .sizePx = ImVec2(w, h)});
     FinishField(col);
 }
 
@@ -554,7 +554,7 @@ void Card::AddValueDisplay(const char* text, const char* unit, RowHeight height,
     float w = 0.0f;
     PrepareField(col, w);
     float h = ResolveHeight(height, RowHeight::Display());
-    ValueDisplay::Render(text, unit, w, h);
+    ValueDisplay(text, {.unit = unit, .sizePx = ImVec2(w, h)});
     FinishField(col);
 }
 
@@ -596,9 +596,9 @@ void Card::AddValueDisplay(const char* label, std::optional<double> value, const
     }
 
     if (value.has_value()) {
-        ValueDisplay::Render(*value, unit, w, h, format, &vStyle);
+        ValueDisplay(*value, {.unit = unit, .format = format, .style = &vStyle, .sizePx = ImVec2(w, h)});
     } else {
-        ValueDisplay::Render("—", unit, w, h, &vStyle);
+        ValueDisplay("—", {.unit = unit, .style = &vStyle, .sizePx = ImVec2(w, h)});
     }
 
     ImGui::EndGroup();
@@ -612,7 +612,7 @@ bool Card::AddPresetGrid(float& value, const std::vector<float>& presets,
     float w = 0.0f;
     PrepareField(col, w);
     float dispH = ResolveHeight(displayHeight, RowHeight(44.0f));
-    bool changed = PresetGrid::Render(value, presets, unit, w, columns, true, dispH);
+    bool changed = PresetGrid(value, presets, {.unit = unit, .columns = columns, .sizePx = ImVec2(w, dispH)});
     FinishField(col);
     return changed;
 }
@@ -624,7 +624,7 @@ bool Card::AddPresetGrid(double& value, const std::vector<double>& presets,
     float w = 0.0f;
     PrepareField(col, w);
     float dispH = ResolveHeight(displayHeight, RowHeight(44.0f));
-    bool changed = PresetGrid::Render(value, presets, unit, w, columns, true, dispH);
+    bool changed = PresetGrid(value, presets, {.unit = unit, .columns = columns, .sizePx = ImVec2(w, dispH)});
     FinishField(col);
     return changed;
 }

@@ -258,7 +258,11 @@ bool ItemRow::Tags(const std::vector<std::string>& tags, std::string* outClicked
     float rightArea = m_totalActionsExpected * theme.Scale(st.actionBtnWidth) + theme.Scale(16.0f);
     float maxWrapW = std::max(theme.Scale(100.0f), m_availW - m_padX * 2.0f - rightArea);
 
-    return Tag::RenderList(tags, maxWrapW, outClickedTag);
+    if (auto clicked = TagList(tags, {.maxWidthPx = maxWrapW})) {
+        if (outClickedTag) *outClickedTag = *clicked;
+        return true;
+    }
+    return false;
 }
 
 void ItemRow::Status(const char* text, UiVariant variant) {

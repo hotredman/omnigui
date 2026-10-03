@@ -4,8 +4,11 @@
 #include <string>
 #include <algorithm>
 
-bool Tag::Render(const char* label, const char* prefix, bool clickable, const char* tooltip) {
+bool Tag(const char* label, const TagOptions& options) {
     if (!label || label[0] == '\0') return false;
+    const char* prefix = options.prefix;
+    const bool clickable = options.clickable;
+    const char* tooltip = options.tooltip;
 
     const UiTheme& theme = UiTheme::Get();
     const TagStyle& st = theme.tag;
@@ -74,9 +77,9 @@ bool Tag::Render(const char* label, const char* prefix, bool clickable, const ch
     return clicked;
 }
 
-bool Tag::RenderList(const std::vector<std::string>& tags, float maxAvailableWidth,
-                     std::string* outClickedTag) {
-    if (tags.empty()) return false;
+std::optional<std::string> TagList(const std::vector<std::string>& tags, const TagListOptions& options) {
+    if (tags.empty()) return std::nullopt;
+    const float maxAvailableWidth = options.maxWidthPx;
 
     const UiTheme& theme = UiTheme::Get();
     const TagStyle& st = theme.tag;
@@ -85,7 +88,7 @@ bool Tag::RenderList(const std::vector<std::string>& tags, float maxAvailableWid
     float availW = (maxAvailableWidth > 0.0f) ? maxAvailableWidth : ImGui::GetContentRegionAvail().x;
     float startX = ImGui::GetCursorPosX();
     float curLineW = 0.0f;
-    bool anyClicked = false;
+    std::optional<std::string> clickedTag;
 
     theme.PushFont(st.font ? st.font : theme.fontMedium, st.fontSize);
     for (size_t i = 0; i < tags.size(); ++i) {
@@ -107,13 +110,12 @@ bool Tag::RenderList(const std::vector<std::string>& tags, float maxAvailableWid
         curLineW += tagW;
 
         theme.PopFont();
-        if (Tag::Render(tag.c_str(), "#", true)) {
-            anyClicked = true;
-            if (outClickedTag) *outClickedTag = tag;
+        if (Tag(tag.c_str())) {
+            clickedTag = tag;
         }
         theme.PushFont(st.font ? st.font : theme.fontMedium, st.fontSize);
     }
     theme.PopFont();
 
-    return anyClicked;
+    return clickedTag;
 }

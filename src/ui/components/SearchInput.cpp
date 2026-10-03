@@ -3,7 +3,10 @@
 #include <imgui.h>
 #include <algorithm>
 
-bool SearchInput::Render(const char* id, std::string& query, const char* hint, float baseWidth, UiSize size) {
+bool SearchInput(std::string& query, const SearchInputOptions& options) {
+    const char* hint = options.hint;
+    const float baseWidth = options.width;
+    const UiSize size = options.size;
     const UiTheme& theme = UiTheme::Get();
     ControlMetrics m = theme.GetMetrics(size);
 
@@ -20,7 +23,7 @@ bool SearchInput::Render(const char* id, std::string& query, const char* hint, f
     float clearBtnW = hasClearBtn ? h : 0.0f;
     float inputW = totalW - (hasClearBtn ? (clearBtnW + theme.Scale(4.0f)) : 0.0f);
 
-    ImGui::PushID(id);
+    ImGui::PushID(options.key ? options.key : (hint ? hint : "search"));
 
     float fontSize = theme.Scale(m.fontSize);
     float padY = std::max(2.0f, (m.height - fontSize) * 0.5f);

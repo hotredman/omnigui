@@ -357,23 +357,23 @@ static void RenderHeader(double elapsed) {
             // Align cursor for DeviceStatus with header content baseline
             ImGui::SetCursorPosY(theme.Scale(theme.header.paddingY));
 
-            DeviceStatus::Render("Cluster Uplink 07",
-                                 s_deviceConnected ? s_deviceState : DeviceState::Disconnected,
-                                 s_deviceConnected ? (s_deviceState == DeviceState::Running ? "STREAMING (100 Hz)" : "STANDBY") : "DISCONNECTED",
-                                 s_deviceConnected ? (s_deviceState == DeviceState::Running ? "Pause" : "Start") : "Connect",
-                                 []() {
-                                     if (!s_deviceConnected) {
-                                         s_deviceConnected = true;
-                                         s_deviceState = DeviceState::Running;
-                                         s_deviceStreaming = true;
-                                     } else if (s_deviceState == DeviceState::Running) {
-                                         s_deviceState = DeviceState::Idle;
-                                         s_deviceStreaming = false;
-                                     } else {
-                                         s_deviceState = DeviceState::Running;
-                                         s_deviceStreaming = true;
-                                     }
-                                 });
+            const bool running = s_deviceConnected && s_deviceState == DeviceState::Running;
+            if (DeviceStatus("Cluster Uplink 07",
+                             s_deviceConnected ? s_deviceState : DeviceState::Disconnected,
+                             {.status = s_deviceConnected ? (running ? "STREAMING (100 Hz)" : "STANDBY") : "DISCONNECTED",
+                              .action = s_deviceConnected ? (running ? "Pause" : "Start") : "Connect"})) {
+                if (!s_deviceConnected) {
+                    s_deviceConnected = true;
+                    s_deviceState = DeviceState::Running;
+                    s_deviceStreaming = true;
+                } else if (running) {
+                    s_deviceState = DeviceState::Idle;
+                    s_deviceStreaming = false;
+                } else {
+                    s_deviceState = DeviceState::Running;
+                    s_deviceStreaming = true;
+                }
+            }
         }
 
         // 1.2 Right Zone: Indicator count selector (evaluated before Center so Center knows exact width)
@@ -617,7 +617,7 @@ static void RenderRemoteControl() {
 
         if (Card jogCard("jog_card", "Sampling Frequency"); jogCard) {
             static const std::vector<float> freqs = { 20.0f, 50.0f, 100.0f, 250.0f, 500.0f };
-            PresetGrid::Render(s_streamRateJog, freqs, "Hz", 0.0f, 3);
+            PresetGrid(s_streamRateJog, freqs, {.unit = "Hz", .columns = 3});
         }
 
         ImGui::Spacing();
@@ -722,9 +722,9 @@ static void RenderProcessing() {
         ImGui::Spacing();
 
         if (Card metaCard("meta_card", "Run Metadata"); metaCard) {
-            ValueDisplay::Render(static_cast<double>(activeRun.pointCount), "points", 0, 40.0f * theme.GetScale(), "%.0f");
+            ValueDisplay(static_cast<double>(activeRun.pointCount), {.unit = "points", .format = "%.0f", .compact = true});
             ImGui::Spacing();
-            ValueDisplay::Render(activeRun.durationS, "s", 0, 40.0f * theme.GetScale(), "%.1f");
+            ValueDisplay(activeRun.durationS, {.unit = "s", .format = "%.1f", .compact = true});
         }
     }
 }
@@ -744,7 +744,7 @@ static void RenderMachine() {
         "Diagnostics",
         "Export / Sync"
     };
-    TabBar::Render("##MachineConfigTabs", machineTabs, IM_ARRAYSIZE(machineTabs), s_machineTab, true);
+    TabBar(machineTabs, s_machineTab);
 
     ImGui::Spacing();
 
@@ -835,7 +835,7 @@ static void RenderMachine() {
 static void RenderArchive() {
     const UiTheme& theme = UiTheme::Get();
     if (Card archiveCard("archive_full_card", "Telemetry Dataset Archive"); archiveCard) {
-        SearchInput::Render("tbl_search_archive", s_searchArchive, "Search datasets by name or run ID...");
+        SearchInput(s_searchArchive, {.hint = "Search datasets by name or run ID...", .key = "archive"});
         ImGui::Spacing();
 
         std::vector<TableGrid::Column> cols = {
@@ -883,7 +883,7 @@ static void RenderJournal() {
     if (Card journalCard("journal_full_card", "Real-Time Event & Operator Journal"); journalCard) {
         ImGui::Checkbox("Auto-scroll", &s_autoScrollJournal);
         ImGui::SameLine();
-        SearchInput::Render("tbl_search_journal", s_searchJournal, "Filter log entries...", 220.0f * theme.GetScale());
+        SearchInput(s_searchJournal, {.hint = "Filter log entries...", .width = 220, .key = "journal"});
         ImGui::SameLine();
         if (Button({.label = "Clear Journal", .variant = UiVariant::Secondary, .icon = Icon::Refresh, .size = UiSize::Small})) {
             s_journalLogs.clear();

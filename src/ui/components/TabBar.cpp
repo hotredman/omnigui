@@ -4,40 +4,44 @@
 #include <imgui_internal.h>
 #include <cfloat>
 
-bool TabBar::Render(const char* id,
-                    const char* const items[],
-                    int itemsCount,
-                    int& selectedIndex,
-                    bool showSeparator,
-                    float itemWidth,
-                    float itemHeight,
-                    const TabBarStyle* customStyle,
-                    const UiVariant* variants)
+bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const TabBarOptions& options)
 {
     const UiTheme& theme = UiTheme::Get();
-    const TabBarStyle& style = customStyle ? *customStyle : theme.tab;
+    const TabBarStyle& style = options.style ? *options.style : theme.tab;
+    const UiVariant* variants = options.variants;
     bool changed = false;
+
+    // Идентичность панели: ключ либо подпись первой вкладки
+    std::string id = std::string("##tabs_") +
+        (options.key ? options.key : (itemsCount > 0 ? items[0] : ""));
+
+    auto tabOptions = [&](int i) {
+        TabItemOptions o;
+        o.variant = variants ? variants[i] : UiVariant::Default;
+        o.sameLine = i > 0;
+        o.style = options.style;
+        return o;
+    };
 
     // Headless-режим без активного окна ImGui (для минималистичных юнит-тестов)
     if (ImGui::GetCurrentWindowRead() == nullptr) {
         for (int i = 0; i < itemsCount; ++i) {
             bool isSelected = (selectedIndex == i);
-            char btnId[64];
-            std::snprintf(btnId, sizeof(btnId), "%s_tab_%d", id, i);
-            if (TabItem(btnId, items[i], isSelected, itemWidth, itemHeight, i > 0, customStyle,
-                        variants ? variants[i] : UiVariant::Default)) {
+            ImGui::PushID(i);
+            if (TabItem(items[i], isSelected, tabOptions(i))) {
                 selectedIndex = i;
                 changed = true;
             }
+            ImGui::PopID();
         }
-        if (showSeparator) {
-            AddSeparator(customStyle);
+        if (options.separator) {
+            TabSeparator(options.style);
         }
         return changed;
     }
 
     // Полноценный адаптивный рендеринг через карусель со стрелками при переполнении
-    float tabH = (itemHeight > 0.0f) ? itemHeight : theme.Scale(style.height);
+    float tabH = theme.Scale(style.height);
     CarouselStyle cStyle = theme.carousel;
     cStyle.itemSpacing = theme.Scale(style.itemSpacing);
     cStyle.scrollStep = theme.Scale(160.0f);
@@ -45,7 +49,7 @@ bool TabBar::Render(const char* id,
     cStyle.hideDisabledArrows = true;
     cStyle.paddingY = 2.0f; // запас от субпиксельного клиппинга скруглений
 
-    ImGuiID storageId = ImGui::GetID(id);
+    ImGuiID storageId = ImGui::GetID(id.c_str());
     ImGuiStorage* storage = ImGui::GetStateStorage();
     int* pPrevSelected = storage->GetIntRef(storageId + 10, -1);
     bool* pNeedsScroll = storage->GetBoolRef(storageId + 11, true);
@@ -59,18 +63,17 @@ bool TabBar::Render(const char* id,
     float selectedMaxX = 0.0f;
     bool hasSelected = false;
 
-    if (Carousel carousel(id, ImVec2(0.0f, tabH), &cStyle); carousel) {
+    if (Carousel carousel(id.c_str(), ImVec2(0.0f, tabH), &cStyle); carousel) {
         for (int i = 0; i < itemsCount; ++i) {
             bool isSelected = (selectedIndex == i);
-            char btnId[64];
-            std::snprintf(btnId, sizeof(btnId), "%s_tab_%d", id, i);
 
-            if (TabItem(btnId, items[i], isSelected, itemWidth, itemHeight, i > 0, customStyle,
-                        variants ? variants[i] : UiVariant::Default)) {
+            ImGui::PushID(i);
+            if (TabItem(items[i], isSelected, tabOptions(i))) {
                 selectedIndex = i;
                 changed = true;
                 *pNeedsScroll = true;
             }
+            ImGui::PopID();
 
             if (selectedIndex == i) {
                 selectedMinX = ImGui::GetItemRectMin().x - ImGui::GetWindowPos().x + ImGui::GetScrollX();
@@ -87,62 +90,38 @@ bool TabBar::Render(const char* id,
         }
     }
 
-    if (showSeparator) {
-        AddSeparator(customStyle);
+    if (options.separator) {
+        TabSeparator(options.style);
     }
 
     return changed;
 }
 
-bool TabBar::Render(const char* id,
-                    const std::vector<std::string>& items,
-                    int& selectedIndex,
-                    bool showSeparator,
-                    float itemWidth,
-                    float itemHeight,
-                    const TabBarStyle* customStyle)
+bool TabBar(const std::vector<std::string>& items, int& selectedIndex, const TabBarOptions& options)
 {
     std::vector<const char*> cItems;
     cItems.reserve(items.size());
     for (const auto& s : items) {
         cItems.push_back(s.c_str());
     }
-    return Render(id, cItems.empty() ? nullptr : cItems.data(), static_cast<int>(cItems.size()),
-                  selectedIndex, showSeparator, itemWidth, itemHeight, customStyle);
+    return TabBar(cItems.empty() ? nullptr : cItems.data(), static_cast<int>(cItems.size()),
+                  selectedIndex, options);
 }
 
-bool TabBar::RenderEx(const char* id,
-                      const char* const items[],
-                      int itemsCount,
-                      int& selectedIndex,
-                      const TabBarStyle& customStyle,
-                      bool showSeparator,
-                      float itemWidth,
-                      float itemHeight)
-{
-    return Render(id, items, itemsCount, selectedIndex, showSeparator, itemWidth, itemHeight, &customStyle);
-}
-
-bool TabBar::TabItem(const char* id,
-                     const char* label,
-                     bool isSelected,
-                     float width,
-                     float height,
-                     bool sameLine,
-                     const TabBarStyle* customStyle,
-                     UiVariant variant)
+bool TabItem(const char* label, bool isSelected, const TabItemOptions& options)
 {
     const UiTheme& theme = UiTheme::Get();
-    const TabBarStyle& style = customStyle ? *customStyle : theme.tab;
+    const TabBarStyle& style = options.style ? *options.style : theme.tab;
+    const UiVariant variant = options.variant;
 
-    if (sameLine) {
+    if (options.sameLine) {
         // Настраиваемый зазор между вкладками по горизонтали
         ImGui::SameLine(0.0f, theme.Scale(style.itemSpacing));
     }
 
     // Расчет габаритов
-    float tabH = (height > 0.0f) ? height : theme.Scale(style.height);
-    float tabW = width;
+    float tabH = (options.sizePx.y > 0.0f) ? options.sizePx.y : theme.Scale(style.height);
+    float tabW = options.sizePx.x;
 
     ImFont* font = style.font ? style.font : theme.defaultFont;
     float fontSize = theme.Scale(style.fontSize);
@@ -156,7 +135,9 @@ bool TabBar::TabItem(const char* id,
     ImVec2 size(tabW, tabH);
 
     // Невидимая кнопка для обработки ввода
-    bool pressed = ImGui::InvisibleButton(id, size);
+    ImGui::PushID(options.key ? options.key : label);
+    bool pressed = ImGui::InvisibleButton("##tab", size);
+    ImGui::PopID();
     bool hovered = ImGui::IsItemHovered();
 
     // Отрисовка
@@ -194,7 +175,7 @@ bool TabBar::TabItem(const char* id,
     return pressed;
 }
 
-void TabBar::AddSeparator(const TabBarStyle* customStyle) {
+void TabSeparator(const TabBarStyle* customStyle) {
     const UiTheme& theme = UiTheme::Get();
     const TabBarStyle& style = customStyle ? *customStyle : theme.tab;
 

@@ -7,21 +7,19 @@
 #include <string>
 
 template<typename T>
-static bool RenderInternal(
-    T& value,
-    const std::vector<T>& presets,
-    const char* unit,
-    float width,
-    int columns,
-    bool showDisplay,
-    float displayHeight,
-    const char* displayFormat,
-    const char* btnFormat,
-    const PresetGridStyle& style
-) {
+static bool RenderInternal(T& value, const std::vector<T>& presets, const PresetGridOptions& options) {
     const UiTheme& theme = UiTheme::Get();
+    const PresetGridStyle& style = options.style ? *options.style : theme.presetGrid;
+    const char* unit = options.unit;
+    const int columns = options.columns;
+    const bool showDisplay = options.showDisplay;
+    const char* displayFormat = options.displayFormat;
+    const char* btnFormat = options.buttonFormat;
 
-    float w = width;
+    // Идентичность всей сетки: ключ или адрес значения (две сетки в одном окне не конфликтуют)
+    if (options.key) ImGui::PushID(options.key); else ImGui::PushID(&value);
+
+    float w = options.sizePx.x;
     if (w <= 0.0f) {
         float avail = ImGui::GetContentRegionAvail().x;
         w = (avail > 0.0f) ? avail : theme.Scale(200.0f);
@@ -31,7 +29,7 @@ static bool RenderInternal(
 
     // 1. Информационное табло текущего значения
     if (showDisplay) {
-        float dispH = (displayHeight > 0.0f) ? displayHeight : theme.Scale(style.displayHeight);
+        float dispH = (options.sizePx.y > 0.0f) ? options.sizePx.y : theme.Scale(style.displayHeight);
 
         ValueDisplayStyle dispStyle = theme.valueDisplay;
         dispStyle.valueFont = style.displayValFont ? style.displayValFont : theme.displayBigFont;
@@ -41,10 +39,10 @@ static bool RenderInternal(
         dispStyle.unitFontSize = style.displayUnitFontSize;
         dispStyle.unitCompactFontSize = style.displayUnitFontSize;
 
-        ValueDisplay::Render(static_cast<double>(value), unit, w, dispH, displayFormat, &dispStyle);
+        ValueDisplay(static_cast<double>(value),
+                     {.unit = unit, .format = displayFormat, .style = &dispStyle, .sizePx = ImVec2(w, dispH)});
 
         // Интерактивность табло: ввод пользовательского значения по клику
-        ImGui::PushID(&value);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Click to enter custom value");
         }
@@ -72,7 +70,6 @@ static bool RenderInternal(
             }
             ImGui::EndPopup();
         }
-        ImGui::PopID();
 
         if (style.displaySpacing != 0.0f) {
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + theme.Scale(style.displaySpacing));
@@ -81,6 +78,7 @@ static bool RenderInternal(
 
     // 2. Сетка кнопок пресетов
     if (presets.empty()) {
+        ImGui::PopID();
         return changed;
     }
 
@@ -166,37 +164,14 @@ static bool RenderInternal(
     ImGui::PopStyleVar();
     theme.PopFont();
 
+    ImGui::PopID();
     return changed;
 }
 
-bool PresetGrid::Render(
-    float& value,
-    const std::vector<float>& presets,
-    const char* unit,
-    float width,
-    int columns,
-    bool showDisplay,
-    float displayHeight,
-    const char* displayFormat,
-    const char* btnFormat,
-    const PresetGridStyle& style
-) {
-    return RenderInternal<float>(value, presets, unit, width, columns, showDisplay, 
-                                 displayHeight, displayFormat, btnFormat, style);
+bool PresetGrid(float& value, const std::vector<float>& presets, const PresetGridOptions& options) {
+    return RenderInternal<float>(value, presets, options);
 }
 
-bool PresetGrid::Render(
-    double& value,
-    const std::vector<double>& presets,
-    const char* unit,
-    float width,
-    int columns,
-    bool showDisplay,
-    float displayHeight,
-    const char* displayFormat,
-    const char* btnFormat,
-    const PresetGridStyle& style
-) {
-    return RenderInternal<double>(value, presets, unit, width, columns, showDisplay, 
-                                  displayHeight, displayFormat, btnFormat, style);
+bool PresetGrid(double& value, const std::vector<double>& presets, const PresetGridOptions& options) {
+    return RenderInternal<double>(value, presets, options);
 }

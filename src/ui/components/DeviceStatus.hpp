@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ui/components/UiTheme.hpp"
-#include <functional>
 #include <string>
 #include <vector>
 
@@ -14,38 +13,37 @@ enum class DeviceState {
     Fault         // Красный: авария, перегрузка, сбой
 };
 
-class DeviceStatus {
-public:
-    // Предварительный расчет требуемой ширины плашки с учетом полной геометрии:
-    // замеряет список кандидатов на имя устройства (titleCandidates), текущее имя (currentTitle),
-    // все возможные состояния ("ОТКЛЮЧЕН", "ПОДКЛЮЧЕНИЕ" и др.), отступы, светодиод и кнопку действия.
-    static float CalculateWidth(const std::vector<std::string>& titleCandidates = {},
-                                const std::string& currentTitle = "",
-                                const DeviceStatusStyle* customStyle = nullptr);
+// Параметры плашки статуса устройства (designated initializers):
+//
+//     if (DeviceStatus("Cluster 07", state, {.status = "STANDBY", .action = "Start"})) { ... }
+//     if (DeviceStatus("Cluster 07", state)) { ... }   // кнопка питания (Connect / Disconnect)
+struct DeviceStatusOptions {
+    const char* status = nullptr;       // текст статуса; nullptr — стандартный для состояния
+    const char* action = nullptr;       // подпись кнопки действия; nullptr — иконка питания
+    bool        showAction = true;      // показывать кнопку действия
+    bool        actionDisabled = false; // кнопка видна, но выключена
+    float       width = 0.0f;           // базовые px (масштабируются внутри); 0 — по стилю темы
 
-    // Отрисовка бейджа статуса устройства с кнопкой действия (колбэк или возврат bool)
-    // Возвращает true, если кнопка действия была нажата; без колбэка кнопка
-    // видна, но выключена
-    static bool Render(const char* deviceName, 
-                       DeviceState state, 
-                       const char* statusText = nullptr, 
-                       const char* buttonLabel = "[P]",
-                       std::function<void()> onAction = nullptr,
-                       float width = 0.0f,
-                       const DeviceStatusStyle* customStyle = nullptr);
+    // Кандидаты на имя устройства: если не пусто, ширина подбирается автоматически под самое
+    // длинное имя / статус (плашка не «прыгает» при смене имени); width тогда игнорируется
+    std::vector<std::string> titleCandidates;
 
-    // Отрисовка с автоматическим расчетом ширины по переданным кандидатам
-    static bool RenderAutoWidth(const char* deviceName,
-                                DeviceState state,
-                                const std::vector<std::string>& titleCandidates,
-                                const char* statusText = nullptr,
-                                const char* buttonLabel = "[P]",
-                                std::function<void()> onAction = nullptr,
-                                const DeviceStatusStyle* customStyle = nullptr);
-
-    // Вспомогательный метод для получения стандартного текста состояния
-    static const char* GetDefaultStateText(DeviceState state);
-
-    // Вспомогательный метод для получения цвета светодиода
-    static ImU32 GetStateLedColor(DeviceState state, const DeviceStatusStyle& style);
+    const DeviceStatusStyle* style = nullptr;   // оверрайд стиля; nullptr — из темы
 };
+
+// Плашка статуса устройства с кнопкой действия.
+// Возвращает true, если кнопка действия была нажата
+bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusOptions& options = {});
+
+// Предварительный расчет требуемой ширины плашки с учетом полной геометрии (в финальных px):
+// замеряет список кандидатов на имя устройства (titleCandidates), текущее имя (currentTitle),
+// все возможные состояния ("ОТКЛЮЧЕН", "ПОДКЛЮЧЕНИЕ" и др.), отступы, светодиод и кнопку действия.
+float DeviceStatusWidth(const std::vector<std::string>& titleCandidates = {},
+                        const std::string& currentTitle = "",
+                        const DeviceStatusStyle* style = nullptr);
+
+// Стандартный текст состояния
+const char* DeviceStateText(DeviceState state);
+
+// Цвет светодиода состояния
+ImU32 DeviceStateColor(DeviceState state, const DeviceStatusStyle& style);
