@@ -30,6 +30,7 @@
 #include "imgui_ext/oscilloscope.h"
 #include "imgui_dom/imgui_dom.h"
 #include "OmniKitShowcase.hpp"
+#include "omnikit.hpp"
 
 struct PerformanceMetrics {
     double cpu_usage_percent = 0.0;
@@ -566,6 +567,10 @@ int main(int argc, char* argv[]) {
         font = io.Fonts->AddFontDefault();
     }
 
+    // Initialize design system theme scale and fonts
+    UiTheme::Get().SetScale(main_scale);
+    UiTheme::Get().LoadFonts();
+
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
@@ -732,295 +737,12 @@ int main(int argc, char* argv[]) {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        // Responsive side-by-side layout
-        float pad = 12.0f * main_scale;
-        float total_w = io.DisplaySize.x;
-        float total_h = io.DisplaySize.y;
-
-        float hud_w = (std::min)(560.0f * main_scale, (total_w - pad * 3.0f) * 0.44f);
-        float hud_h = total_h - pad * 2.0f;
-        float demo_x = pad + hud_w + pad;
-        float demo_w = total_w - demo_x - pad;
-        float demo_h = total_h - pad * 2.0f;
-
-        static bool show_omnikit_showcase = true;
-        static bool show_standard_demo = false;
-        static bool show_oscilloscope = false;
-
-        float half_h = (demo_h - pad) * 0.48f;
-        float osc_h = demo_h - half_h - pad;
-
-        // 1. OmniKit Component Library Showcase
-        if (show_omnikit_showcase) {
-            ImGui::SetNextWindowPos(ImVec2(demo_x, pad), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSize(ImVec2(demo_w, demo_h), ImGuiCond_FirstUseEver);
-            if (ImGui::Begin("OmniKit Component Suite (Design System & Widgets)", &show_omnikit_showcase)) {
-                OmniKitShowcase::RenderUI(main_scale);
-            }
-            ImGui::End();
-        }
-
-        // 2. Standard ImGui Demo
-        if (show_standard_demo) {
-            ImGui::SetNextWindowPos(ImVec2(demo_x, pad), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSize(ImVec2(demo_w * 0.6f, half_h), ImGuiCond_FirstUseEver);
-            ImGui::ShowDemoWindow(&show_standard_demo);
-        }
-
-        // 3. Real-Time Oscilloscope Widget with LTTB
-        if (show_oscilloscope) {
-            ImGui::SetNextWindowPos(ImVec2(demo_x, pad + half_h + pad), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSize(ImVec2(demo_w * 0.6f, osc_h), ImGuiCond_FirstUseEver);
-            oscilloscope.RenderUI();
-        }
-
-        // 2. Metrics & Benchmark HUD
-        {
-            ImGui::SetNextWindowPos(ImVec2(pad, pad), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSize(ImVec2(hud_w, hud_h), ImGuiCond_FirstUseEver);
-            ImGuiDom::Begin("ImGui Vector Backend - Controls & Metrics", nullptr);
-            ImGuiDom::Text("Dear ImGui %s + SDL3", IMGUI_VERSION);
-            ImGuiDom::Separator();
-
-            if (ImGuiDom::BeginTabBar("HudTabs")) {
-                if (ImGuiDom::BeginTabItem("Backends")) {
-                    ImGuiDom::Text("Active Render Backends (User Choice):");
-                    if (ImGuiDom::Checkbox("1. ImGui - Thor - SDL (Vector Rasterizer)", &use_vector_backend)) {
-                        ImGuiExt::SetVectorInterception(use_vector_backend);
-                    }
-                    if (use_vector_backend) {
-                        ImGuiDom::SameLine();
-                        ImGuiDom::TextColored(ImVec4(0.3f, 1.0f, 0.4f, 1.0f), "[ACTIVE: Vector Primitives]");
-                    } else {
-                        ImGuiDom::SameLine();
-                        ImGuiDom::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "[2. ImGui - SDL Triangles Active]");
-                    }
-
-                    if (ImGuiDom::Checkbox("3. ImGui - DOM (Native HTML5 Web Page)", &use_dom_server)) {
-                        if (use_dom_server) {
-                            ImGuiDom::DomContext::Instance().SetEventCallback([]() {
-                                ImGuiExt::RequestRepaint(3);
-                            });
-                            ImGuiDom::StartServer(dom_port);
-                        } else {
-                            ImGuiDom::StopServer();
-                        }
-                    }
-                    if (use_dom_server) {
-                        ImGuiDom::SameLine();
-                        ImGuiDom::TextColored(ImVec4(0.2f, 0.9f, 1.0f, 1.0f), "[http://localhost:%d]", dom_port);
-                        ImGuiDom::SameLine();
-                        if (ImGuiDom::Button("Open Web Client")) {
-                            std::string url = "http://localhost:" + std::to_string(dom_port);
-                            SDL_OpenURL(url.c_str());
-                        }
-                        ImGuiDom::SetItemTooltip("Opens browser to connect via full-duplex WebSocket");
-                    }
-
-                    ImGuiDom::Separator();
-                    bool reactive = ImGuiExt::IsReactiveMode();
-                    if (ImGuiDom::Checkbox("Reactive Event-Driven Loop (Stage 1)", &reactive)) {
-                        ImGuiExt::SetReactiveMode(reactive);
-                    }
-                    ImGuiDom::SetItemTooltip("Suspends main thread when no events or animations are active");
-
-                    bool dedup = ImGuiExt::IsFrameDeduplicationEnabled();
-                    if (ImGuiDom::Checkbox("Frame Deduplication (Stage 2)", &dedup)) {
-                        ImGuiExt::SetFrameDeduplication(dedup);
-                    }
-                    ImGuiDom::SetItemTooltip("Skips GPU rendering when draw data matches previous frame hash");
-
-                    if (use_vector_backend) {
-                        size_t total_cmds = 0, vector_cmds = 0, fallback_cmds = 0;
-                        for (const auto& kv : ImGuiExt::Recorder::Instance().GetStreams()) {
-                            total_cmds += kv.second.commands.size();
-                            for (const auto& c : kv.second.commands) {
-                                if (c.type == ImGuiExt::CmdType::FallbackMesh) fallback_cmds++;
-                                else vector_cmds++;
-                            }
-                        }
-                        ImGuiDom::Text("Recorded: %zu commands (%zu vector, %zu fallback mesh)", total_cmds, vector_cmds, fallback_cmds);
-                    }
-
-                    if (ImGuiDom::Button("Simulate Texture Update")) {
-                        ImGuiExt::NotifyTextureUpdated();
-                    }
-                    ImGuiDom::SetItemTooltip("Forces texture cache invalidation and redraw");
-
-                    ImGuiDom::Separator();
-                    ImGuiDom::Text("Showcase Windows:");
-                    ImGuiDom::Checkbox("OmniKit Component Suite", &show_omnikit_showcase);
-                    ImGuiDom::Checkbox("Standard Dear ImGui Demo", &show_standard_demo);
-                    ImGuiDom::Checkbox("Hardware Oscilloscope", &show_oscilloscope);
-
-                    ImGuiDom::EndTabItem();
-                }
-
-                if (ImGuiDom::BeginTabItem("Metrics & Benchmark")) {
-                    bool dedup = ImGuiExt::IsFrameDeduplicationEnabled();
-                    bool reactive = ImGuiExt::IsReactiveMode();
-
-                    ImGuiDom::Text("FPS: %.1f (Total Frame: %.2f ms)", metrics.display_fps, metrics.display_cpu_frame_ms);
-                    ImGuiDom::Text("CPU Work Time: %.2f ms / frame", metrics.display_cpu_work_ms);
-                    ImGuiDom::Text("Render/Present: %.2f ms", metrics.display_gpu_frame_ms);
-                    ImGuiDom::Text("CPU Usage (Process): %.2f %%", metrics.cpu_usage_percent);
-                    ImGuiDom::Text("RAM Working Set: %.2f MB (Peak: %.2f MB)", metrics.ram_working_set_mb, metrics.ram_peak_working_set_mb);
-                    if (dedup) {
-                        ImGuiDom::Text("Deduplication: %llu frames skipped", (unsigned long long)metrics.display_skipped_frames);
-                    }
-
-                    ImGuiDom::Separator();
-                    if (bench.running) {
-                        ImGuiDom::TextColored(ImVec4(1, 1, 0, 1), "Benchmarking '%s'... (%.1fs left)",
-                            bench.name.c_str(),
-                            bench.duration_sec - std::chrono::duration<double>(std::chrono::steady_clock::now() - bench.start_time).count());
-                    } else {
-                        if (ImGuiDom::Button("Run 5s Idle Benchmark")) {
-                            std::string label = reactive ? (dedup ? "Stage 2: Reactive+Dedup - Idle (5s)" : "Stage 1: Reactive - Idle (5s)") : "Stage 0: Continuous - Idle (5s)";
-                            bench.Start(label, 5.0);
-                        }
-                        ImGuiDom::SetItemTooltip("Runs 5-second baseline benchmark without user input");
-
-                        ImGuiDom::SameLine();
-                        if (ImGuiDom::Button("Run 5s Active Benchmark")) {
-                            std::string label = reactive ? (dedup ? "Stage 2: Reactive+Dedup - Mouse Motion (5s)" : "Stage 1: Reactive - Mouse Motion (5s)") : "Stage 0: Continuous - Mouse Motion (5s)";
-                            bench.Start(label, 5.0);
-                        }
-                        ImGuiDom::SetItemTooltip("Synthesizes continuous mouse motion to test peak throughput");
-
-                        if (ImGuiDom::Button("Run 5s Vector Benchmark")) {
-                            use_vector_backend = true;
-                            ImGuiExt::SetVectorInterception(true);
-                            bench.Start("Stage 3: ThorVG Vector - Mouse Motion (5s)", 5.0);
-                        }
-                        ImGuiDom::SetItemTooltip("Benchmarks pure vector ThorVG primitive rendering");
-                    }
-                    ImGuiDom::EndTabItem();
-                }
-
-                if (ImGuiDom::BeginTabItem("Channels & Status")) {
-                    ImGuiDom::Text("Real-Time Signal Channels:");
-                    if (ImGuiDom::BeginTable("SignalChannels", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-                        ImGuiDom::TableSetupColumn("Channel");
-                        ImGuiDom::TableSetupColumn("Type");
-                        ImGuiDom::TableSetupColumn("Rate");
-                        ImGuiDom::TableHeadersRow();
-
-                        ImGuiDom::TableNextRow();
-                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("CH-1 (Sine)");
-                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("Hardware ADC");
-                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("100 kS/s");
-
-                        ImGuiDom::TableNextRow();
-                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("CH-2 (Pulse)");
-                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("Synthetic");
-                        ImGuiDom::TableNextColumn(); ImGuiDom::Text("50 kS/s");
-
-                        ImGuiDom::EndTable();
-                    }
-                    ImGuiDom::Separator();
-                    static int selected_preset = 0;
-                    static const char* presets[] = { "Default (Laboratory)", "High Speed Transients", "Audio Band (20Hz-20kHz)", "Low Power Telemetry" };
-                    ImGuiDom::Text("Oscilloscope Preset Profile:");
-                    ImGuiDom::ListBox("Presets", &selected_preset, presets, 4);
-                    ImGuiDom::EndTabItem();
-                }
-
-                if (ImGuiDom::BeginTabItem("Appearance & Notes")) {
-                    ImGuiDom::Text("Waveform Trace Color:");
-                    static float trace_color[3] = { 0.0f, 0.95f, 0.8f };
-                    ImGuiDom::ColorEdit3("Trace Color", trace_color);
-
-                    ImGuiDom::Separator();
-                    ImGuiDom::Text("Session Notes & Annotation:");
-                    static char session_notes[512] = "Observation: Signal stable at 1kHz.\nNoise floor: -65dB.\nStatus: Nominal.";
-                    ImGuiDom::InputTextMultiline("Notes", session_notes, sizeof(session_notes), ImVec2(0, 80));
-                    ImGuiDom::EndTabItem();
-                }
-
-                if (ImGuiDom::BeginTabItem("Element Gallery")) {
-                    ImGuiDom::Text("Canonical Widget Gallery & State Matrix:");
-                    ImGuiDom::Separator();
-
-                    // Buttons
-                    if (ImGuiDom::Button("Gallery Button")) {}
-                    ImGuiDom::SameLine();
-                    ImGui::BeginDisabled(true);
-                    ImGuiDom::Button("Disabled Button");
-                    ImGui::EndDisabled();
-
-                    // Checkboxes
-                    static bool gal_c1 = false;
-                    static bool gal_c2 = true;
-                    ImGuiDom::Checkbox("Unchecked", &gal_c1);
-                    ImGuiDom::SameLine();
-                    ImGuiDom::Checkbox("Checked", &gal_c2);
-                    ImGuiDom::SameLine();
-                    ImGui::BeginDisabled(true);
-                    ImGuiDom::Checkbox("Disabled Check", &gal_c2);
-                    ImGui::EndDisabled();
-
-                    // Radio
-                    static int gal_r = 1;
-                    ImGuiDom::RadioButton("Radio 0", &gal_r, 0);
-                    ImGuiDom::SameLine();
-                    ImGuiDom::RadioButton("Radio 1", &gal_r, 1);
-                    ImGuiDom::SameLine();
-                    ImGui::BeginDisabled(true);
-                    ImGuiDom::RadioButton("Radio Dis", &gal_r, 1);
-                    ImGui::EndDisabled();
-
-                    // Slider
-                    static float gal_slider = 50.0f;
-                    ImGuiDom::SliderFloat("Slider 50%", &gal_slider, 0.0f, 100.0f);
-                    ImGui::BeginDisabled(true);
-                    ImGuiDom::SliderFloat("Disabled Slider", &gal_slider, 0.0f, 100.0f);
-                    ImGui::EndDisabled();
-
-                    // Input
-                    static char gal_text[64] = "Editable text";
-                    ImGuiDom::InputText("Input Text", gal_text, sizeof(gal_text));
-                    ImGui::BeginDisabled(true);
-                    ImGuiDom::InputText("Disabled Input", gal_text, sizeof(gal_text));
-                    ImGui::EndDisabled();
-
-                    // Combo
-                    static int gal_combo = 0;
-                    static const char* gal_items[] = { "Option Alpha", "Option Beta", "Option Gamma" };
-                    ImGuiDom::Combo("Select Combo", &gal_combo, gal_items, 3);
-
-                    // ProgressBar
-                    ImGuiDom::ProgressBar(0.70f, ImVec2(-1, 0), "70%");
-
-                    // CollapsingHeader
-                    if (ImGui::CollapsingHeader("Gallery Collapsing Header")) {
-                        ImGuiDom::Text("Inside Collapsing Header");
-                        if (ImGui::TreeNode("Gallery Tree Node")) {
-                            ImGuiDom::Text("Tree node content");
-                            ImGui::TreePop();
-                        }
-                    }
-
-                    ImGuiDom::EndTabItem();
-                }
-
-                if (ImGuiDom::BeginTabItem("Layout")) {
-                    if (ImGuiDom::Button("Reset Layout to Default")) {
-                        ImGui::SetWindowPos("ImGui Vector Backend - Controls & Metrics", ImVec2(pad, pad));
-                        ImGui::SetWindowSize("ImGui Vector Backend - Controls & Metrics", ImVec2(hud_w, hud_h));
-                        ImGui::SetWindowPos("Dear ImGui Demo", ImVec2(demo_x, pad));
-                        ImGui::SetWindowSize("Dear ImGui Demo", ImVec2(demo_w, half_h));
-                        ImGui::SetWindowPos("Real-Time Oscilloscope & Signal Monitor", ImVec2(demo_x, pad + half_h + pad));
-                        ImGui::SetWindowSize("Real-Time Oscilloscope & Signal Monitor", ImVec2(demo_w, osc_h));
-                    }
-                    ImGuiDom::SetItemTooltip("Snaps all windows to their initial grid layout");
-                    ImGuiDom::EndTabItem();
-                }
-
-                ImGuiDom::EndTabBar();
-            }
-            ImGuiDom::End();
-        }
+        // ====================================================================
+        // OmniKit Workstation Showcase
+        // Component-pure shell (Header, Toolbar, Sidebar, ContentArea, StatusBar)
+        // Self-docking borderless panels tile 100% of the viewport seamlessly.
+        // ====================================================================
+        OmniKitShowcase::RenderUI(main_scale);
 
         ImGui::Render();
         ImGuiDom::EndFrame();
@@ -1050,7 +772,12 @@ int main(int argc, char* argv[]) {
 
         auto render_start = std::chrono::steady_clock::now();
 
-        SDL_SetRenderDrawColor(renderer, 31, 31, 36, 255);
+        ImVec4 clear_col = ImColor(UiTheme::Get().palette.bgApp).Value;
+        SDL_SetRenderDrawColor(renderer,
+                               static_cast<Uint8>(clear_col.x * 255.0f),
+                               static_cast<Uint8>(clear_col.y * 255.0f),
+                               static_cast<Uint8>(clear_col.z * 255.0f),
+                               255);
         SDL_RenderClear(renderer);
 
         if (use_vector_backend) {

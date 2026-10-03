@@ -1,78 +1,229 @@
 #include "OmniKitShowcase.hpp"
 #include "omnikit.hpp"
-#include "imgui.h"
+#include <imgui.h>
 
 #include <cmath>
+#include <cstdarg>
+#include <cstdio>
 #include <chrono>
 #include <string>
 #include <vector>
 #include <deque>
+#include <ctime>
+#include <algorithm>
+#include <memory>
 
 namespace OmniKitShowcase {
 
-// Sidebar channels data model
-struct ChannelInfo {
-    std::string id;
-    std::string name;
-    std::string sublabel;
-    std::string nodeId;
-    ImU32 statusColor;
+// Screen navigation enumeration (mirroring evo-machine-cpp NavScreen)
+enum class NavScreen {
+    RemoteControl = 0, // Live Stream & Pult controls
+    Processing    = 1, // Offline Analysis & Metrics evaluation
+    Machine       = 2, // System & Node Hardware Configuration
+    Archive       = 3, // Data Archive
+    Journal       = 4, // Event Journal
+    Passport      = 5, // Node Passport / Specification
+    Series        = 6  // Batch Analytics
 };
 
-// Distributed job queue record
-struct JobRecord {
-    int id;
-    std::string taskName;
-    std::string engine;
-    double executionTimeMs;
-    double memoryUsageMb;
+// Test run record in sidebar
+struct RecordedRun {
+    std::string id;
+    std::string title;
+    std::string timestamp;
+    double durationS;
+    int pointCount;
     UiVariant status;
     const char* statusText;
+    ImU32 ledColor;
+    double peakThroughput;
+    double avgLatency;
+    double p99Latency;
+    double efficiency;
+    std::string anomaly;
 };
 
-// Diagnostic log entry
-struct LogEntry {
+// Journal entry record
+struct JournalEntry {
     std::string timeStr;
     std::string level;
     std::string message;
     UiVariant variant;
 };
 
-// Demonstration state
+// State variables
 static bool s_initialized = false;
-static RealtimeChart s_realtimeChart;
-static auto s_startTime = std::chrono::steady_clock::now();
-static auto s_lastSampleTime = std::chrono::steady_clock::now();
-static auto s_lastLogTime = std::chrono::steady_clock::now();
+static NavScreen s_currentScreen = NavScreen::RemoteControl;
+static int s_selectedRunIndex = 0;
+static int s_indicatorsCount = 5;
 
+// Component instances (strictly decoupled, self-docking design system shell)
+static Header s_header;
+static Toolbar s_toolbar;
+static Sidebar s_sidebar;
+static SidebarMenu s_sidebarMenu;
+static ContentArea s_contentArea;
+static StatusBar s_statusBar;
+static std::vector<std::unique_ptr<Indicator>> s_indicators;
+
+// Charts
+static RealtimeChart s_liveChart1;
+static RealtimeChart s_liveChart2;
+static RealtimeChart s_liveChart3;
+static RealtimeChart s_liveChart4;
+static int s_realtimeLayout = 0; // 0: 1 graph, 1: 2 graphs, 2: 3 graphs, 3: 4 graphs
+
+static AnalysisChart s_offlineChart;
+static bool s_offlineChartDirty = true;
+
+// Timing & Streaming
+static auto s_liveStartTime = std::chrono::steady_clock::now();
+static auto s_lastLiveSampleTime = std::chrono::steady_clock::now();
+static auto s_lastJournalTime = std::chrono::steady_clock::now();
+
+static bool s_deviceConnected = true;
+static bool s_boostHeld = false; // true while the "Hold to Boost" button is pressed
+static bool s_deviceStreaming = true;
 static DeviceState s_deviceState = DeviceState::Running;
-static bool s_autoTare = false;
-static bool s_liveFeed = true;
-static bool s_hardwareAcc = true;
-static float s_sampleInterval = 250.0f; // ms
-static std::string s_searchQuery = "";
-static std::string s_nodeIdentifier = "worker-node-cluster-07";
-static float s_throughputLimit = 120.0f; // MB/s
-static bool s_confirmModalOpen = false;
+static float s_streamRateJog = 100.0f; // Hz
 
-static int s_currentNav = 0;
-static int s_selectedChannel = 2; // Default to Worker-07
+static std::string s_sessionTitle = "Telemetry Ingestion Session - Zone Alpha";
+static EditableLabel s_editableSessionTitle;
 
-static std::vector<ChannelInfo> s_channels;
-static std::vector<JobRecord> s_jobRecords;
-static std::deque<LogEntry> s_diagnosticLogs;
-static bool s_autoScrollLogs = true;
+// Sidebar & Runs list
+static std::vector<RecordedRun> s_runs;
+static std::deque<JournalEntry> s_journalLogs;
+static bool s_autoScrollJournal = true;
+static std::string s_searchArchive = "";
+static std::string s_searchJournal = "";
 
-// Long settings form state (for Tab 3 scroll form demo)
+// Machine / Node configuration tabs
+static int s_machineTab = 0;
+static std::string s_bindAddress = "0.0.0.0";
+static int s_bindPort = 9050;
 static float s_tcpBufferSize = 64.0f; // KB
-static int s_workerThreads = 16;
-static float s_connectionTimeout = 5.0f; // s
 static bool s_keepaliveEnabled = true;
 static bool s_compressionZstd = true;
-static float s_cacheQuotaMb = 2048.0f;
-static float s_evictionThreshold = 85.0f; // %
-static int s_replicationFactor = 3;
+static int s_workerThreads = 16;
 static std::string s_clusterRegion = "us-east-zone-b";
+static bool s_numaAffinity = true;
+static float s_cacheQuotaMb = 2048.0f;
+static float s_evictionThreshold = 85.0f;
+static int s_replicationFactor = 3;
+static float s_pidKp = 1.25f;
+static float s_pidKi = 0.08f;
+static float s_pidKd = 0.35f;
+
+// Node Passport data
+static std::string s_passportNodeId = "NODE-AVX512-OCTA-07";
+static std::string s_passportFwRev = "v2.8.4-RELEASE-PROD";
+static std::string s_passportSimdArch = "AVX-512 F / CD / BW / DQ / VL";
+static float s_passportMaxThroughput = 250.0f;
+static float s_passportMinLatency = 0.85f;
+static bool s_passportEccMemory = true;
+static bool s_passportRdmaEnabled = true;
+
+// printf-style formatting into std::string (for TableGrid::CellText and similar)
+static std::string Fmt(const char* format, ...) {
+    char buf[128];
+    va_list args;
+    va_start(args, format);
+    std::vsnprintf(buf, sizeof(buf), format, args);
+    va_end(args);
+    return std::string(buf);
+}
+
+// Formatting helper for clock
+static std::string FormatCurrentClock() {
+    auto nowTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::tm localTm{};
+#if defined(_WIN32)
+    localtime_s(&localTm, &nowTime);
+#else
+    localtime_r(&nowTime, &localTm);
+#endif
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%02d:%02d:%02d", localTm.tm_hour, localTm.tm_min, localTm.tm_sec);
+    return std::string(buf);
+}
+
+// Generates rich offline analytical curve with ramp-up, plateau, resonant peak, and breakdown
+static void BuildOfflineAnalysisData(const RecordedRun& run) {
+    s_offlineChart.Clear();
+    s_offlineChart.SetXAxis("Elapsed Time", "s");
+    s_offlineChart.SetYAxis("Throughput", "MB/s");
+    s_offlineChart.SetPanEnabled(true);
+    s_offlineChart.SetZoomEnabled(true);
+    s_offlineChart.SetStickyZero(false);
+
+    ChartSeries series;
+    series.id = run.id;
+    series.label = run.title;
+    series.color = 0; // theme accent line
+    series.thickness = 2.2f;
+    series.style = LineStyle::Solid;
+    series.points.reserve(600);
+
+    double peakTarget = run.peakThroughput;
+    double duration = run.durationS > 0.0 ? run.durationS : 45.0;
+
+    for (int i = 0; i <= 600; ++i) {
+        double t = (i / 600.0) * duration;
+        double progress = t / duration;
+
+        double val = 0.0;
+        if (progress < 0.15) {
+            // Smooth sigmoid ramp up
+            double u = progress / 0.15;
+            val = peakTarget * 0.75 * (3.0 * u * u - 2.0 * u * u * u);
+        } else if (progress < 0.65) {
+            // Stable plateau with harmonics
+            double u = (progress - 0.15) / 0.50;
+            double baseline = peakTarget * 0.85;
+            double harmonic = 0.12 * peakTarget * std::sin(u * 12.0 * 3.14159);
+            double noise = 0.03 * peakTarget * std::sin(u * 73.0);
+            val = baseline + harmonic + noise;
+        } else if (progress < 0.85) {
+            // Resonant spike
+            double u = (progress - 0.65) / 0.20;
+            double peakRamp = std::sin(u * 3.14159);
+            val = peakTarget * 0.85 + (peakTarget * 0.15) * peakRamp;
+        } else {
+            // Graceful shutdown decay
+            double u = (progress - 0.85) / 0.15;
+            val = peakTarget * (1.0 - u * u);
+        }
+
+        series.points.push_back({ t, std::max(0.0, val) });
+    }
+    s_offlineChart.AddSeries(series);
+
+    // Baseline threshold line
+    ChartLine thresholdLine;
+    thresholdLine.id = "baseline_sla";
+    thresholdLine.label = "Target Baseline (65 MB/s)";
+    thresholdLine.x1 = 0.0;
+    thresholdLine.y1 = 65.0;
+    thresholdLine.x2 = duration;
+    thresholdLine.y2 = 65.0;
+    thresholdLine.style = LineStyle::Dotted;
+    thresholdLine.thickness = 1.8f;
+    s_offlineChart.AddLine(thresholdLine);
+
+    // Peak limit line
+    ChartLine slaLine;
+    slaLine.id = "sla_line";
+    slaLine.label = "SLA Ceiling (100 MB/s)";
+    slaLine.x1 = 0.0;
+    slaLine.y1 = 100.0;
+    slaLine.x2 = duration;
+    slaLine.y2 = 100.0;
+    slaLine.style = LineStyle::Dashed;
+    slaLine.thickness = 1.5f;
+    s_offlineChart.AddLine(slaLine);
+
+    s_offlineChartDirty = false;
+}
 
 void Init() {
     if (s_initialized) return;
@@ -82,578 +233,887 @@ void Init() {
     theme.LoadFonts();
     theme.SetMode(ThemeMode::Dark);
 
-    // Channels for sidebar navigation
-    s_channels = {
-        { "ch_01", "Node-01 East",     "100 Hz • Streaming",  "node-east-01",      theme.palette.success.solid },
-        { "ch_02", "Node-02 Central",  "Batch 512 • Active",  "node-central-02",   theme.palette.primary.solid },
-        { "ch_03", "Worker-07",        "Throughput 85 MB/s",  "worker-cluster-07", theme.palette.accent },
-        { "ch_04", "Edge Gateway 04",  "Latency Spike • Warn","edge-gw-04",        theme.palette.warning.solid },
-        { "ch_05", "Relay Node 05",    "Standby • Ready",     "relay-05",          theme.palette.textMuted },
-        { "ch_06", "Storage Sink 09",  "Flushing Buffer",     "sink-nvme-09",      theme.palette.info.solid },
-        { "ch_07", "Backup Ingestion", "Idle • Synced",       "backup-ingest-01",  theme.palette.textMuted },
-        { "ch_08", "Neural Worker 03", "Quantizing Weights",  "neural-simd-03",    theme.palette.primary.solid },
+    // 1. Initial recorded runs for sidebar
+    s_runs = {
+        { "run_01", "Run #01 - High Rate Ingestion",    "10:14:22", 45.0, 1240, UiVariant::Success, "COMPLETED", theme.palette.success.solid, 118.4, 12.4, 28.5, 96.8, "Nominal" },
+        { "run_02", "Run #02 - Vector AVX-512 Matrix",  "10:18:05", 35.0,  850, UiVariant::Success, "COMPLETED", theme.palette.success.solid, 142.0,  8.2, 14.0, 98.4, "Nominal" },
+        { "run_03", "Run #03 - Stress Spike Latency",   "10:22:40", 50.0, 3400, UiVariant::Warning, "LATENCY SPIKE", theme.palette.warning.solid, 94.2, 38.6, 72.0, 84.1, "Jitter Anomaly" },
+        { "run_04", "Run #04 - Neural Cache Quantize",  "10:28:11",  0.0,    0, UiVariant::Primary, "PROCESSING",    theme.palette.accent,        108.5, 14.8, 26.0, 94.5, "Nominal" },
+        { "run_05", "Run #05 - Distributed Lock Sync",  "10:32:50", 40.0,  400, UiVariant::Success, "COMPLETED", theme.palette.success.solid,  64.0,  4.2,  8.1, 99.1, "Nominal" },
+        { "run_06", "Run #06 - Socket Buffer Saturation","10:38:19",22.5, 6200, UiVariant::Danger,  "FAILED",    theme.palette.danger.solid,  156.0, 95.0, 180.0, 62.0, "Buffer Overflow" },
+        { "run_07", "Run #07 - Standby Ingestion",      "10:44:00", 60.0,  600, UiVariant::Secondary, "IDLE",    theme.palette.textMuted,      45.0, 10.1, 18.0, 97.2, "Nominal" },
     };
 
-    // Configure RealtimeChart
-    s_realtimeChart.Clear();
-    s_realtimeChart.SetXAxis("Elapsed Time", "s");
-    s_realtimeChart.SetYAxis("Throughput", "MB/s");
-    s_realtimeChart.SetLineThickness(2.2f);
-    s_realtimeChart.SetHeadMarker(true);
+    // 2. Setup Real-time Charts
+    s_liveChart1.Clear();
+    s_liveChart1.SetXAxis("Elapsed Time", "s");
+    s_liveChart1.SetYAxis("Throughput", "MB/s");
+    s_liveChart1.SetLineThickness(2.2f);
+    s_liveChart1.SetHeadMarker(true);
 
-    s_startTime = std::chrono::steady_clock::now();
-    s_lastSampleTime = s_startTime;
-    s_lastLogTime = s_startTime;
+    s_liveChart2.Clear();
+    s_liveChart2.SetXAxis("Elapsed Time", "s");
+    s_liveChart2.SetYAxis("Latency", "ms");
+    s_liveChart2.SetLineThickness(2.2f);
+    s_liveChart2.SetHeadMarker(true);
 
-    // Pre-populate with historical points across [0.0, 5.0]s
-    // so the chart immediately displays a full horizontal curve
-    for (int i = 0; i <= 65; ++i) {
+    s_liveChart3.Clear();
+    s_liveChart3.SetXAxis("Elapsed Time", "s");
+    s_liveChart3.SetYAxis("Memory", "MB");
+    s_liveChart3.SetLineThickness(2.2f);
+    s_liveChart3.SetHeadMarker(true);
+
+    s_liveChart4.Clear();
+    s_liveChart4.SetXAxis("Elapsed Time", "s");
+    s_liveChart4.SetYAxis("Packets", "k/s");
+    s_liveChart4.SetLineThickness(2.2f);
+    s_liveChart4.SetHeadMarker(true);
+
+    s_liveStartTime = std::chrono::steady_clock::now();
+    s_lastLiveSampleTime = s_liveStartTime;
+    s_lastJournalTime = s_liveStartTime;
+
+    // Pre-populate online chart with 60 live points across [0, 5s]
+    for (int i = 0; i <= 60; ++i) {
         double t = i * 0.08;
-        double baseline = 65.0;
-        double harmonics = 22.0 * std::sin(t * 1.8) + 12.0 * std::cos(t * 3.4);
-        double throughput = std::max(12.0, baseline + harmonics);
-        s_realtimeChart.AppendPoint(t, throughput);
+        double throughput = std::max(8.0, 68.0 + 22.0 * std::sin(t * 1.8) + 12.0 * std::cos(t * 3.4));
+        double latency = std::max(2.0, 12.0 + 4.5 * std::cos(t * 1.5));
+        double memory = 512.0 + 40.0 * std::sin(t * 0.8);
+        double packets = throughput * 1.25;
+
+        s_liveChart1.AppendPoint(t, throughput);
+        s_liveChart2.AppendPoint(t, latency);
+        s_liveChart3.AppendPoint(t, memory);
+        s_liveChart4.AppendPoint(t, packets);
     }
 
-    s_jobRecords = {
-        { 1001, "Telemetry Ingestion Pipeline", "ThorEngine v4", 12.4, 256.0, UiVariant::Success, "COMPLETED" },
-        { 1002, "Vector Matrix Transformation", "SIMD-AVX512",   48.2, 512.5, UiVariant::Success, "COMPLETED" },
-        { 1003, "Neural Weight Quantization",  "CoreCompute",   118.0, 1024.0, UiVariant::Primary, "PROCESSING" },
-        { 1004, "Cache Index Rebalancing",     "LSM-Store",       6.5, 128.2, UiVariant::Success, "COMPLETED" },
-        { 1005, "Distributed Lock Heartbeat",  "Raft-Cluster",    2.1,  64.0, UiVariant::Warning, "LATENCY SPIKE" },
-        { 1006, "TLS Key Exchange Handshake",  "CryptoLib",       4.8,  32.0, UiVariant::Success, "COMPLETED" },
-        { 1007, "Batch Data Compaction",       "ZSTD-Parallel", 230.1, 780.0, UiVariant::Danger,  "FAILED" },
-        { 1008, "Snapshot Checkpoint Sink",    "RocksDB-IO",     18.6, 320.0, UiVariant::Success, "COMPLETED" },
-        { 1009, "Kafka Consumer Group Sync",   "StreamBridge",    3.4,  48.0, UiVariant::Success, "COMPLETED" },
+    // 3. Setup Offline Analysis Chart
+    BuildOfflineAnalysisData(s_runs[0]);
+
+    // 4. Initial Journal Logs
+    s_journalLogs = {
+        { "10:14:00", "INFO",    "Application runtime initialized with ThorVG vector presentation backend", UiVariant::Success },
+        { "10:14:02", "INFO",    "Cluster socket established to 10.0.4.12:9050 (TCP/IP)", UiVariant::Success },
+        { "10:14:22", "SUCCESS", "Run #01 telemetry capture completed: 1,240 records committed", UiVariant::Success },
+        { "10:18:05", "SUCCESS", "Run #02 SIMD AVX-512 matrix evaluation completed without errors", UiVariant::Success },
+        { "10:22:40", "WARN",    "Run #03 observed packet queue spike at 13.6s (P99: 72 ms)", UiVariant::Warning },
+        { "10:28:11", "INFO",    "Run #04 neural cache quantization streaming active", UiVariant::Primary },
     };
 
-    s_diagnosticLogs = {
-        { "00:01.02", "INFO",    "Cluster heartbeat synchronized across 8 active nodes", UiVariant::Success },
-        { "00:01.45", "METRIC",  "Average telemetry ingestion rate stabilized at 84.6 MB/s", UiVariant::Info },
-        { "00:02.10", "SUCCESS", "AVX-512 SIMD vector compute pipeline online and verified", UiVariant::Success },
-        { "00:02.80", "WARN",    "Worker-07 reported transient latency excursion (+4.2 ms)", UiVariant::Warning },
-        { "00:03.22", "INFO",    "Ring buffer flushed 10,240 records without frame drops", UiVariant::Success },
-        { "00:04.05", "METRIC",  "Zero-copy socket transfer efficiency: 99.4%", UiVariant::Info },
-        { "00:04.91", "INFO",    "TLS 1.3 session ticket refreshed for downstream gateway", UiVariant::Success },
-    };
+    // 5. Setup Persistent Indicators for Header Carousel
+    s_indicators.clear();
+    s_indicators.push_back(std::make_unique<Indicator>("THROUGHPUT", 0.0, 1, "MB/s", 5, true));
+    s_indicators.push_back(std::make_unique<Indicator>("LATENCY", 0.0, 2, "ms", 5, true));
+    s_indicators.push_back(std::make_unique<Indicator>("CPU LOAD", 0.0, 1, "%", 4, false));
+    s_indicators.push_back(std::make_unique<Indicator>("UPTIME", 0.0, 1, "s", 4, false));
+    s_indicators.push_back(std::make_unique<Indicator>("THREADS", 16.0, 0, "", 3, false));
+    s_indicators.push_back(std::make_unique<Indicator>("MEMORY", 512.0, 0, "MB", 4, false));
+
+    // Zero / Tare action resets live stream baseline
+    s_indicators[0]->SetOnTare([]() {
+        s_liveChart1.Clear();
+        s_liveChart2.Clear();
+        s_liveChart3.Clear();
+        s_liveChart4.Clear();
+        s_liveStartTime = std::chrono::steady_clock::now();
+    });
 }
 
+// ----------------------------------------------------------------------------
+// 1. TOP HEADER (MIRRORING evo-machine-cpp MainWindow::RenderHeader)
+// ----------------------------------------------------------------------------
+static void RenderHeader(double elapsed) {
+    if (s_header.Begin()) {
+        const UiTheme& theme = UiTheme::Get();
+
+        // 1.1 Left Zone: Font scale Aa, Sun/Moon theme toggle, and DeviceStatus
+        if (auto left = s_header.Left()) {
+            float btnSize = 36.0f;
+
+            // Aa Scale button
+            if (ToolButton::Render("##BtnScale", Icon::Aa, "Interface scale & DPI", UiVariant::Default, false, btnSize)) {
+                ContextMenu::Open("FontScalePopup");
+            }
+            if (ContextMenu menu("FontScalePopup"); menu) {
+                menu.Header("INTERFACE SCALE");
+                menu.Separator();
+                float scales[] = { 1.0f, 1.25f, 1.5f, 1.75f, 2.0f };
+                for (float s : scales) {
+                    char label[32];
+                    std::snprintf(label, sizeof(label), "%.0f%%", s * 100.0f);
+                    bool isCurrent = std::abs(theme.GetScale() - s) < 0.05f;
+                    if (menu.Item(label, isCurrent)) {
+                        UiTheme::Get().SetScale(s);
+                    }
+                }
+            }
+
+            ImGui::SameLine(0.0f, theme.Scale(6.0f));
+
+            // Theme toggle (Sun / Moon)
+            const bool isDark = (theme.mode == ThemeMode::Dark);
+            const Icon themeIcon = isDark ? Icon::Moon : Icon::Sun;
+            const char* themeTooltip = isDark ? "Dark theme - click for light" : "Light theme - click for dark";
+            if (ToolButton::Render("##BtnTheme", themeIcon, themeTooltip, UiVariant::Default, false, btnSize)) {
+                UiTheme::Get().SetMode(isDark ? ThemeMode::Light : ThemeMode::Dark);
+            }
+
+            ImGui::SameLine(0.0f, theme.Scale(10.0f));
+
+            // Align cursor for DeviceStatus with header content baseline
+            ImGui::SetCursorPosY(theme.Scale(theme.header.paddingY));
+
+            DeviceStatus::Render("Cluster Uplink 07",
+                                 s_deviceConnected ? s_deviceState : DeviceState::Disconnected,
+                                 s_deviceConnected ? (s_deviceState == DeviceState::Running ? "STREAMING (100 Hz)" : "STANDBY") : "DISCONNECTED",
+                                 s_deviceConnected ? (s_deviceState == DeviceState::Running ? "Pause" : "Start") : "Connect",
+                                 []() {
+                                     if (!s_deviceConnected) {
+                                         s_deviceConnected = true;
+                                         s_deviceState = DeviceState::Running;
+                                         s_deviceStreaming = true;
+                                     } else if (s_deviceState == DeviceState::Running) {
+                                         s_deviceState = DeviceState::Idle;
+                                         s_deviceStreaming = false;
+                                     } else {
+                                         s_deviceState = DeviceState::Running;
+                                         s_deviceStreaming = true;
+                                     }
+                                 });
+        }
+
+        // 1.2 Right Zone: Indicator count selector (evaluated before Center so Center knows exact width)
+        if (auto right = s_header.Right()) {
+            float btnSize = 36.0f;
+            char countTip[64];
+            std::snprintf(countTip, sizeof(countTip), "Active Indicators (%d)", s_indicatorsCount);
+            if (ToolButton::Render("##BtnIndicatorsCount", Icon::List, countTip, UiVariant::Default, false, btnSize)) {
+                ContextMenu::Open("IndicatorCountPopup");
+            }
+            if (ContextMenu menu("IndicatorCountPopup"); menu) {
+                menu.Header("DIGITAL INDICATORS");
+                menu.Separator();
+                for (int n = 2; n <= 6; ++n) {
+                    char label[32];
+                    std::snprintf(label, sizeof(label), "%d indicators", n);
+                    if (menu.Item(label, s_indicatorsCount == n)) {
+                        s_indicatorsCount = n;
+                    }
+                }
+            }
+        }
+
+        // 1.3 Center Zone: Telemetry carousel
+        if (auto center = s_header.Center()) {
+            // Update live values in persistent indicators
+            double liveTput = s_deviceStreaming ? (84.6 + 4.8 * std::sin(elapsed * 2.2)) : 0.0;
+            double liveLat = s_deviceStreaming ? (14.2 + 2.1 * std::cos(elapsed * 1.5)) : 0.0;
+            double liveCpu = s_deviceStreaming ? (24.8 + 6.2 * std::sin(elapsed * 1.1)) : 2.1;
+            double liveMem = 512.0 + 35.0 * std::sin(elapsed * 0.7);
+
+            if (s_indicators.size() >= 6) {
+                s_indicators[0]->SetValue(liveTput);
+                s_indicators[1]->SetValue(liveLat);
+                s_indicators[2]->SetValue(liveCpu);
+                s_indicators[3]->SetValue(elapsed);
+                s_indicators[4]->SetValue(static_cast<double>(s_workerThreads));
+                s_indicators[5]->SetValue(liveMem);
+            }
+
+            if (Carousel carousel("##HeaderTelemetryCarousel", ImVec2(center.Width(), center.Height())); carousel) {
+                for (size_t i = 0; i < s_indicators.size() && i < static_cast<size_t>(s_indicatorsCount); ++i) {
+                    if (i > 0) ImGui::SameLine();
+                    s_indicators[i]->Render();
+                }
+            }
+        }
+
+        s_header.End();
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 2. SESSION / PROJECT TOOLBAR (MIRRORING evo-machine-cpp ProjectBar)
+// ----------------------------------------------------------------------------
+static void RenderToolbar() {
+    if (s_toolbar.Begin()) {
+        const UiTheme& theme = UiTheme::Get();
+
+        // 2.1 Left Zone: "Session:" label
+        if (auto left = s_toolbar.Left()) {
+            left.Label("Session:");
+        }
+
+        // 2.2 Center / Fill Zone: Editable title
+        if (auto fill = s_toolbar.Fill()) {
+            s_editableSessionTitle.Render("##SessionTitleLabel", s_sessionTitle, fill.Width(), theme.fontBold);
+        }
+
+        // 2.3 Right Zone: "New Session" button
+        if (auto right = s_toolbar.Right()) {
+            if (Button::Primary("New Session", Icon::Plus, 0.0f, theme.toolbar.ContentHeight())) {
+                s_sessionTitle = "Telemetry Ingestion Session - " + FormatCurrentClock();
+                s_liveChart1.Clear();
+                s_liveStartTime = std::chrono::steady_clock::now();
+            }
+        }
+
+        s_toolbar.End();
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 3. SIDEBAR NAVIGATION (MIRRORING evo-machine-cpp MainWindow::RenderSidebar)
+// ----------------------------------------------------------------------------
+static void RenderSidebar() {
+    if (s_sidebar.Begin()) {
+        // Fixed navigation items
+        s_sidebarMenu.Item("Live Stream",      Icon::Gamepad,   NavScreen::RemoteControl, s_currentScreen);
+        s_sidebarMenu.Item("Offline Analysis", Icon::LineChart, NavScreen::Processing,    s_currentScreen);
+        s_sidebarMenu.Item("Machine & Node",   Icon::Cog,       NavScreen::Machine,       s_currentScreen);
+        s_sidebarMenu.Item("Data Archive",     Icon::Database,  NavScreen::Archive,       s_currentScreen);
+        s_sidebarMenu.Item("Event Journal",    Icon::List,      NavScreen::Journal,       s_currentScreen);
+        s_sidebarMenu.Item("Node Passport",    Icon::Clipboard, NavScreen::Passport,      s_currentScreen);
+        s_sidebarMenu.Item("Batch Analytics",  Icon::BarChart,  NavScreen::Series,        s_currentScreen);
+
+        s_sidebarMenu.Spacing(8.0f);
+        s_sidebarMenu.Separator();
+        s_sidebarMenu.SectionTitle("RECORDED RUNS");
+
+        // Scrollable region for recorded runs
+        if (s_sidebarMenu.BeginScrollRegion("##RunsScrollRegion")) {
+            for (size_t i = 0; i < s_runs.size(); ++i) {
+                const auto& run = s_runs[i];
+                bool isSelected = (s_currentScreen == NavScreen::Processing && s_selectedRunIndex == static_cast<int>(i));
+
+                char sublabel[64];
+                std::snprintf(sublabel, sizeof(sublabel), "%s • %d pts", run.timestamp.c_str(), run.pointCount);
+
+                if (s_sidebarMenu.ItemEx(run.id.c_str(), run.title.c_str(), sublabel, run.ledColor, isSelected)) {
+                    s_selectedRunIndex = static_cast<int>(i);
+                    s_currentScreen = NavScreen::Processing;
+                    BuildOfflineAnalysisData(s_runs[i]);
+                }
+
+                // Tooltip
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("%s", run.title.c_str());
+                    ImGui::TextDisabled("Started: %s | Duration: %.1f s", run.timestamp.c_str(), run.durationS);
+                    ImGui::TextDisabled("Peak: %.1f MB/s | Latency: %.1f ms", run.peakThroughput, run.avgLatency);
+                    Badge::Render(run.statusText, run.status);
+                    ImGui::EndTooltip();
+                }
+
+                // Context menu
+                if (ImGui::BeginPopupContextItem()) {
+                    if (ImGui::MenuItem("Open in Analysis")) {
+                        s_selectedRunIndex = static_cast<int>(i);
+                        s_currentScreen = NavScreen::Processing;
+                        BuildOfflineAnalysisData(s_runs[i]);
+                    }
+                    if (ImGui::MenuItem("Delete Run", nullptr, false, run.status != UiVariant::Primary)) {
+                        s_runs.erase(s_runs.begin() + i);
+                        if (s_selectedRunIndex >= static_cast<int>(s_runs.size())) {
+                            s_selectedRunIndex = static_cast<int>(s_runs.size()) - 1;
+                        }
+                        if (s_selectedRunIndex >= 0) {
+                            BuildOfflineAnalysisData(s_runs[s_selectedRunIndex]);
+                        }
+                        ImGui::EndPopup();
+                        break;
+                    }
+                    ImGui::EndPopup();
+                }
+            }
+            s_sidebarMenu.EndScrollRegion();
+        }
+
+        s_sidebar.End();
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 4. SCREEN 1: REMOTE CONTROL & REAL-TIME STREAM
+// ----------------------------------------------------------------------------
+static void RenderRemoteControl() {
+    const UiTheme& theme = UiTheme::Get();
+    float availW = ImGui::GetContentRegionAvail().x;
+    float availH = ImGui::GetContentRegionAvail().y;
+
+    float sideOccupiedW = SidePanel::CalcTotalWidth(260.0f, false);
+    float graphAreaW = std::max(50.0f, availW - sideOccupiedW - theme.SpacingMedium());
+
+    // 1. Left Area: Animated Real-time Chart
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImColor(theme.card.colBg).Value);
+    if (ImGui::BeginChild("##LiveGraphArea", ImVec2(graphAreaW, availH), true)) {
+        // Single combo to select number of graphs to display: 1, 2, 3, 4
+        const char* const graphCountOptions[] = {
+            "1 Graph",
+            "2 Graphs",
+            "3 Graphs",
+            "4 Graphs"
+        };
+        Combo::Render("##GraphCountCombo", s_realtimeLayout, graphCountOptions, 4, UiSize::Medium, 160.0f * theme.GetScale());
+
+        ImGui::Spacing();
+
+        ImVec2 graphSize = ImGui::GetContentRegionAvail();
+        float spacing = theme.SpacingMedium();
+
+        if (s_realtimeLayout == 0) {
+            // 1 Graph: Single chart filling the entire available graph space (Throughput)
+            s_liveChart1.Render("##LiveChart1", graphSize);
+        } else if (s_realtimeLayout == 1) {
+            // 2 Graphs: Dual stacked charts (Top: Throughput, Bottom: Latency)
+            float halfH = std::max(50.0f, (graphSize.y - spacing) * 0.5f);
+            s_liveChart1.Render("##LiveChart1", ImVec2(graphSize.x, halfH));
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + spacing);
+            s_liveChart2.Render("##LiveChart2", ImVec2(graphSize.x, halfH));
+        } else if (s_realtimeLayout == 2) {
+            // 3 Graphs: Top full width (Throughput), Bottom split dual (Left: Latency, Right: Memory)
+            float halfW = std::max(50.0f, (graphSize.x - spacing) * 0.5f);
+            float halfH = std::max(50.0f, (graphSize.y - spacing) * 0.5f);
+
+            s_liveChart1.Render("##LiveChart1", ImVec2(graphSize.x, halfH));
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + spacing);
+            s_liveChart2.Render("##LiveChart2", ImVec2(halfW, halfH));
+            ImGui::SameLine(0.0f, spacing);
+            s_liveChart3.Render("##LiveChart3", ImVec2(halfW, halfH));
+        } else {
+            // 4 Graphs: Quad 2x2 grid
+            // Top: Throughput (left) & Latency (right)
+            // Bottom: Memory (left) & Packets (right)
+            float halfW = std::max(50.0f, (graphSize.x - spacing) * 0.5f);
+            float halfH = std::max(50.0f, (graphSize.y - spacing) * 0.5f);
+
+            s_liveChart1.Render("##LiveChart1", ImVec2(halfW, halfH));
+            ImGui::SameLine(0.0f, spacing);
+            s_liveChart2.Render("##LiveChart2", ImVec2(halfW, halfH));
+
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + spacing);
+            s_liveChart3.Render("##LiveChart3", ImVec2(halfW, halfH));
+            ImGui::SameLine(0.0f, spacing);
+            s_liveChart4.Render("##LiveChart4", ImVec2(halfW, halfH));
+        }
+    }
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+
+    ImGui::SameLine();
+
+    // 2. Right Area: SidePanel Remote Control actions
+    if (SidePanel panel("##RemoteSidePanel", 260.0f, SidePanel::Side::Right); panel) {
+        if (Card actionCard("pult_card", "Stream Actions"); actionCard) {
+            float btnW = ImGui::GetContentRegionAvail().x;
+            if (Button::Render("START STREAM", UiVariant::Success, ImVec2(btnW, 40.0f * theme.GetScale()), Icon(Icon::Play))) {
+                s_deviceState = DeviceState::Running;
+                s_deviceStreaming = true;
+            }
+            ImGui::Spacing();
+            if (Button::Render("PAUSE FEED", UiVariant::Warning, ImVec2(btnW, 36.0f * theme.GetScale()), Icon(Icon::Pause))) {
+                s_deviceState = DeviceState::Idle;
+                s_deviceStreaming = false;
+            }
+            ImGui::Spacing();
+            if (Button::Render("STOP & RESET", UiVariant::Danger, ImVec2(btnW, 36.0f * theme.GetScale()), Icon(Icon::Square))) {
+                s_deviceState = DeviceState::Idle;
+                s_deviceStreaming = false;
+                s_liveChart1.Clear();
+                s_liveChart2.Clear();
+                s_liveChart3.Clear();
+                s_liveChart4.Clear();
+                s_liveStartTime = std::chrono::steady_clock::now();
+            }
+        }
+
+        ImGui::Spacing();
+
+        if (Card jogCard("jog_card", "Sampling Frequency"); jogCard) {
+            static const std::vector<float> freqs = { 20.0f, 50.0f, 100.0f, 250.0f, 500.0f };
+            PresetGrid::Render(s_streamRateJog, freqs, "Hz", 0.0f, 3);
+        }
+
+        ImGui::Spacing();
+
+        if (Card calibCard("calib_card", "Baseline & Zero"); calibCard) {
+            float btnW = ImGui::GetContentRegionAvail().x;
+            if (Button::Render("Tare / Zero Baseline", UiVariant::Secondary, ImVec2(btnW, 34.0f * theme.GetScale()), Icon(Icon::Zero))) {
+                s_liveChart1.Clear();
+                s_liveChart2.Clear();
+                s_liveChart3.Clear();
+                s_liveChart4.Clear();
+                s_liveStartTime = std::chrono::steady_clock::now();
+            }
+
+            // Hold button: true only while pressed (Card::HoldButton); streams ~4x faster while held
+            ImGui::Spacing();
+            s_boostHeld = calibCard.HoldButton("Hold to Boost Stream", Icon::Play, UiVariant::Info, RowHeight::Auto(),
+                                               ::Col::Full(), !s_deviceStreaming);
+            Tooltip::OnLastItem(s_deviceStreaming ? "Samples ~4x faster while the button is held"
+                                                  : "Start the stream to enable boost");
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 5. SCREEN 2: OFFLINE DATASET ANALYSIS (AnalysisChart with Zoom & Pan)
+// ----------------------------------------------------------------------------
+static void RenderProcessing() {
+    const UiTheme& theme = UiTheme::Get();
+    float availW = ImGui::GetContentRegionAvail().x;
+    float availH = ImGui::GetContentRegionAvail().y;
+
+    const auto& activeRun = s_runs[s_selectedRunIndex];
+    float sideOccupiedW = SidePanel::CalcTotalWidth(280.0f, false);
+    float chartAreaW = std::max(50.0f, availW - sideOccupiedW - theme.SpacingMedium());
+
+    // 1. Left Area: Interactive Zoomable AnalysisChart
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImColor(theme.card.colBg).Value);
+    if (ImGui::BeginChild("##OfflineChartContainer", ImVec2(chartAreaW, availH), true)) {
+        ImGui::TextColored(ImColor(theme.palette.accent).Value, "%s", activeRun.title.c_str());
+        ImGui::SameLine();
+        Badge::Render(activeRun.statusText, activeRun.status);
+
+        ImGui::SameLine(chartAreaW - 240.0f * theme.GetScale());
+        if (Button::Render("Reset Zoom", UiVariant::Secondary, Icon(Icon::Refresh), UiSize::Small)) {
+            s_offlineChart.ResetZoom();
+        }
+        ImGui::SameLine();
+        bool majGrid = s_offlineChart.GetOptions().majorGrid;
+        if (Button::Render(majGrid ? "Grid: ON" : "Grid: OFF", UiVariant::Secondary, Icon::None, UiSize::Small)) {
+            s_offlineChart.SetMajorGrid(!majGrid);
+            s_offlineChart.SetMinorGrid(!majGrid);
+        }
+
+        ImGui::Spacing();
+
+        ImVec2 chartSz = ImGui::GetContentRegionAvail();
+        s_offlineChart.Render("##OfflineDatasetAnalysisChart", chartSz);
+    }
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+
+    ImGui::SameLine();
+
+    // 2. Right Area: Metrics Evaluation & Run Metadata
+    if (SidePanel sideP("##AnalysisSideMetrics", 280.0f, SidePanel::Side::Right); sideP) {
+        if (Card metricsCard("calc_metrics_card", "Calculated Indicators"); metricsCard) {
+            std::vector<TableGrid::Column> cols = {
+                { "Indicator", ColumnWidthMode::Stretch, 1.0f },
+                { "Value / Status", ColumnWidthMode::Fixed, 120.0f }
+            };
+            TableGrid::Options opts;
+            opts.scrollY = false;
+            opts.height = 170.0f;
+            if (TableGrid grid("MetricsTable", cols, opts); grid) {
+                grid.NextRow();
+                grid.SetColumn(0); ImGui::Text("Peak Throughput");
+                grid.SetColumn(1); ImGui::Text("%.1f MB/s", activeRun.peakThroughput);
+                ImGui::SameLine(); TableCell::MetricStatus("ok");
+
+                grid.NextRow();
+                grid.SetColumn(0); ImGui::Text("Mean Latency");
+                grid.SetColumn(1); ImGui::Text("%.1f ms", activeRun.avgLatency);
+                ImGui::SameLine(); TableCell::MetricStatus("ok");
+
+                grid.NextRow();
+                grid.SetColumn(0); ImGui::Text("P99 Latency");
+                grid.SetColumn(1); ImGui::Text("%.1f ms", activeRun.p99Latency);
+                ImGui::SameLine(); TableCell::MetricStatus(activeRun.p99Latency > 30.0 ? "manual_needed" : "ok");
+
+                grid.NextRow();
+                grid.SetColumn(0); ImGui::Text("Efficiency Factor");
+                grid.SetColumn(1); ImGui::Text("%.1f %%", activeRun.efficiency);
+                ImGui::SameLine(); TableCell::MetricStatus("ok");
+
+                grid.NextRow();
+                grid.SetColumn(0); ImGui::Text("Anomaly Classifier");
+                grid.SetColumn(1); ImGui::Text("%s", activeRun.anomaly.c_str());
+                ImGui::SameLine(); TableCell::MetricStatus(activeRun.anomaly == "Nominal" ? "ok" : "empty");
+            }
+        }
+
+        ImGui::Spacing();
+
+        if (Card metaCard("meta_card", "Run Metadata"); metaCard) {
+            ValueDisplay::Render(static_cast<double>(activeRun.pointCount), "points", 0, 40.0f * theme.GetScale(), "%.0f");
+            ImGui::Spacing();
+            ValueDisplay::Render(activeRun.durationS, "s", 0, 40.0f * theme.GetScale(), "%.1f");
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 6. SCREEN 3: SYSTEM & HARDWARE CONFIGURATION
+// ----------------------------------------------------------------------------
+static void RenderMachine() {
+    const UiTheme& theme = UiTheme::Get();
+    const char* machineTabs[] = {
+        "Networking",
+        "Compute Arch",
+        "AVX-512 SIMD",
+        "Buffer Pool",
+        "NVMe Storage",
+        "Rate Limiter & PID",
+        "Diagnostics",
+        "Export / Sync"
+    };
+    TabBar::Render("##MachineConfigTabs", machineTabs, IM_ARRAYSIZE(machineTabs), s_machineTab, true);
+
+    ImGui::Spacing();
+
+    ImGui::BeginChild("##MachineTabScrollRegion", ImVec2(0, 0), false, ImGuiWindowFlags_None);
+    {
+        switch (s_machineTab) {
+            case 0: { // Networking
+                if (Card netCard("net_cfg_card", "Socket & Transport Configuration"); netCard) {
+                    InputField::Text("##bind_ip", "Listening Interface Address", s_bindAddress);
+                    ImGui::Spacing();
+                    InputField::Int("##bind_port", "Uplink TCP Port", s_bindPort);
+                    ImGui::Spacing();
+                    InputField::Float("##tcp_buf", "Socket Ring Buffer Size", s_tcpBufferSize, "KB");
+                    ImGui::Spacing();
+                    Toggle::Render("tog_keepalive", s_keepaliveEnabled, "Enable TCP Keepalive Probes", "Verifies socket liveness every 15s");
+                    Toggle::Render("tog_zstd", s_compressionZstd, "Payload Compression (Zstandard)", "Compresses wire packets above 4 KB");
+                    ImGui::Spacing();
+                    Button::Render("Apply Network Configuration", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                }
+                break;
+            }
+            case 1: { // Compute Architecture
+                if (Card compCard("comp_cfg_card", "Thread Concurrency & Core Allocation"); compCard) {
+                    InputField::Int("##workers", "Active Worker Thread Count", s_workerThreads);
+                    ImGui::Spacing();
+                    InputField::Text("##region", "Cluster Deployment Zone", s_clusterRegion);
+                    ImGui::Spacing();
+                    Toggle::Render("tog_numa", s_numaAffinity, "NUMA Socket Memory Pinning", "Allocates buffers strictly local to core");
+                    ImGui::Spacing();
+                    Button::Render("Apply Compute Settings", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                }
+                break;
+            }
+            case 2: { // AVX-512 SIMD
+                if (Card simdCard("simd_cfg_card", "Vectorization Engine Parameters"); simdCard) {
+                    Toggle::Render("tog_avx512", s_passportRdmaEnabled, "Enable AVX-512 FPU Instructions", "512-bit wide vector matrix operations");
+                    ImGui::Spacing();
+                    InputField::Float("##tput_max", "Rated Maximum Bandwidth", s_passportMaxThroughput, "MB/s");
+                    ImGui::Spacing();
+                    Button::Render("Commit SIMD Pipeline", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                }
+                break;
+            }
+            case 3: { // Buffer Pool
+                if (Card bufCard("buf_cfg_card", "Slab Allocator Quotas"); bufCard) {
+                    InputField::Float("##cache_quota", "Max L1 Memory Slab Size", s_cacheQuotaMb, "MB");
+                    ImGui::Spacing();
+                    InputField::Float("##evict_th", "Eviction High-Watermark", s_evictionThreshold, "%");
+                    ImGui::Spacing();
+                    Button::Render("Flush & Reallocate Slabs", UiVariant::Warning, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Refresh));
+                }
+                break;
+            }
+            case 4: { // Storage NVMe
+                if (Card storageCard("storage_cfg_card", "Zero-Copy Disk Writer"); storageCard) {
+                    InputField::Int("##repl_f", "Replication Factor", s_replicationFactor);
+                    ImGui::Spacing();
+                    Button::Render("Sync Storage Buffers", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                }
+                break;
+            }
+            case 5: { // Rate Limiter & PID
+                if (Card pidCard("pid_cfg_card", "Telemetry Stream PID Controller"); pidCard) {
+                    InputField::Float("##pid_kp", "Proportional Gain (Kp)", s_pidKp);
+                    ImGui::Spacing();
+                    InputField::Float("##pid_ki", "Integral Gain (Ki)", s_pidKi);
+                    ImGui::Spacing();
+                    InputField::Float("##pid_kd", "Derivative Gain (Kd)", s_pidKd);
+                    ImGui::Spacing();
+                    Button::Render("Apply PID Calibration", UiVariant::Primary, ImVec2(240.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Check));
+                }
+                break;
+            }
+            default: { // Diagnostics & Export
+                if (Card diagCard("diag_cfg_card", "Self-Test & Diagnostics"); diagCard) {
+                    Button::Render("Run Cluster Diagnostic Self-Test", UiVariant::Info, ImVec2(260.0f * theme.GetScale(), 36.0f * theme.GetScale()), Icon(Icon::Target));
+                }
+                break;
+            }
+        }
+    }
+    ImGui::EndChild();
+}
+
+// ----------------------------------------------------------------------------
+// 7. SCREEN 4: DATA ARCHIVE (TableGrid & SearchInput)
+// ----------------------------------------------------------------------------
+static void RenderArchive() {
+    const UiTheme& theme = UiTheme::Get();
+    if (Card archiveCard("archive_full_card", "Telemetry Dataset Archive"); archiveCard) {
+        SearchInput::Render("tbl_search_archive", s_searchArchive, "Search datasets by name or run ID...");
+        ImGui::Spacing();
+
+        std::vector<TableGrid::Column> cols = {
+            { "ID", ColumnWidthMode::Fixed, 65.0f },
+            { "Dataset Name", ColumnWidthMode::Stretch, 1.0f },
+            { "Timestamp", ColumnWidthMode::Fixed, 90.0f },
+            { "Duration", ColumnWidthMode::Fixed, 80.0f },
+            { "Samples", ColumnWidthMode::Fixed, 80.0f },
+            { "Status", ColumnWidthMode::Fixed, 110.0f },
+            { "Action", ColumnWidthMode::Fixed, 80.0f }
+        };
+
+        if (TableGrid grid("FullArchiveTable", cols); grid) {
+            for (size_t i = 0; i < s_runs.size(); ++i) {
+                const auto& run = s_runs[i];
+                if (!s_searchArchive.empty() &&
+                    run.title.find(s_searchArchive) == std::string::npos &&
+                    run.id.find(s_searchArchive) == std::string::npos) {
+                    continue;
+                }
+                grid.NextRow(static_cast<int>(i));
+                grid.SetColumn(0); grid.CellText(run.id);
+                grid.SetColumn(1); grid.CellText(run.title);
+                grid.SetColumn(2); grid.CellText(run.timestamp, theme.palette.textMuted);
+                grid.SetColumn(3); grid.CellText(Fmt("%.1f s", run.durationS));
+                grid.SetColumn(4); grid.CellText(Fmt("%d", run.pointCount));
+                grid.SetColumn(5); Badge::Render(run.statusText, run.status);
+                grid.SetColumn(6);
+                if (Button::Render("View", UiVariant::Secondary, ImVec2(70.0f * theme.GetScale(), 22.0f * theme.GetScale()), Icon::None, false)) {
+                    s_selectedRunIndex = static_cast<int>(i);
+                    s_currentScreen = NavScreen::Processing;
+                    BuildOfflineAnalysisData(s_runs[i]);
+                }
+                Tooltip::OnLastItem("Open this run in Offline Analysis");
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 8. SCREEN 5: EVENT JOURNAL (Terminal Log Stream)
+// ----------------------------------------------------------------------------
+static void RenderJournal() {
+    const UiTheme& theme = UiTheme::Get();
+    if (Card journalCard("journal_full_card", "Real-Time Event & Operator Journal"); journalCard) {
+        ImGui::Checkbox("Auto-scroll", &s_autoScrollJournal);
+        ImGui::SameLine();
+        SearchInput::Render("tbl_search_journal", s_searchJournal, "Filter log entries...", 220.0f * theme.GetScale());
+        ImGui::SameLine();
+        if (Button::Render("Clear Journal", UiVariant::Secondary, Icon(Icon::Refresh), UiSize::Small)) {
+            s_journalLogs.clear();
+        }
+
+        ImGui::Spacing();
+
+        ImGui::BeginChild("JournalTerminalShell", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+        {
+            for (const auto& entry : s_journalLogs) {
+                if (!s_searchJournal.empty() && entry.message.find(s_searchJournal) == std::string::npos) {
+                    continue;
+                }
+                ImGui::TextColored(ImColor(theme.palette.textMuted).Value, "[%s]", entry.timeStr.c_str());
+                ImGui::SameLine();
+                Badge::Render(entry.level.c_str(), entry.variant);
+                ImGui::SameLine();
+                ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", entry.message.c_str());
+            }
+            if (s_autoScrollJournal && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+                ImGui::SetScrollHereY(1.0f);
+            }
+        }
+        ImGui::EndChild();
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 9. SCREEN 6: NODE PASSPORT (Hardware Specs)
+// ----------------------------------------------------------------------------
+static void RenderPassport() {
+    if (Card passportCard("passport_full_card", "Node Hardware Specification & Identity"); passportCard) {
+        InputField::Text("##node_id", "Node Unique Identifier", s_passportNodeId);
+        ImGui::Spacing();
+        InputField::Text("##fw_rev", "Firmware / Runtime Revision", s_passportFwRev);
+        ImGui::Spacing();
+        InputField::Text("##simd_arch", "SIMD Architecture Extensions", s_passportSimdArch);
+        ImGui::Spacing();
+        InputField::Float("##max_tput", "Rated Maximum Bandwidth", s_passportMaxThroughput, "MB/s");
+        ImGui::Spacing();
+        InputField::Float("##min_lat", "Design Latency Lower Bound", s_passportMinLatency, "ms");
+        ImGui::Spacing();
+        Toggle::Render("tog_ecc", s_passportEccMemory, "ECC Memory Scrubbing Active", "Hardware parity correction enabled");
+        Toggle::Render("tog_rdma", s_passportRdmaEnabled, "Direct Memory Access (RDMA)", "Kernel bypass zero-copy network buffers");
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 10. SCREEN 7: BATCH ANALYTICS (Series Evaluation Matrix)
+// ----------------------------------------------------------------------------
+static void RenderSeries() {
+    const UiTheme& theme = UiTheme::Get();
+    if (Card seriesCard("series_full_card", "Cluster Nodes Comparative Analytics"); seriesCard) {
+        std::vector<TableGrid::Column> cols = {
+            { "Node Identifier", ColumnWidthMode::Stretch, 1.0f },
+            { "Peak Tput (MB/s)", ColumnWidthMode::Fixed, 130.0f },
+            { "Avg Latency (ms)", ColumnWidthMode::Fixed, 130.0f },
+            { "P99 Tail (ms)", ColumnWidthMode::Fixed, 110.0f },
+            { "Efficiency", ColumnWidthMode::Fixed, 100.0f },
+            { "State", ColumnWidthMode::Fixed, 110.0f }
+        };
+
+        if (TableGrid grid("SeriesTable", cols); grid) {
+            for (size_t i = 0; i < s_runs.size(); ++i) {
+                const auto& run = s_runs[i];
+                grid.NextRow(static_cast<int>(i));
+                grid.SetColumn(0); ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", run.title.c_str());
+                grid.SetColumn(1); ImGui::Text("%.1f", run.peakThroughput);
+                grid.SetColumn(2); ImGui::Text("%.2f", run.avgLatency);
+                grid.SetColumn(3); ImGui::Text("%.2f", run.p99Latency);
+                grid.SetColumn(4); ImGui::Text("%.1f %%", run.efficiency);
+                grid.SetColumn(5); Badge::Render(run.statusText, run.status);
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 11. MAIN CONTENT ROUTER (ContentArea)
+// ----------------------------------------------------------------------------
+static void RenderContent() {
+    if (s_contentArea.Begin()) {
+        switch (s_currentScreen) {
+            case NavScreen::RemoteControl:
+                RenderRemoteControl();
+                break;
+            case NavScreen::Processing:
+                RenderProcessing();
+                break;
+            case NavScreen::Machine:
+                RenderMachine();
+                break;
+            case NavScreen::Archive:
+                RenderArchive();
+                break;
+            case NavScreen::Journal:
+                RenderJournal();
+                break;
+            case NavScreen::Passport:
+                RenderPassport();
+                break;
+            case NavScreen::Series:
+                RenderSeries();
+                break;
+        }
+        s_contentArea.End();
+    }
+}
+
+// ----------------------------------------------------------------------------
+// 12. BOTTOM STATUS BAR (StatusBar)
+// ----------------------------------------------------------------------------
+static void RenderStatusBar() {
+    if (s_statusBar.Begin()) {
+        s_statusBar.Text("Uplink: 10.0.4.12:9050 (Active • 1.2 ms)", UiVariant::Success);
+        s_statusBar.Separator();
+
+        std::string curMsg = (s_deviceState == DeviceState::Running)
+                           ? "System nominal • Real-time pipeline active and streaming"
+                           : "Standby • Stream paused by operator";
+        s_statusBar.Text(curMsg, s_deviceState == DeviceState::Running ? UiVariant::Default : UiVariant::Warning);
+
+        s_statusBar.Separator();
+        s_statusBar.Text("OmniGUI v1.0.7 | " + FormatCurrentClock(), UiVariant::Secondary);
+
+        s_statusBar.End();
+    }
+}
+
+// ----------------------------------------------------------------------------
+// MAIN SHOWCASE ENTRY POINT
+// ----------------------------------------------------------------------------
 void RenderUI(float main_scale) {
     if (!s_initialized) {
         Init();
     }
 
     UiTheme& theme = UiTheme::Get();
+    if (theme.GetScale() > 0.0f) {
+        main_scale = theme.GetScale();
+    }
     auto now = std::chrono::steady_clock::now();
-    double elapsed = std::chrono::duration<double>(now - s_startTime).count();
+    double elapsed = std::chrono::duration<double>(now - s_liveStartTime).count();
 
     // Stream synthetic real-time telemetry curve data (Throughput vs Elapsed Time)
-    if (s_liveFeed && s_deviceState == DeviceState::Running) {
-        double dt = std::chrono::duration<double>(now - s_lastSampleTime).count();
-        if (dt >= 0.033) { // ~30 Hz telemetry rate
-            s_lastSampleTime = now;
+    if (s_deviceStreaming && s_deviceConnected && s_deviceState == DeviceState::Running) {
+        double dt = std::chrono::duration<double>(now - s_lastLiveSampleTime).count();
+        const double minDt = s_boostHeld ? 0.008 : 0.033; // boost: ~4x telemetry rate
+        if (dt >= minDt) { // ~30 Hz telemetry rate (120 Hz while boosted)
+            s_lastLiveSampleTime = now;
             double t = elapsed;
-            double baseline = 65.0;
+            double baseline = 68.0;
             double harmonics = 22.0 * std::sin(t * 1.8) + 12.0 * std::cos(t * 3.4);
             double burst = 14.0 * std::sin(t * 0.4);
-            double throughput = std::max(8.0, baseline + harmonics + burst);
+            double throughput = std::max(6.0, baseline + harmonics + burst);
 
-            // Cycle time window when points exceed 250 so it continuously sweeps
-            if (s_realtimeChart.PointCount() > 250) {
-                s_realtimeChart.Clear();
-                s_startTime = now;
+            double latency = std::max(1.5, 12.0 + 4.5 * std::cos(t * 1.5) + 2.0 * std::sin(t * 4.2));
+            double memory = 512.0 + 50.0 * std::sin(t * 0.8);
+            double packets = throughput * 1.25;
+
+            // Continuous sweep: refresh window when exceeding 250 samples
+            if (s_liveChart1.PointCount() > 250) {
+                s_liveChart1.Clear();
+                s_liveChart2.Clear();
+                s_liveChart3.Clear();
+                s_liveChart4.Clear();
+                s_liveStartTime = now;
                 elapsed = 0.0;
             }
-            s_realtimeChart.AppendPoint(elapsed, throughput);
+
+            s_liveChart1.AppendPoint(elapsed, throughput);
+            s_liveChart2.AppendPoint(elapsed, latency);
+            s_liveChart3.AppendPoint(elapsed, memory);
+            s_liveChart4.AppendPoint(elapsed, packets);
         }
     }
 
-    // Stream synthetic diagnostic logs periodically
+    // Periodic live journal events
     {
-        double logDt = std::chrono::duration<double>(now - s_lastLogTime).count();
-        if (logDt >= 2.5) {
-            s_lastLogTime = now;
-            char timeBuf[32];
-            snprintf(timeBuf, sizeof(timeBuf), "%02d:%05.2f", (int)(elapsed / 60.0), std::fmod(elapsed, 60.0));
-            static int s_logCounter = 0;
-            s_logCounter++;
-            if (s_logCounter % 4 == 0) {
-                s_diagnosticLogs.push_back({ timeBuf, "WARN", "Buffer pressure exceeded 75% on ingestion sink", UiVariant::Warning });
-            } else if (s_logCounter % 3 == 0) {
-                s_diagnosticLogs.push_back({ timeBuf, "METRIC", "Heartbeat roundtrip latency: 1.82 ms (P99: 3.4 ms)", UiVariant::Info });
+        double logDt = std::chrono::duration<double>(now - s_lastJournalTime).count();
+        if (logDt >= 4.0) {
+            s_lastJournalTime = now;
+            std::string curTime = FormatCurrentClock();
+            static int s_logIdx = 0;
+            s_logIdx++;
+            if (s_logIdx % 4 == 0) {
+                s_journalLogs.push_back({ curTime, "WARN", "Memory pressure watermark at 78% on L1 cache slab", UiVariant::Warning });
+            } else if (s_logIdx % 3 == 0) {
+                s_journalLogs.push_back({ curTime, "METRIC", "Heartbeat latency verified: 1.18 ms RTT", UiVariant::Info });
             } else {
-                s_diagnosticLogs.push_back({ timeBuf, "INFO", "Batch processed 4096 records in SIMD pipeline", UiVariant::Success });
+                s_journalLogs.push_back({ curTime, "INFO", "Batch compacted 4,096 records in SIMD pipeline", UiVariant::Success });
             }
-            if (s_diagnosticLogs.size() > 80) {
-                s_diagnosticLogs.pop_front();
+            if (s_journalLogs.size() > 100) {
+                s_journalLogs.pop_front();
             }
         }
     }
 
     // ========================================================================
-    // 1. TOP HEADER & BRANDING CONTROLS
+    // Five Component Architecture (Fully Tiling Viewport)
     // ========================================================================
-    {
-        ImVec2 curPos = ImGui::GetCursorScreenPos();
-        Icon(Icon::Target).DrawAt(ImGui::GetWindowDrawList(), ImVec2(curPos.x + 2, curPos.y + 4), 22.0f * main_scale, theme.palette.accent);
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 32.0f * main_scale);
-        ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "OmniKit");
-        ImGui::SameLine();
-        ImGui::TextColored(ImColor(theme.palette.accent).Value, "UI Design System & Widget Kit");
-        ImGui::SameLine();
-        Badge::Render("v2.0", UiVariant::Primary);
+    // 1. Top Header Bar
+    RenderHeader(elapsed);
 
-        float rightToolsWidth = 240.0f * main_scale;
-        float rightPos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - rightToolsWidth;
-        if (rightPos > ImGui::GetCursorPosX() + 20.0f) {
-            ImGui::SameLine(rightPos);
-        }
-        bool isDark = (theme.mode == ThemeMode::Dark);
-        if (Button::Render(isDark ? "Light Mode" : "Dark Mode",
-                           UiVariant::Secondary,
-                           isDark ? Icon(Icon::Sun) : Icon(Icon::Moon),
-                           UiSize::Small)) {
-            theme.SetMode(isDark ? ThemeMode::Light : ThemeMode::Dark);
-        }
+    // 2. Session / Project Toolbar
+    RenderToolbar();
 
-        ImGui::SameLine();
-        if (Button::Render("Reset", UiVariant::Danger, Icon(Icon::Refresh), UiSize::Small)) {
-            s_confirmModalOpen = true;
-        }
-    }
+    // 3. Left Sidebar
+    RenderSidebar();
 
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
+    // 4. Main Content Area
+    RenderContent();
 
-    // ========================================================================
-    // 2. TWO-COLUMN SPLIT: LEFT SIDEBAR + RIGHT MAIN WORKSPACE
-    // ========================================================================
-    float totalAvailW = ImGui::GetContentRegionAvail().x;
-    float sidebarW = std::clamp(210.0f * main_scale, 180.0f, totalAvailW * 0.28f);
-    float mainW = totalAvailW - sidebarW - 12.0f * main_scale;
-
-    // LEFT COLUMN: SIDEBAR MENU
-    ImGui::BeginChild("ShowcaseSidebar", ImVec2(sidebarW, 0.0f), false, ImGuiWindowFlags_None);
-    {
-        SidebarMenu sidebar;
-
-        if (sidebar.Item("nav_overview", "Overview", Icon(Icon::Target), s_currentNav == 0)) s_currentNav = 0;
-        if (sidebar.Item("nav_telemetry", "Telemetry", Icon(Icon::LineChart), s_currentNav == 1)) s_currentNav = 1;
-        if (sidebar.Item("nav_pipeline", "Pipelines", Icon(Icon::Play), s_currentNav == 2)) s_currentNav = 2;
-        if (sidebar.Item("nav_nodes", "Cluster Nodes", Icon(Icon::Database), s_currentNav == 3)) s_currentNav = 3;
-        if (sidebar.Item("nav_settings", "Settings", Icon(Icon::Cog), s_currentNav == 4)) s_currentNav = 4;
-
-        sidebar.Spacing(10.0f);
-        sidebar.Separator();
-        sidebar.SectionTitle("PIPELINE CHANNELS");
-
-        if (sidebar.BeginScrollRegion("##ChannelsScroll")) {
-            for (size_t i = 0; i < s_channels.size(); ++i) {
-                const auto& ch = s_channels[i];
-                if (sidebar.ItemEx(ch.id.c_str(), ch.name.c_str(), ch.sublabel.c_str(), ch.statusColor, s_selectedChannel == (int)i)) {
-                    s_selectedChannel = (int)i;
-                    s_nodeIdentifier = ch.nodeId;
-                }
-            }
-            sidebar.EndScrollRegion();
-        }
-    }
-    ImGui::EndChild();
-
-    ImGui::SameLine(0.0f, 12.0f * main_scale);
-
-    // RIGHT COLUMN: SYSTEM STATUS BANNER + SCROLLABLE TABS
-    ImGui::BeginChild("ShowcaseMainArea", ImVec2(mainW, 0.0f), false, ImGuiWindowFlags_None);
-    {
-        // 2.1 STATUS BANNER & DIGITAL INDICATORS
-        {
-            DeviceStatus::Render("Data Pipeline Node 07",
-                                 s_deviceState,
-                                 s_deviceState == DeviceState::Running ? "STREAMING (100 Hz)" : "STANDBY",
-                                 s_deviceState == DeviceState::Running ? "Pause" : "Start",
-                                 []() {
-                                     if (s_deviceState == DeviceState::Running) {
-                                         s_deviceState = DeviceState::Idle;
-                                         s_liveFeed = false;
-                                     } else {
-                                         s_deviceState = DeviceState::Running;
-                                         s_liveFeed = true;
-                                     }
-                                 });
-
-            ImGui::SameLine();
-
-            double liveThroughput = (s_liveFeed && s_deviceState == DeviceState::Running)
-                                  ? (84.6 + 4.8 * std::sin(elapsed * 2.2)) : 0.0;
-            double liveLatency = (s_liveFeed && s_deviceState == DeviceState::Running)
-                               ? (14.2 + 2.1 * std::cos(elapsed * 1.5)) : 0.0;
-
-            Indicator indThroughput("THROUGHPUT", liveThroughput, 1, "MB/s", 5, true);
-            indThroughput.Render();
-
-            ImGui::SameLine();
-            Indicator indLatency("AVG LATENCY", liveLatency, 2, "ms", 5, true);
-            indLatency.Render();
-
-            ImGui::SameLine();
-            Indicator indUptime("UPTIME", elapsed, 1, "s", 4, false);
-            indUptime.Render();
-        }
-
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        // 2.2 TABS WRAPPED IN SCROLL
-        // Flag ImGuiTabBarFlags_FittingPolicyScroll enables horizontal scroll buttons
-        // when multiple tabs exceed available width!
-        ImGuiTabBarFlags tabFlags = ImGuiTabBarFlags_FittingPolicyScroll | ImGuiTabBarFlags_TabListPopupButton;
-        if (ImGui::BeginTabBar("OmniKitShowcaseTabBar", tabFlags)) {
-
-            // ----------------------------------------------------------------
-            // TAB 1: TELEMETRY & PIPELINE
-            // ----------------------------------------------------------------
-            if (ImGui::BeginTabItem("Telemetry & Pipeline")) {
-                // Wrap tab content in scrollable child container
-                ImGui::BeginChild("##TabScroll_Telemetry", ImVec2(0, 0), false, ImGuiWindowFlags_None);
-                {
-                    float availInsideTab = ImGui::GetContentRegionAvail().x;
-                    float colLeftW = (availInsideTab - 16.0f * main_scale) * 0.44f;
-                    float colRightW = availInsideTab - colLeftW - 16.0f * main_scale;
-
-                    // Left sub-column: Configuration Card
-                    ImGui::BeginChild("SubColLeft", ImVec2(colLeftW, 0), false, ImGuiWindowFlags_None);
-                    {
-                        if (Card cfgCard("cfg_card", "Pipeline Configuration"); cfgCard) {
-                            InputField::Text("##node_name", "Cluster Node Identifier", s_nodeIdentifier);
-
-                            ImGui::Spacing();
-                            InputField::Float("##throughput_limit", "Throughput Ceiling", s_throughputLimit, "MB/s");
-
-                            ImGui::Spacing();
-                            Toggle::Render("tog_tare", s_autoTare, "Auto-Zero Telemetry Baseline", "Zeros relative baseline counter on cycle start");
-                            Toggle::Render("tog_stream", s_liveFeed, "Real-Time Telemetry Feed", "Streams continuous high-frequency metrics");
-                            Toggle::Render("tog_acc", s_hardwareAcc, "Hardware Acceleration (AVX-512)", "Enables vectorized math operations");
-
-                            ImGui::Spacing();
-                            ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Sampling Interval Preset:");
-                            static const std::vector<float> sampleOptions = { 50.0f, 100.0f, 250.0f, 500.0f };
-                            PresetGrid::Render(s_sampleInterval, sampleOptions, "ms", 0.0f, 4);
-
-                            ImGui::Spacing();
-                            ImGui::Spacing();
-
-                            // Deploy Button cleanly rendered below the preset grid with dedicated height and spacing
-                            // Avoids overlap with earlier form inputs
-                            if (Button::Render("Deploy Pipeline Configuration",
-                                               UiVariant::Primary,
-                                               ImVec2(ImGui::GetContentRegionAvail().x, 38.0f * main_scale),
-                                               Icon(Icon::Check))) {
-                                s_deviceState = DeviceState::Running;
-                                s_liveFeed = true;
-                            }
-                        }
-                    }
-                    ImGui::EndChild();
-
-                    ImGui::SameLine();
-
-                    // Right sub-column: High-Speed Realtime Chart & Job Quick List
-                    ImGui::BeginChild("SubColRight", ImVec2(colRightW, 0), false, ImGuiWindowFlags_None);
-                    {
-                        if (Card chartCard("chart_card", "Real-Time Telemetry Stream (Throughput vs Elapsed Time)"); chartCard) {
-                            float chartH = 260.0f * main_scale;
-                            s_realtimeChart.Render("realtime_chart_view", ImVec2(colRightW - 32.0f * main_scale, chartH));
-                        }
-
-                        ImGui::Spacing();
-
-                        if (Card queueCard("queue_card", "Job Execution Queue Snapshot"); queueCard) {
-                            SearchInput::Render("tbl_search_mini", s_searchQuery, "Filter active jobs...");
-                            ImGui::Spacing();
-
-                            if (ImGui::BeginTable("JobDataTableMini", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
-                                ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 55.0f * main_scale);
-                                ImGui::TableSetupColumn("Task Identifier");
-                                ImGui::TableSetupColumn("Engine");
-                                ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 100.0f * main_scale);
-                                ImGui::TableHeadersRow();
-
-                                for (const auto& job : s_jobRecords) {
-                                    if (!s_searchQuery.empty() && 
-                                        job.taskName.find(s_searchQuery) == std::string::npos &&
-                                        job.engine.find(s_searchQuery) == std::string::npos) {
-                                        continue;
-                                    }
-                                    ImGui::TableNextRow();
-                                    ImGui::TableNextColumn();
-                                    ImGui::Text("#%d", job.id);
-                                    ImGui::TableNextColumn();
-                                    ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", job.taskName.c_str());
-                                    ImGui::TableNextColumn();
-                                    ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "%s", job.engine.c_str());
-                                    ImGui::TableNextColumn();
-                                    Badge::Render(job.statusText, job.status);
-                                }
-                                ImGui::EndTable();
-                            }
-                        }
-                    }
-                    ImGui::EndChild();
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            // ----------------------------------------------------------------
-            // TAB 2: DISTRIBUTED JOB QUEUE (FULL TABLE IN SCROLL)
-            // ----------------------------------------------------------------
-            if (ImGui::BeginTabItem("Job Execution Queue")) {
-                ImGui::BeginChild("##TabScroll_JobQueue", ImVec2(0, 0), false, ImGuiWindowFlags_None);
-                {
-                    if (Card tableCard("records_card_full", "Distributed Job Execution Queue (Full Dataset)"); tableCard) {
-                        SearchInput::Render("tbl_search_full", s_searchQuery, "Search jobs across cluster nodes...");
-                        ImGui::Spacing();
-
-                        if (ImGui::BeginTable("JobDataTableFull", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
-                            ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 65.0f * main_scale);
-                            ImGui::TableSetupColumn("Task Identifier");
-                            ImGui::TableSetupColumn("Execution Engine");
-                            ImGui::TableSetupColumn("Latency (ms)");
-                            ImGui::TableSetupColumn("Memory (MB)");
-                            ImGui::TableSetupColumn("Status");
-                            ImGui::TableHeadersRow();
-
-                            for (const auto& job : s_jobRecords) {
-                                if (!s_searchQuery.empty() && 
-                                    job.taskName.find(s_searchQuery) == std::string::npos &&
-                                    job.engine.find(s_searchQuery) == std::string::npos) {
-                                    continue;
-                                }
-                                ImGui::TableNextRow();
-                                ImGui::TableNextColumn();
-                                ImGui::Text("#%d", job.id);
-                                ImGui::TableNextColumn();
-                                ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", job.taskName.c_str());
-                                ImGui::TableNextColumn();
-                                ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "%s", job.engine.c_str());
-                                ImGui::TableNextColumn();
-                                ImGui::Text("%.2f ms", job.executionTimeMs);
-                                ImGui::TableNextColumn();
-                                ImGui::Text("%.1f MB", job.memoryUsageMb);
-                                ImGui::TableNextColumn();
-                                Badge::Render(job.statusText, job.status);
-                            }
-                            ImGui::EndTable();
-                        }
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            // ----------------------------------------------------------------
-            // TAB 3: NODE PARAMETERS (LONG SCROLLABLE SETTINGS FORM)
-            // ----------------------------------------------------------------
-            if (ImGui::BeginTabItem("Node Parameters (Scroll Form)")) {
-                // Demonstrates deep multi-section scrollable settings form wrapped inside tab
-                ImGui::BeginChild("##TabScroll_SettingsForm", ImVec2(0, 0), false, ImGuiWindowFlags_None);
-                {
-                    if (Card netCard("net_card", "Network & Socket Subsystem"); netCard) {
-                        InputField::Float("##tcp_buf", "TCP Socket Buffer Size", s_tcpBufferSize, "KB");
-                        ImGui::Spacing();
-                        InputField::Float("##conn_timeout", "Connection Keepalive Timeout", s_connectionTimeout, "s");
-                        ImGui::Spacing();
-                        Toggle::Render("tog_keepalive", s_keepaliveEnabled, "Enable TCP Keepalive Probes", "Periodically tests idle connection liveness");
-                        Toggle::Render("tog_zstd", s_compressionZstd, "Payload Compression (Zstandard)", "Compresses wire packets above 4 KB");
-                    }
-
-                    ImGui::Spacing();
-
-                    if (Card computeCard("compute_card", "Compute & Parallelism Architecture"); computeCard) {
-                        InputField::Int("##worker_th", "Worker Thread Concurrency", s_workerThreads);
-                        ImGui::Spacing();
-                        InputField::Text("##region", "Cluster Deployment Zone", s_clusterRegion);
-                        ImGui::Spacing();
-                        Toggle::Render("tog_numa", s_hardwareAcc, "NUMA Node Pinning & Core Affinity", "Binds memory allocations to the active socket");
-                    }
-
-                    ImGui::Spacing();
-
-                    if (Card cacheCard("cache_card", "In-Memory Storage & Cache Quota"); cacheCard) {
-                        InputField::Float("##cache_quota", "Max L1 Memory Quota", s_cacheQuotaMb, "MB");
-                        ImGui::Spacing();
-                        InputField::Float("##eviction_th", "Eviction High-Watermark", s_evictionThreshold, "%");
-                        ImGui::Spacing();
-                        InputField::Int("##repl_factor", "Distributed Replication Factor", s_replicationFactor);
-                    }
-
-                    ImGui::Spacing();
-                    if (Button::Render("Apply Node Parameters", UiVariant::Primary, ImVec2(220.0f * main_scale, 36.0f * main_scale), Icon(Icon::Check))) {
-                        s_diagnosticLogs.push_back({ "NOW", "SUCCESS", "Node parameters reloaded and propagated", UiVariant::Success });
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            // ----------------------------------------------------------------
-            // TAB 4: CLUSTER DIAGNOSTICS (SCROLLABLE LOG STREAM)
-            // ----------------------------------------------------------------
-            if (ImGui::BeginTabItem("Diagnostic Logs (Stream)")) {
-                ImGui::BeginChild("##TabScroll_LogStream", ImVec2(0, 0), false, ImGuiWindowFlags_None);
-                {
-                    if (Card logCard("log_card", "Live Distributed Cluster Event Log"); logCard) {
-                        ImGui::Checkbox("Auto-scroll to bottom", &s_autoScrollLogs);
-                        ImGui::SameLine();
-                        if (Button::Render("Clear Logs", UiVariant::Secondary, Icon(Icon::Refresh), UiSize::Small)) {
-                            s_diagnosticLogs.clear();
-                        }
-
-                        ImGui::Spacing();
-
-                        // Inner scrollable terminal log view
-                        ImGui::BeginChild("LogTerminalRegion", ImVec2(0, 340.0f * main_scale), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-                        {
-                            for (const auto& entry : s_diagnosticLogs) {
-                                ImGui::TextColored(ImColor(theme.palette.textMuted).Value, "[%s]", entry.timeStr.c_str());
-                                ImGui::SameLine();
-                                Badge::Render(entry.level.c_str(), entry.variant);
-                                ImGui::SameLine();
-                                ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", entry.message.c_str());
-                            }
-                            if (s_autoScrollLogs && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-                                ImGui::SetScrollHereY(1.0f);
-                            }
-                        }
-                        ImGui::EndChild();
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            // ----------------------------------------------------------------
-            // TAB 5: SEMANTIC DESIGN TOKENS GALLERY
-            // ----------------------------------------------------------------
-            if (ImGui::BeginTabItem("Semantic Tokens Gallery")) {
-                ImGui::BeginChild("##TabScroll_TokensGallery", ImVec2(0, 0), false, ImGuiWindowFlags_None);
-                {
-                    if (Card tokensCard("tokens_card_full", "Design System Interactive Variants"); tokensCard) {
-                        ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Interactive Variants (UiVariant):");
-                        ImGui::Spacing();
-
-                        FlowLayout flow(ImGui::GetContentRegionAvail().x);
-                        if (auto col = flow.Col(::Col::Third()); col) {
-                            Button::Render("Primary", UiVariant::Primary, Icon(Icon::Play), UiSize::Medium);
-                        }
-                        if (auto col = flow.Col(::Col::Third()); col) {
-                            Button::Render("Success", UiVariant::Success, Icon(Icon::Check), UiSize::Medium);
-                        }
-                        if (auto col = flow.Col(::Col::Third()); col) {
-                            Button::Render("Warning", UiVariant::Warning, Icon(Icon::Pause), UiSize::Medium);
-                        }
-                        if (auto col = flow.Col(::Col::Third()); col) {
-                            Button::Render("Danger", UiVariant::Danger, Icon(Icon::Close), UiSize::Medium);
-                        }
-                        if (auto col = flow.Col(::Col::Third()); col) {
-                            Button::Render("Info", UiVariant::Info, Icon(Icon::Target), UiSize::Medium);
-                        }
-                        if (auto col = flow.Col(::Col::Third()); col) {
-                            Button::Render("Secondary", UiVariant::Secondary, Icon(Icon::Cog), UiSize::Medium);
-                        }
-
-                        ImGui::Spacing();
-                        ImGui::Separator();
-                        ImGui::Spacing();
-
-                        ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Status Badges & Tags:");
-                        Badge::Render("ONLINE", UiVariant::Success);
-                        ImGui::SameLine();
-                        Badge::Render("READY", UiVariant::Primary);
-                        ImGui::SameLine();
-                        Badge::Render("STANDBY", UiVariant::Secondary);
-                        ImGui::SameLine();
-                        Badge::Render("ALERT", UiVariant::Danger);
-                        ImGui::SameLine();
-                        Badge::Render("SYNCING", UiVariant::Warning);
-                        ImGui::SameLine();
-                        Tag::Render("HTTP/3");
-                        ImGui::SameLine();
-                        Tag::Render("AVX-512");
-                        ImGui::SameLine();
-                        Tag::Render("ZERO-COPY");
-
-                        ImGui::Spacing();
-                        ImGui::Separator();
-                        ImGui::Spacing();
-
-                        ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Editable Label Widget:");
-                        static std::string s_sampleLabel = "Production Cluster Node 07";
-                        static EditableLabel s_sampleEditableLabel;
-                        s_sampleEditableLabel.Render("sample_edit_label", s_sampleLabel, 340.0f * main_scale);
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            // ----------------------------------------------------------------
-            // TAB 6: MEMORY & BUFFERS
-            // ----------------------------------------------------------------
-            if (ImGui::BeginTabItem("Memory & Buffers")) {
-                ImGui::BeginChild("##TabScroll_Memory", ImVec2(0, 0), false, ImGuiWindowFlags_None);
-                {
-                    if (Card memCard("mem_card", "Cluster Buffer Pool Allocator"); memCard) {
-                        ValueDisplay::Render(14.8, "GB", 0, 48.0f * main_scale, "%.1f");
-                        ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Total Allocated Slab Cache");
-                        ImGui::Spacing();
-                        ValueDisplay::Render(99.4, "%", 0, 48.0f * main_scale, "%.1f");
-                        ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Cache Hit Rate (Past 10m)");
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            // ----------------------------------------------------------------
-            // TAB 7: SECURITY & TLS
-            // ----------------------------------------------------------------
-            if (ImGui::BeginTabItem("Security & TLS")) {
-                ImGui::BeginChild("##TabScroll_Security", ImVec2(0, 0), false, ImGuiWindowFlags_None);
-                {
-                    if (Card secCard("sec_card", "Cryptographic Protocol Status"); secCard) {
-                        Badge::Render("TLS 1.3 ACTIVE", UiVariant::Success);
-                        ImGui::SameLine();
-                        Badge::Render("ECDHE-RSA-AES256-GCM", UiVariant::Primary);
-                        ImGui::Spacing();
-                        ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Key Exchange Latency: 1.12 ms");
-                        ImGui::TextColored(ImColor(theme.palette.textSecondary).Value, "Certificate Fingerprint: SHA256:7f:8c:12:44:90:de:bc");
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::EndTabItem();
-            }
-
-            ImGui::EndTabBar();
-        }
-    }
-    ImGui::EndChild();
-
-    // Confirm Modal dialog
-    if (s_confirmModalOpen) {
-        if (ConfirmDialog::Render("ConfirmResetModal",
-                                  s_confirmModalOpen,
-                                  "Reset Pipeline Buffer",
-                                  "Are you sure you want to flush the active queue buffer?",
-                                  "All active telemetry points and cache buffers will be cleared.",
-                                  "Flush Buffer",
-                                  UiVariant::Danger)) {
-            s_realtimeChart.Clear();
-            s_startTime = std::chrono::steady_clock::now();
-        }
-    }
+    // 5. Bottom Status Bar
+    RenderStatusBar();
 }
 
 } // namespace OmniKitShowcase
