@@ -533,7 +533,7 @@ static void RenderRemoteControl() {
         const int count = s_realtimeLayout + 1;
         const int cols = count >= 3 ? 2 : 1;
         const int rows = count >= 2 ? 2 : 1;
-        GridLayout grid(cols, rows);
+        GridLayout grid({.cols = cols, .rows = rows});
         for (int i = 0; i < count; ++i) {
             const bool wide = (count == 3 && i == 0);
             const int col = (count == 3) ? std::max(0, i - 1) : i % cols;

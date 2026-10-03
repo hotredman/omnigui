@@ -2,26 +2,24 @@
 #include <algorithm>
 #include <cmath>
 
-SidePanel::SidePanel(const char* id, float width, Side side, const SidePanelStyle& style) {
-    Init(id, width, nullptr, side, false, width, width, style);
+SidePanel::SidePanel(const SidePanelOptions& options) {
+    Init(options, options.width, nullptr, false);
 }
 
-SidePanel::SidePanel(const char* id, float& width, Side side, bool resizable,
-                     float minWidth, float maxWidth, const SidePanelStyle& style) {
-    Init(id, width, &width, side, resizable, minWidth, maxWidth, style);
+SidePanel::SidePanel(float& width, const SidePanelOptions& options) {
+    Init(options, width, &width, true);
 }
 
-void SidePanel::Init(const char* id, float width, float* widthRef, Side side, bool resizable,
-                     float minWidth, float maxWidth, const SidePanelStyle& style) {
+void SidePanel::Init(const SidePanelOptions& options, float width, float* widthRef, bool resizable) {
     const UiTheme& theme = UiTheme::Get();
-    m_id = id ? id : "##SidePanel";
+    m_id = options.key ? options.key : "##SidePanel";
     m_width = width;
     m_widthRef = widthRef;
-    m_side = side;
+    m_side = options.side;
     m_resizable = resizable;
-    m_minWidth = minWidth;
-    m_maxWidth = maxWidth;
-    m_style = style;
+    m_minWidth = resizable ? options.minWidth : width;
+    m_maxWidth = resizable ? options.maxWidth : width;
+    m_style = options.style ? *options.style : theme.sidePanel;
 
     // 1. Для правой панели со сплиттером сначала отрисовываем сплиттер слева от панели
     if (m_resizable && m_side == Side::Right) {

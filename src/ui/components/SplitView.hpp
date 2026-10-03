@@ -38,7 +38,7 @@ public:
     // Боковая панель справа от основной области
     SidePanel Side() const {
         ImGui::SameLine();
-        return SidePanel("##split_side", m_sideWidth, SidePanel::Side::Right);
+        return SidePanel({.width = m_sideWidth, .key = "##split_side"});
     }
 
 private:

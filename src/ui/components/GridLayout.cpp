@@ -8,20 +8,21 @@ thread_local float GridLayout::s_currentCellWidth = 0.0f;
 thread_local float GridLayout::s_currentCellHeight = 0.0f;
 
 GridLayout::CellScope::~CellScope() {
-    if (m_parent && m_active) {
+    if (m_parent && m_open) {
         m_parent->EndCell();
     }
 }
 
-GridLayout::GridLayout(int cols, int rows, float gapX, float gapY, ImVec2 totalSize)
-    : m_cols(std::max(1, cols))
-    , m_rows(std::max(1, rows))
+GridLayout::GridLayout(const GridLayoutOptions& options)
+    : m_cols(std::max(1, options.cols))
+    , m_rows(std::max(1, options.rows))
 {
+    m_open = true;
     const UiTheme& theme = UiTheme::Get();
-    m_gapX = (gapX >= 0.0f) ? gapX : theme.SpacingLarge();
-    m_gapY = (gapY >= 0.0f) ? gapY : theme.SpacingLarge();
+    m_gapX = (options.gapX >= 0.0f) ? theme.Scale(options.gapX) : theme.SpacingLarge();
+    m_gapY = (options.gapY >= 0.0f) ? theme.Scale(options.gapY) : theme.SpacingLarge();
 
-    CalculateGeometry(totalSize);
+    CalculateGeometry(options.sizePx ? *options.sizePx : ImVec2(0.0f, 0.0f));
 }
 
 GridLayout::~GridLayout() {
@@ -31,43 +32,6 @@ GridLayout::~GridLayout() {
     // Восстанавливаем позицию курсора под всей областью сетки и регистрируем габарит в ImGui
     ImGui::SetCursorScreenPos(ImVec2(m_originScreenPos.x, m_originScreenPos.y + m_totalSize.y));
     ImGui::Dummy(ImVec2(m_totalSize.x, 0.0f));
-}
-
-GridLayout::GridLayout(GridLayout&& other) noexcept
-    : m_cols(other.m_cols)
-    , m_rows(other.m_rows)
-    , m_gapX(other.m_gapX)
-    , m_gapY(other.m_gapY)
-    , m_originScreenPos(other.m_originScreenPos)
-    , m_totalSize(other.m_totalSize)
-    , m_cellWidth(other.m_cellWidth)
-    , m_cellHeight(other.m_cellHeight)
-    , m_nextCol(other.m_nextCol)
-    , m_nextRow(other.m_nextRow)
-    , m_cellOpen(other.m_cellOpen)
-{
-    other.m_cellOpen = false;
-}
-
-GridLayout& GridLayout::operator=(GridLayout&& other) noexcept {
-    if (this != &other) {
-        if (m_cellOpen) {
-            EndCell();
-        }
-        m_cols = other.m_cols;
-        m_rows = other.m_rows;
-        m_gapX = other.m_gapX;
-        m_gapY = other.m_gapY;
-        m_originScreenPos = other.m_originScreenPos;
-        m_totalSize = other.m_totalSize;
-        m_cellWidth = other.m_cellWidth;
-        m_cellHeight = other.m_cellHeight;
-        m_nextCol = other.m_nextCol;
-        m_nextRow = other.m_nextRow;
-        m_cellOpen = other.m_cellOpen;
-        other.m_cellOpen = false;
-    }
-    return *this;
 }
 
 void GridLayout::CalculateGeometry(ImVec2 userSize) {

@@ -1,54 +1,51 @@
 #pragma once
 
+#include "ui/components/Scope.hpp"
 #include "ui/components/UiTheme.hpp"
 #include <imgui.h>
 #include <string>
 
-class SidePanel {
+enum class SidePanelSide {
+    Left,
+    Right
+};
+
+// Параметры боковой панели (designated initializers):
+//
+//     if (SidePanel panel({.width = 260}); panel) { ... }                         // фиксированная ширина
+//     if (SidePanel panel(s_width, {.minWidth = 240, .maxWidth = 600}); panel) { ... } // со сплиттером
+struct SidePanelOptions {
+    float                width    = 320.0f;                 // базовые px; для панели со сплиттером берётся из переданной переменной
+    SidePanelSide        side     = SidePanelSide::Right;
+    float                minWidth = 240.0f;                 // границы ширины для панели со сплиттером
+    float                maxWidth = 600.0f;
+    const char*          key      = nullptr;                // идентичность; nullptr — "##SidePanel" (нужен, если панелей несколько в одной области)
+    const SidePanelStyle* style   = nullptr;                // оверрайд стиля; nullptr — из темы
+};
+
+// ============================================================================
+// Боковая панель (RAII-область): дочернее окно заданной ширины во всю
+// оставшуюся высоту. Со сплиттером ширину можно менять мышью.
+// ============================================================================
+class SidePanel : public Scope {
 public:
-    enum class Side {
-        Left,
-        Right
-    };
+    using Side = SidePanelSide;
 
-    // 1. Фиксированная панель (без сплиттера)
-    SidePanel(
-        const char* id,
-        float width,
-        Side side = Side::Right,
-        const SidePanelStyle& style = UiTheme::Get().sidePanel
-    );
+    // 1. Фиксированная ширина (без сплиттера)
+    explicit SidePanel(const SidePanelOptions& options = {});
 
-    // 2. Интерактивная панель со сплиттером
-    SidePanel(
-        const char* id,
-        float& width,
-        Side side,
-        bool resizable,
-        float minWidth = 240.0f,
-        float maxWidth = 600.0f,
-        const SidePanelStyle& style = UiTheme::Get().sidePanel
-    );
+    // 2. Изменяемая ширина со сплиттером: width читается и пишется панелью
+    SidePanel(float& width, const SidePanelOptions& options = {});
 
     ~SidePanel();
 
-    // Запрет копирования
-    SidePanel(const SidePanel&) = delete;
-    SidePanel& operator=(const SidePanel&) = delete;
-
-    // Явное закрытие панели
-    void End();
-
-    // Проверка успешности открытия ImGui::BeginChild
-    operator bool() const { return m_open; }
-
-    // Текущая базовая ширина (без масштаба)
+    // Текущая ширина (базовые px)
     float GetWidth() const { return m_width; }
 
-    // Суммарная занимаемая ширина в пикселях экрана с учетом масштаба и сплиттера
+    // Полная ширина вместе со сплиттером в px (с учётом масштаба)
     float GetTotalWidth() const;
 
-    // Статический расчет занимаемой ширины (в пикселях экрана с учетом масштаба)
+    // Статический расчёт полной ширины (в пикселях, с учётом масштаба)
     static float CalcTotalWidth(
         float width,
         bool resizable = false,
@@ -56,8 +53,8 @@ public:
     );
 
 private:
-    void Init(const char* id, float width, float* widthRef, Side side, bool resizable,
-              float minWidth, float maxWidth, const SidePanelStyle& style);
+    void Init(const SidePanelOptions& options, float width, float* widthRef, bool resizable);
+    void End();
     void RenderSplitter();
 
     std::string m_id;
@@ -69,7 +66,6 @@ private:
     float m_maxWidth = 600.0f;
     SidePanelStyle m_style;
 
-    bool m_open = false;
     bool m_childStarted = false;
     int m_styleColorPushes = 0;
     int m_styleVarPushes = 0;
