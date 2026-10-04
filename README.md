@@ -77,14 +77,14 @@ if (Card card("Machine Configuration"); card) {
 
 ## ⚡ Quick Launch (Desktop)
 
-Double-click any of the launcher scripts in [`scripts/`](scripts/) to run:
+Double-click any of the launcher scripts in [`scripts/windows/`](scripts/windows/) (or run from [`scripts/linux/`](scripts/linux/)) to run:
 
-* **`scripts\run_desktop_thorvg.cmd`** &mdash; Launches Desktop with ThorVG Vector Backend.
-* **`scripts\run_desktop_sdl.cmd`** &mdash; Launches Desktop with Canonical SDL3 Renderer.
-* **`scripts\run_web_dom.cmd`** &mdash; Launches Web DOM server and automatically opens browser at `http://localhost:8080`.
-* **`scripts\run_demo.cmd`** &mdash; Universal launcher (defaults to ThorVG).
+* **`scripts\windows\run_desktop_thorvg.cmd`** &mdash; Launches Desktop with ThorVG Vector Backend (`scripts/linux/run_desktop_thorvg.sh`).
+* **`scripts\windows\run_desktop_sdl.cmd`** &mdash; Launches Desktop with Canonical SDL3 Renderer (`scripts/linux/run_desktop_sdl.sh`).
+* **`scripts\windows\run_web_dom.cmd`** &mdash; Launches Web DOM server and automatically opens browser at `http://localhost:8080` (`scripts/linux/run_web_dom.sh`).
+* **`scripts\windows\run_demo.cmd`** &mdash; Universal launcher, defaults to ThorVG (`scripts/linux/run_demo.sh`).
 
-*(Linux / macOS bash equivalents `.sh` are also available)*.
+*(Linux / macOS bash equivalents `.sh` are located in `scripts/linux/`)*.
 
 ### Command Line Flags
 
@@ -110,13 +110,13 @@ OmniGUI provides automated scripts to compile all three web presentations:
 
 ```bash
 # 1. Automatic Emscripten toolchain setup (installs to tools/emsdk)
-scripts\setup_emsdk.cmd
+scripts\windows\setup_emsdk.cmd   # Linux: scripts/linux/setup_emsdk.sh
 
 # 2. Build demo_thorvg.html, demo_sdl.html, demo_dom.html into dist/web/
-scripts\build_wasm.cmd
+scripts\windows\build_wasm.cmd    # Linux: scripts/linux/build_wasm.sh
 
 # 3. Preview web showcase in browser at http://localhost:8080
-scripts\run_wasm.cmd
+scripts\windows\run_wasm.cmd      # Linux: scripts/linux/run_wasm.sh
 ```
 
 ---

@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."
 
 if not exist "build\Release\demo.exe" (
     echo [WARN] demo.exe not found. Building project first...

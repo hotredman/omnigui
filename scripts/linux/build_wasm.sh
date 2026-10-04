@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 echo "========================================================"
 echo " Building OmniGUI WebAssembly Targets"
@@ -16,7 +16,7 @@ elif [ -f "tools/emsdk/emsdk_env.sh" ]; then
     source tools/emsdk/emsdk_env.sh
 else
     echo "[WARN] Emscripten SDK not detected. Launching setup..."
-    bash scripts/setup_emsdk.sh
+    bash "$(dirname "$0")/setup_emsdk.sh"
     source tools/emsdk/emsdk_env.sh
 fi
 
@@ -43,4 +43,4 @@ echo "========================================================"
 echo " WebAssembly build succeeded!"
 echo " Output files located in: dist/web/"
 echo "========================================================"
-echo " Run scripts/run_wasm.sh to preview in browser!"
+echo " Run scripts/linux/run_wasm.sh to preview in browser!"

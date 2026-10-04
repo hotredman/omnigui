@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."
 
 if not exist "build\Release\demo.exe" (
     echo [WARN] demo.exe not found. Building project first...
@@ -13,8 +13,9 @@ if not exist "build\Release\demo.exe" (
 )
 
 echo ========================================================
-echo  Launching OmniGUI: ImGui + Standard SDL3 (Desktop)
-echo  Canonical Dear ImGui raster triangles & texture atlas
+echo  Launching OmniGUI Demo (Default: ThorVG Vector Backend)
+echo  Tip: Use scripts\windows\run_desktop_sdl.cmd for standard SDL3
+echo       Use scripts\windows\run_web_dom.cmd for Web DOM Server
 echo ========================================================
-start "" "build\Release\demo.exe" --backend=sdl %*
+start "" "build\Release\demo.exe" %*
 endlocal

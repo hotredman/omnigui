@@ -1,6 +1,5 @@
 #include "ui/components/charts/AnalysisChart.hpp"
 #include "ui/components/charts/Decimate.hpp"
-#include "ui/components/UiTheme.hpp"
 #include <imgui.h>
 #include <cmath>
 #include <algorithm>
@@ -77,16 +76,9 @@ AnalysisChart::AnalysisChart()
 
 AnalysisChart::AnalysisChart(const ChartOptions& options, const ChartStyle* customStyle)
     : m_options(options)
+    , m_style(customStyle ? *customStyle : ChartStyle::Dark())
+    , m_hasCustomStyle(customStyle != nullptr)
 {
-    if (customStyle) {
-        m_style = *customStyle;
-        m_hasCustomStyle = true;
-    }
-}
-
-const ChartStyle& AnalysisChart::GetStyle() const {
-    if (m_hasCustomStyle) return m_style;
-    return UiTheme::Get().chart;
 }
 
 void AnalysisChart::SetXAxis(const std::string& label, const std::string& unit) {
@@ -281,8 +273,7 @@ ChartBounds AnalysisChart::GetActiveBounds() const {
 }
 
 void AnalysisChart::Render(ImVec2 size) {
-    const UiTheme& theme = UiTheme::Get();
-    ChartStyle style = GetStyle();
+    const ChartStyle& style = m_style;
 
     ImVec2 canvasSize = size;
     if (canvasSize.x <= 0.0f) canvasSize.x = ImGui::GetContentRegionAvail().x;
@@ -303,10 +294,10 @@ void AnalysisChart::Render(ImVec2 size) {
     ChartBounds activeBounds = GetActiveBounds();
 
     ChartPad scaledPad = m_pad;
-    scaledPad.left = theme.Scale(m_pad.left);
-    scaledPad.right = theme.Scale(m_pad.right);
-    scaledPad.top = theme.Scale(m_pad.top);
-    scaledPad.bottom = theme.Scale(m_pad.bottom);
+    scaledPad.left = style.Scale(m_pad.left);
+    scaledPad.right = style.Scale(m_pad.right);
+    scaledPad.top = style.Scale(m_pad.top);
+    scaledPad.bottom = style.Scale(m_pad.bottom);
 
     ChartCore::Projection proj = ChartCore::Projection::Create(activeBounds, scaledPad, origin, canvasSize);
 
@@ -411,9 +402,9 @@ void AnalysisChart::Render(ImVec2 size) {
 
     // 1. Фон и рамка
     dl->AddRectFilled(origin, ImVec2(origin.x + canvasSize.x, origin.y + canvasSize.y),
-                      style.colBg, theme.Scale(style.cornerRadius));
+                      style.colBg, style.Scale(style.cornerRadius));
     dl->AddRect(origin, ImVec2(origin.x + canvasSize.x, origin.y + canvasSize.y),
-                style.colBorder, theme.Scale(style.cornerRadius), 0, style.borderSize);
+                style.colBorder, style.Scale(style.cornerRadius), 0, style.borderSize);
 
     // 2. Сетка и оси
     RenderGridAndAxes(dl, proj, style);
@@ -434,8 +425,6 @@ void AnalysisChart::Render(ImVec2 size) {
 }
 
 void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projection& proj, const ChartStyle& style) {
-    const UiTheme& theme = UiTheme::Get();
-
     std::vector<double> xMajorTicks = ChartCore::GenerateTicks(proj.bounds.minX, proj.bounds.maxX, 5);
     std::vector<double> yMajorTicks = ChartCore::GenerateTicks(proj.bounds.minY, proj.bounds.maxY, 5);
 
@@ -458,7 +447,7 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
     }
 
     // Мажорная сетка и числовые подписи
-    theme.PushFont(theme.fontRegular, style.tickFontSize);
+    style.PushFont(style.fontRegular, style.tickFontSize);
 
     // Горизонтальные линии Y и числовые метки
     for (double yVal : yMajorTicks) {
@@ -469,7 +458,7 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
             }
             std::string text = ChartCore::FormatTickValue(yVal);
             ImVec2 txtSz = ImGui::CalcTextSize(text.c_str());
-            dl->AddText(ImVec2(proj.plotMin.x - txtSz.x - theme.Scale(6.0f), sy - txtSz.y * 0.5f),
+            dl->AddText(ImVec2(proj.plotMin.x - txtSz.x - style.Scale(6.0f), sy - txtSz.y * 0.5f),
                         style.colTickText, text.c_str());
         }
     }
@@ -483,7 +472,7 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
             }
             std::string text = ChartCore::FormatTickValue(xVal);
             ImVec2 txtSz = ImGui::CalcTextSize(text.c_str());
-            dl->AddText(ImVec2(sx - txtSz.x * 0.5f, proj.plotMax.y + theme.Scale(6.0f)),
+            dl->AddText(ImVec2(sx - txtSz.x * 0.5f, proj.plotMax.y + style.Scale(6.0f)),
                         style.colTickText, text.c_str());
         }
     }
@@ -491,18 +480,18 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
     // Рамка области графика
     dl->AddRect(proj.plotMin, proj.plotMax, style.colAxis, 0.0f, 0, 1.0f);
 
-    theme.PopFont();
+    style.PopFont();
 
     // Заголовки осей
-    theme.PushFont(theme.fontMedium, style.axisTitleFontSize);
+    style.PushFont(style.fontMedium, style.axisTitleFontSize);
 
     // Заголовок оси Y (сверху слева)
     if (!m_yLabel.empty()) {
         std::string yTitle = m_yUnit.empty() ? m_yLabel : (m_yLabel + " (" + m_yUnit + ")");
-        float yPos = (proj.plotMin.y - proj.origin.y >= theme.Scale(24.0f))
-                         ? (proj.origin.y + theme.Scale(3.0f))
-                         : (proj.plotMin.y + theme.Scale(4.0f));
-        dl->AddText(ImVec2(proj.plotMin.x + theme.Scale(6.0f), yPos),
+        float yPos = (proj.plotMin.y - proj.origin.y >= style.Scale(24.0f))
+                         ? (proj.origin.y + style.Scale(3.0f))
+                         : (proj.plotMin.y + style.Scale(4.0f));
+        dl->AddText(ImVec2(proj.plotMin.x + style.Scale(6.0f), yPos),
                     style.colAxisTitle, yTitle.c_str());
     }
 
@@ -510,11 +499,11 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
     if (!m_xLabel.empty()) {
         std::string xTitle = m_xUnit.empty() ? m_xLabel : (m_xLabel + " (" + m_xUnit + ")");
         ImVec2 xSz = ImGui::CalcTextSize(xTitle.c_str());
-        dl->AddText(ImVec2(proj.plotMax.x - xSz.x, proj.plotMax.y + theme.Scale(28.0f)),
+        dl->AddText(ImVec2(proj.plotMax.x - xSz.x, proj.plotMax.y + style.Scale(28.0f)),
                     style.colAxisTitle, xTitle.c_str());
     }
 
-    theme.PopFont();
+    style.PopFont();
 }
 
 void AnalysisChart::RenderSeriesCurves(ImDrawList* dl, const ChartCore::Projection& proj) {
@@ -572,7 +561,7 @@ void AnalysisChart::RenderSeriesCurves(ImDrawList* dl, const ChartCore::Projecti
 }
 
 void AnalysisChart::RenderOverlayLines(ImDrawList* dl, const ChartCore::Projection& proj) {
-    const UiTheme& theme = UiTheme::Get();
+    const ChartStyle& style = m_style;
 
     for (const auto& l : m_lines) {
         double x1 = l.x1, y1 = l.y1;
@@ -594,7 +583,7 @@ void AnalysisChart::RenderOverlayLines(ImDrawList* dl, const ChartCore::Projecti
         ImVec2 p1 = proj.ToScreen(ChartPoint(x1, y1));
         ImVec2 p2 = proj.ToScreen(ChartPoint(x2, y2));
 
-        const ImU32 lineColor = l.color ? l.color : GetStyle().colLine;
+        const ImU32 lineColor = l.color ? l.color : style.colLine;
         if (l.style == LineStyle::Solid) {
             dl->AddLine(p1, p2, lineColor, l.thickness);
         } else {
@@ -606,18 +595,18 @@ void AnalysisChart::RenderOverlayLines(ImDrawList* dl, const ChartCore::Projecti
         // Подпись линии
         if (!l.label.empty()) {
             float t = std::clamp(l.labelPosition, 0.0f, 1.0f);
-            ImVec2 lblPos(p1.x + (p2.x - p1.x) * t + theme.Scale(8.0f),
-                          p1.y + (p2.y - p1.y) * t - theme.Scale(12.0f));
+            ImVec2 lblPos(p1.x + (p2.x - p1.x) * t + style.Scale(8.0f),
+                          p1.y + (p2.y - p1.y) * t - style.Scale(12.0f));
 
-            theme.PushFont(theme.fontMedium, 13.0f);
+            style.PushFont(style.fontMedium, 13.0f);
             dl->AddText(lblPos, lineColor, l.label.c_str());
-            theme.PopFont();
+            style.PopFont();
         }
     }
 }
 
 void AnalysisChart::RenderOverlayMarkers(ImDrawList* dl, const ChartCore::Projection& proj) {
-    const UiTheme& theme = UiTheme::Get();
+    const ChartStyle& style = m_style;
 
     for (const auto& m : m_markers) {
         if (m.x < proj.bounds.minX || m.x > proj.bounds.maxX ||
@@ -629,7 +618,6 @@ void AnalysisChart::RenderOverlayMarkers(ImDrawList* dl, const ChartCore::Projec
         ImVec2 ptPos = proj.ToScreen(ChartPoint(m.x, m.y));
 
         // Пунктирные проекции на оси
-        const ChartStyle& style = GetStyle();
         const ImU32 markerColor = m.color ? m.color : style.colLine;
         const ImU32 projCol = style.colProjection;
         if (m.projectX) {  // на ось X (вниз)
@@ -640,28 +628,27 @@ void AnalysisChart::RenderOverlayMarkers(ImDrawList* dl, const ChartCore::Projec
         }
 
         // Геометрическая форма маркера
-        float s = theme.Scale(m.size);
+        float s = style.Scale(m.size);
         DrawMarkerShape(dl, ptPos, s, m.shape, markerColor, style.colBg);  // обводка — цветом холста
 
         // Текстовая метка (label / sublabel)
         if (!m.label.empty()) {
-            theme.PushFont(theme.fontBold, 14.0f);
-            ImVec2 lblPos(ptPos.x + s + theme.Scale(4.0f), ptPos.y - theme.Scale(14.0f));
+            style.PushFont(style.fontBold, 14.0f);
+            ImVec2 lblPos(ptPos.x + s + style.Scale(4.0f), ptPos.y - style.Scale(14.0f));
             dl->AddText(lblPos, markerColor, m.label.c_str());
-            theme.PopFont();
+            style.PopFont();
 
             if (!m.sublabel.empty()) {
-                theme.PushFont(theme.fontRegular, 12.0f);
-                dl->AddText(ImVec2(lblPos.x, lblPos.y + theme.Scale(14.0f)),
+                style.PushFont(style.fontRegular, 12.0f);
+                dl->AddText(ImVec2(lblPos.x, lblPos.y + style.Scale(14.0f)),
                             style.colAxisTitle, m.sublabel.c_str());
-                theme.PopFont();
+                style.PopFont();
             }
         }
     }
 }
 
 void AnalysisChart::RenderCrosshairAndTooltip(ImDrawList* dl, const ChartCore::Projection& proj, const ChartStyle& style) {
-    const UiTheme& theme = UiTheme::Get();
     ImVec2 mouse = ImGui::GetMousePos();
 
     // 1. Линии перекрестия

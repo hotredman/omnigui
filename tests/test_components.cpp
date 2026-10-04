@@ -247,6 +247,105 @@ int main() {
             Button({.label = "Keyed", .key = "custom_key"});
             Button({.label = "Keyed", .key = &dummyData});
         });
+
+        // 13. Image & HDR Processing: TestPattern, AutoWindow, Histogram, ImageViewer
+        {
+            auto testImg = OmniKit::GenerateTestPattern(128, 96);
+            CHECK(testImg.size() == 128 * 96);
+
+            float autoW = 0.0f, autoL = 0.0f;
+            bool autoRes = OmniKit::ComputeAutoWindow(testImg.data(), 128, 96, 0.8f, autoW, autoL);
+            CHECK(autoRes);
+            CHECK(autoW > 0.0f);
+            CHECK(autoL > 0.0f);
+
+            OmniKit::ImageViewer viewer;
+            viewer.LoadImage16(testImg.data(), 128, 96);
+            CHECK(viewer.HasImage());
+            CHECK(viewer.GetWidth() == 128);
+            CHECK(viewer.GetHeight() == 96);
+            CHECK(viewer.GetHistogram().HasData());
+
+            viewer.RotateCW();
+            CHECK(viewer.GetRotation() == 90);
+            CHECK(viewer.GetDisplayedWidth() == 96);
+            CHECK(viewer.GetDisplayedHeight() == 128);
+
+            viewer.ToggleFlipHorizontal();
+            CHECK(viewer.GetFlipHorizontal());
+
+            viewer.SetRotation(0);
+            viewer.SetFlipHorizontal(false);
+
+            Frame([&] {
+                viewer.Render(600.0f, 400.0f);
+                if (Card card({.title = "HistCard"}); card) {
+                    OmniKit::WindowLevelParams outP;
+                    if (auto col = card.Col(Col::Full())) {
+                        viewer.GetHistogram().Render(viewer.GetParams(), outP, col.Width(), 70.0f);
+                    }
+                    float histBottom = ImGui::GetItemRectMax().y;
+                    card.Button({.label = "Auto Win", .col = Col::Full()});
+                    float btnTop = ImGui::GetItemRectMin().y;
+                    CHECK(btnTop >= histBottom);
+                }
+            });
+
+            // Verify clean render in Light mode as well
+            UiTheme::Get().SetMode(ThemeMode::Light);
+            Frame([&] {
+                viewer.Render(600.0f, 400.0f);
+            });
+            UiTheme::Get().SetMode(ThemeMode::Dark);
+        }
+
+        // 14. High-Performance Charts & Style Adapters (Clean Architecture)
+        {
+            // Verify standalone chart styles
+            ChartStyle darkStyle = ChartStyle::Dark();
+            ChartStyle lightStyle = ChartStyle::Light();
+            CHECK(darkStyle.colBg != lightStyle.colBg);
+
+            // Verify ChartThemeAdapter
+            ChartStyle adaptedStyle = OmniKit::MakeChartStyle(UiTheme::Get());
+            CHECK(adaptedStyle.colBg == UiTheme::Get().palette.chartBg);
+
+            // RealtimeChart standalone + rendered
+            RealtimeChart rtChart;
+            rtChart.SetStyle(darkStyle);
+            rtChart.SetXAxis("Time", "s");
+            rtChart.SetYAxis("Force", "kN");
+            rtChart.AppendPoint(0.0, 10.0);
+            rtChart.AppendPoint(1.0, 25.0);
+            rtChart.AppendPoint(2.0, 40.0);
+            CHECK(rtChart.PointCount() == 3);
+
+            // AnalysisChart standalone + rendered
+            AnalysisChart anaChart;
+            anaChart.SetStyle(darkStyle);
+            anaChart.SetXAxis("Strain", "%");
+            anaChart.SetYAxis("Stress", "MPa");
+            ChartSeries series;
+            series.label = "Specimen 1";
+            series.points = {{0.0, 0.0}, {1.0, 150.0}, {2.0, 280.0}, {3.0, 290.0}};
+            anaChart.AddSeries(series);
+            CHECK(anaChart.GetSeries().size() == 1);
+
+            Frame([&] {
+                rtChart.Render(ImVec2(400.0f, 250.0f));
+                anaChart.Render(ImVec2(400.0f, 250.0f));
+            });
+
+            // Light mode render
+            UiTheme::Get().SetMode(ThemeMode::Light);
+            rtChart.SetStyle(OmniKit::MakeChartStyle(UiTheme::Get()));
+            anaChart.SetStyle(OmniKit::MakeChartStyle(UiTheme::Get()));
+            Frame([&] {
+                rtChart.Render(ImVec2(400.0f, 250.0f));
+                anaChart.Render(ImVec2(400.0f, 250.0f));
+            });
+            UiTheme::Get().SetMode(ThemeMode::Dark);
+        }
     }
 
     ImGui::DestroyContext();

@@ -70,7 +70,18 @@
 // High-Performance Charts
 #include "ui/components/charts/ChartCore.hpp"
 #include "ui/components/charts/ChartStyle.hpp"
+#include "ui/components/charts/ChartThemeAdapter.hpp"
 #include "ui/components/charts/ChartTypes.hpp"
 #include "ui/components/charts/Decimate.hpp"
 #include "ui/components/charts/RealtimeChart.hpp"
 #include "ui/components/charts/AnalysisChart.hpp"
+
+// Image & HDR Processing
+#include "ui/components/image/ImageTypes.hpp"
+#include "ui/components/image/ImageStyle.hpp"
+#include "ui/components/image/ImageThemeAdapter.hpp"
+#include "ui/components/image/ImageColormap.hpp"
+#include "ui/components/image/WindowLevel.hpp"
+#include "ui/components/image/ImageHistogram.hpp"
+#include "ui/components/image/ImageTestPattern.hpp"
+#include "ui/components/image/ImageViewer.hpp"

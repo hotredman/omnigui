@@ -67,6 +67,7 @@ void EnsureChart() {
 // ----------------------------------------------------------------------------
 void RenderConsoleTab() {
     EnsureChart();
+    s_chart.SetStyle(OmniKit::MakeChartStyle(UiTheme::Get()));
     Session& s = s_session;
 
     SplitView split({.sideWidth = 280.0f});

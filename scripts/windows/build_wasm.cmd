@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."
 
 echo ========================================================
 echo  Building OmniGUI WebAssembly Targets
@@ -32,7 +32,7 @@ if %EMSDK_FOUND% equ 0 (
 )
 
 REM 2. Generate web shells
-node "%~dp0generate_dom_shell.mjs"
+node "%~dp0..\generate_dom_shell.mjs"
 
 REM 3. Configure CMake with emcmake
 if not exist "build_wasm" mkdir build_wasm
@@ -68,5 +68,5 @@ echo   - dist\web\demo_thorvg.html (ThorVG Vector Canvas)
 echo   - dist\web\demo_sdl.html    (SDL3 Triangles Canvas)
 echo   - dist\web\demo_dom.html    (Native HTML5 DOM)
 echo ========================================================
-echo  Run scripts\run_wasm.cmd to preview in browser!
+echo  Run scripts\windows\run_wasm.cmd to preview in browser!
 endlocal

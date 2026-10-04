@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 DEMO_BIN=""
 if [ -f "build/demo" ]; then
@@ -25,7 +25,7 @@ if [ -z "$DEMO_BIN" ]; then
 fi
 
 echo "========================================================"
-echo " Launching OmniGUI: ImGui + ThorVG Vector (Desktop)"
+echo " Launching OmniGUI: ImGui + Standard SDL3 (Desktop)"
 echo "========================================================"
 
-exec "$DEMO_BIN" --backend=thorvg "$@"
+exec "$DEMO_BIN" --backend=sdl "$@"

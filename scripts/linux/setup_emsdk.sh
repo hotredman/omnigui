@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 echo "========================================================"
 echo " OmniGUI: Setting up Emscripten SDK (emsdk)"
@@ -29,5 +29,5 @@ popd > /dev/null
 
 echo "========================================================"
 echo " Emscripten SDK setup completed successfully!"
-echo " You can now run: scripts/build_wasm.sh"
+echo " You can now run: scripts/linux/build_wasm.sh"
 echo "========================================================"

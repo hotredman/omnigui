@@ -3,6 +3,7 @@
 #include "core/TimeUtil.hpp"
 #include "pages/TestRunPage.hpp"
 #include "pages/CalcAreaPage.hpp"
+#include "pages/ImageViewerPage.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -24,6 +25,7 @@ namespace {
 enum class NavScreen {
     TestRun = 0, // Прогон: вкладки с пультом и графиком
     CalcArea,    // Расчет площади сечения образца (CalcAreaPage)
+    Image,       // Просмотр изображений и гистограммы (ImageViewerPage)
 };
 
 // Узлы дерева сайдбара: проект → серия → прогон
@@ -246,6 +248,7 @@ void RenderSidebar() {
     if (auto sidebar = Sidebar({.posYPx = topPx})) {
         sidebar.Item({.label = "Test Run", .icon = Icon::Gamepad}, NavScreen::TestRun, s_screen);
         sidebar.Item({.label = "Calc Area", .icon = Icon::Clipboard}, NavScreen::CalcArea, s_screen);
+        sidebar.Item({.label = "Image", .icon = Icon::LineChart}, NavScreen::Image, s_screen);
 
         sidebar.Spacer();
         sidebar.Separator();
@@ -296,6 +299,9 @@ void RenderContent() {
                 break;
             case NavScreen::CalcArea:
                 RenderCalcAreaPage();
+                break;
+            case NavScreen::Image:
+                RenderImageViewerPage();
                 break;
         }
     }

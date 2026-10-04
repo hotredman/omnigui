@@ -1,5 +1,4 @@
 #include "ui/components/charts/RealtimeChart.hpp"
-#include "ui/components/UiTheme.hpp"
 #include "core/units/Units.hpp"
 #include <imgui.h>
 #include <algorithm>
@@ -9,13 +8,6 @@
 RealtimeChart::RealtimeChart() {
     Clear();
     UpdateAxisLabels();
-}
-
-const ChartStyle& RealtimeChart::GetStyle() const {
-    if (m_hasCustomStyle) {
-        return m_style;
-    }
-    return UiTheme::Get().chart;
 }
 
 void RealtimeChart::SetAxisPair(RealtimeAxisPair pair) {
@@ -140,7 +132,7 @@ void RealtimeChart::RebuildPointsFromSamples() {
 void RealtimeChart::Render(ImVec2 size) {
     ImGui::PushID(this);
 
-    const UiTheme& theme = UiTheme::Get();
+    const ChartStyle& style = m_style;
     ImVec2 canvasSize = size;
     if (canvasSize.x <= 0.0f) canvasSize.x = ImGui::GetContentRegionAvail().x;
     if (canvasSize.y <= 0.0f) canvasSize.y = ImGui::GetContentRegionAvail().y;
@@ -152,17 +144,16 @@ void RealtimeChart::Render(ImVec2 size) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
     // 1. Холст графика и внешняя граница
-    const ChartStyle& style = GetStyle();
-    float radius = theme.Scale(style.cornerRadius);
+    float radius = style.Scale(style.cornerRadius);
     dl->AddRectFilled(origin, ImVec2(origin.x + canvasSize.x, origin.y + canvasSize.y), style.colBg, radius);
     dl->AddRect(origin, ImVec2(origin.x + canvasSize.x, origin.y + canvasSize.y), style.colBorder, radius, 0, style.borderSize);
 
     // 2. Создание проекции координат
     ChartPad scaledPad = m_pad;
-    scaledPad.left = theme.Scale(m_pad.left);
-    scaledPad.right = theme.Scale(m_pad.right);
-    scaledPad.top = theme.Scale(m_pad.top);
-    scaledPad.bottom = theme.Scale(m_pad.bottom);
+    scaledPad.left = style.Scale(m_pad.left);
+    scaledPad.right = style.Scale(m_pad.right);
+    scaledPad.top = style.Scale(m_pad.top);
+    scaledPad.bottom = style.Scale(m_pad.bottom);
 
     ChartCore::Projection proj = ChartCore::Projection::Create(m_bounds, scaledPad, origin, canvasSize);
 
@@ -173,7 +164,7 @@ void RealtimeChart::Render(ImVec2 size) {
     const ImU32 colGrid = style.colMajorGrid;
     const ImU32 colText = style.colTickText;
 
-    theme.PushFont(theme.fontRegular, style.tickFontSize);
+    style.PushFont(style.fontRegular, style.tickFontSize);
 
     // Вертикальные линии сетки и подписи X
     for (double tx : ticksX) {
@@ -183,7 +174,7 @@ void RealtimeChart::Render(ImVec2 size) {
 
             std::string label = ChartCore::FormatTickValue(tx);
             ImVec2 txtSz = ImGui::CalcTextSize(label.c_str());
-            dl->AddText(ImVec2(sx - txtSz.x * 0.5f, proj.plotMax.y + theme.Scale(6.0f)), colText, label.c_str());
+            dl->AddText(ImVec2(sx - txtSz.x * 0.5f, proj.plotMax.y + style.Scale(6.0f)), colText, label.c_str());
         }
     }
 
@@ -195,36 +186,36 @@ void RealtimeChart::Render(ImVec2 size) {
 
             std::string label = ChartCore::FormatTickValue(ty);
             ImVec2 txtSz = ImGui::CalcTextSize(label.c_str());
-            dl->AddText(ImVec2(proj.plotMin.x - txtSz.x - theme.Scale(6.0f), sy - txtSz.y * 0.5f), colText, label.c_str());
+            dl->AddText(ImVec2(proj.plotMin.x - txtSz.x - style.Scale(6.0f), sy - txtSz.y * 0.5f), colText, label.c_str());
         }
     }
 
     // 4. Внутренняя рамка области графика
     dl->AddRect(proj.plotMin, proj.plotMax, style.colAxis, 0.0f, 0, 1.0f);
 
-    theme.PopFont();
+    style.PopFont();
 
     // 5. Заголовки осей
-    theme.PushFont(theme.fontMedium, style.axisTitleFontSize);
+    style.PushFont(style.fontMedium, style.axisTitleFontSize);
     const ImU32 colTitle = style.colAxisTitle;
 
     // Заголовок оси Y (сверху слева)
     if (!m_yLabel.empty()) {
         std::string yTitle = m_yLabel + (m_yUnit.empty() ? "" : (" (" + m_yUnit + ")"));
-        float yPos = (proj.plotMin.y - origin.y >= theme.Scale(24.0f))
-                         ? (origin.y + theme.Scale(3.0f))
-                         : (proj.plotMin.y + theme.Scale(4.0f));
-        dl->AddText(ImVec2(proj.plotMin.x + theme.Scale(6.0f), yPos), colTitle, yTitle.c_str());
+        float yPos = (proj.plotMin.y - origin.y >= style.Scale(24.0f))
+                         ? (origin.y + style.Scale(3.0f))
+                         : (proj.plotMin.y + style.Scale(4.0f));
+        dl->AddText(ImVec2(proj.plotMin.x + style.Scale(6.0f), yPos), colTitle, yTitle.c_str());
     }
 
     // Заголовок оси X (снизу справа вдоль графика)
     if (!m_xLabel.empty()) {
         std::string xTitle = m_xLabel + (m_xUnit.empty() ? "" : (" (" + m_xUnit + ")"));
         ImVec2 xTitleSz = ImGui::CalcTextSize(xTitle.c_str());
-        dl->AddText(ImVec2(proj.plotMax.x - xTitleSz.x, proj.plotMax.y + theme.Scale(28.0f)), colTitle, xTitle.c_str());
+        dl->AddText(ImVec2(proj.plotMax.x - xTitleSz.x, proj.plotMax.y + style.Scale(28.0f)), colTitle, xTitle.c_str());
     }
 
-    theme.PopFont();
+    style.PopFont();
 
     // 6. Отрисовка кривой с отсечением по области графика
     dl->PushClipRect(proj.plotMin, proj.plotMax, true);
@@ -242,13 +233,13 @@ void RealtimeChart::Render(ImVec2 size) {
         }
 
         const ImU32 lineColor = m_lineColor ? m_lineColor : style.colLine;
-        dl->AddPolyline(m_screenPoints.data(), static_cast<int>(m_screenPoints.size()), lineColor, 0, theme.Scale(m_lineThickness));
+        dl->AddPolyline(m_screenPoints.data(), static_cast<int>(m_screenPoints.size()), lineColor, 0, style.Scale(m_lineThickness));
 
         // Яркая точка-маркер на конце кривой (текущая точка испытания)
         if (m_showHeadMarker) {
             ImVec2 headPos = m_screenPoints.back();
-            dl->AddCircleFilled(headPos, theme.Scale(6.0f), Tone::Alpha(lineColor, 0.28f));
-            dl->AddCircleFilled(headPos, theme.Scale(3.5f), theme.palette.textOnAccent);
+            dl->AddCircleFilled(headPos, style.Scale(6.0f), ChartStyle::WithAlpha(lineColor, 0.28f));
+            dl->AddCircleFilled(headPos, style.Scale(3.5f), style.colTextOnAccent);
         }
     }
 

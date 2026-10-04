@@ -38,7 +38,7 @@ public:
     void SetZoomEnabled(bool enable) { m_options.zoomEnabled = enable; }
 
     void SetStyle(const ChartStyle& style) { m_style = style; m_hasCustomStyle = true; }
-    const ChartStyle& GetStyle() const;
+    const ChartStyle& GetStyle() const { return m_style; }
 
     // 4. Серии данных (кривые)
     void AddSeries(ChartSeries series);
@@ -87,7 +87,7 @@ private:
 
     ChartPad m_pad;
     ChartOptions m_options;
-    ChartStyle m_style;
+    ChartStyle m_style = ChartStyle::Dark();
     bool m_hasCustomStyle = false;
 
     std::vector<ChartSeries> m_series;

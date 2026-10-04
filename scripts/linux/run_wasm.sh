@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 if [ ! -f "dist/web/index.html" ]; then
     echo "[WARN] WebAssembly distribution not found in dist/web/"
     echo "[INFO] Running build_wasm.sh first..."
-    bash scripts/build_wasm.sh
+    bash "$(dirname "$0")/build_wasm.sh"
 fi
 
 echo "========================================================"

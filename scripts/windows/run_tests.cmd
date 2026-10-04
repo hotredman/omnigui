@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."
 
 if not exist "build\Release\test_text_metrics.exe" (
     echo [WARN] Binaries not found. Building project first...

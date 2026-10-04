@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 DEMO_BIN=""
 for candidate in build/demo build/Release/demo; do
@@ -22,7 +22,7 @@ fi
 
 echo "========================================================"
 echo " Launching OmniGUI Demo (Default: ThorVG Vector Backend)"
-echo " Tip: scripts/run_desktop_sdl.sh for standard SDL3, scripts/run_web_dom.sh for Web DOM Server"
+echo " Tip: scripts/linux/run_desktop_sdl.sh for standard SDL3, scripts/linux/run_web_dom.sh for Web DOM Server"
 echo "========================================================"
 
 exec "$DEMO_BIN" "$@"

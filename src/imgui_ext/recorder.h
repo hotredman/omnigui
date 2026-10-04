@@ -43,6 +43,12 @@ enum class CmdType : uint16_t {
     FallbackMesh,
 };
 
+struct ImageTextureDescriptor {
+    const uint32_t* pixels = nullptr;
+    int width = 0;
+    int height = 0;
+};
+
 struct DrawCommand {
     CmdType type = CmdType::None;
     uint16_t flags = 0;

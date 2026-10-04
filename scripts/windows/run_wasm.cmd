@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."
 
 if not exist "dist\web\index.html" (
     echo [WARN] WebAssembly distribution not found in dist\web\

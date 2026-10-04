@@ -67,9 +67,9 @@ public:
     // Границы данных с учетом отступа
     const ChartBounds& GetBounds() const { return m_bounds; }
 
-    // Визуальные настройки
+    // Style configuration (Clean Architecture: independent from UiTheme)
     void SetStyle(const ChartStyle& style) { m_style = style; m_hasCustomStyle = true; }
-    const ChartStyle& GetStyle() const;
+    const ChartStyle& GetStyle() const { return m_style; }
     void SetLineColor(ImU32 color) { m_lineColor = color; }
     void SetLineThickness(float thickness) { m_lineThickness = thickness; }
     void SetHeadMarker(bool enable) { m_showHeadMarker = enable; }
@@ -101,7 +101,7 @@ private:
     double m_rawMaxY = 0.0;
 
     ChartPad m_pad;
-    ChartStyle m_style;
+    ChartStyle m_style = ChartStyle::Dark();
     bool m_hasCustomStyle = false;
     ImU32 m_lineColor = 0; // 0 — кривая темы (ChartStyle::colLine)
     float m_lineThickness = 2.0f;

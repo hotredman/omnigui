@@ -222,22 +222,6 @@ void UiTheme::ApplyPalette() {
     itemRow.colTextDescription = p.textSecondary;
     itemRow.colTextFormula     = p.accent;
 
-    chart.colBg            = p.chartBg;
-    chart.colBorder        = p.border;
-    chart.colLine          = p.chartLine;
-    chart.colMajorGrid     = p.chartGridMajor;
-    chart.colMinorGrid     = p.chartGridMinor;
-    chart.colAxis          = p.chartAxis;
-    chart.colTickText      = p.chartText;
-    chart.colAxisTitle     = p.chartText;
-    chart.colCrosshair     = p.chartCrosshair;
-    chart.colProjection    = p.chartProjection;
-    chart.colTooltipBg     = p.tooltipBg;
-    chart.colTooltipBorder = p.accentBorder;
-    chart.colTooltipText   = p.tooltipText;
-    chart.tickFontSize      = 18.0f;
-    chart.axisTitleFontSize = 20.0f;
-
     // Бейдж: тинт-подложка, рамка и текст варианта
     auto badgeOf = [](const ThemePalette::Status& s) { return BadgeVariantColors{s.bg, s.border, s.text}; };
     badge.colors[static_cast<int>(UiVariant::Default)]   = {p.bgControl, p.borderSubtle, p.textPrimary};

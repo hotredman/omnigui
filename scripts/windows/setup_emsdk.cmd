@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0\.."
+cd /d "%~dp0\..\.."
 
 echo ========================================================
 echo  OmniGUI: Setting up Emscripten SDK (emsdk)
@@ -46,6 +46,6 @@ popd
 
 echo ========================================================
 echo  Emscripten SDK setup completed successfully!
-echo  You can now run: scripts\build_wasm.cmd
+echo  You can now run: scripts\windows\build_wasm.cmd
 echo ========================================================
 endlocal

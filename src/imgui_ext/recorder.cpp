@@ -708,7 +708,7 @@ bool Recorder::RecordImage(ImDrawList* dl, ImTextureRef tex_ref, const ImVec2& p
 
     DrawCommand cmd;
     cmd.type = CmdType::Image;
-    cmd.texture_id = tex_ref._TexData ? (ImTextureID)tex_ref._TexData : (ImTextureID)0;
+    cmd.texture_id = tex_ref._TexData ? (ImTextureID)(intptr_t)tex_ref._TexData : tex_ref._TexID;
     cmd.p1 = p_min;
     cmd.p2 = p_max;
     cmd.p3 = uv_min;
@@ -731,7 +731,7 @@ bool Recorder::RecordImageQuad(ImDrawList* dl, ImTextureRef tex_ref, const ImVec
 
     DrawCommand cmd;
     cmd.type = CmdType::ImageQuad;
-    cmd.texture_id = tex_ref._TexData ? (ImTextureID)tex_ref._TexData : (ImTextureID)0;
+    cmd.texture_id = tex_ref._TexData ? (ImTextureID)(intptr_t)tex_ref._TexData : tex_ref._TexID;
     cmd.p1 = p1; cmd.p2 = p2; cmd.p3 = p3; cmd.p4 = p4;
     cmd.col = col;
     cmd.clip_rect = GetCurrentClipRect(stream, dl);
@@ -755,7 +755,7 @@ bool Recorder::RecordImageRounded(ImDrawList* dl, ImTextureRef tex_ref, const Im
 
     DrawCommand cmd;
     cmd.type = CmdType::ImageRounded;
-    cmd.texture_id = tex_ref._TexData ? (ImTextureID)tex_ref._TexData : (ImTextureID)0;
+    cmd.texture_id = tex_ref._TexData ? (ImTextureID)(intptr_t)tex_ref._TexData : tex_ref._TexID;
     cmd.p1 = p_min;
     cmd.p2 = p_max;
     cmd.p3 = uv_min;

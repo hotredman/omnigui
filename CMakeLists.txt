@@ -6,6 +6,7 @@ set(DEMO_APP_SOURCES
     examples/demo/OmniKitShowcase.cpp
     examples/demo/pages/TestRunPage.cpp
     examples/demo/pages/CalcAreaPage.cpp
+    examples/demo/pages/ImageViewerPage.cpp
 )
 
 # Единый стандарт C++20 для всего проекта (designated initializers в опциях компонентов)
@@ -112,6 +113,10 @@ set(OMNIKIT_SOURCES
     src/ui/components/charts/ChartCore.cpp
     src/ui/components/charts/Decimate.cpp
     src/ui/components/charts/RealtimeChart.cpp
+    src/ui/components/image/ImageColormap.cpp
+    src/ui/components/image/WindowLevel.cpp
+    src/ui/components/image/ImageHistogram.cpp
+    src/ui/components/image/ImageViewer.cpp
 )
 
 add_library(omnikit STATIC ${OMNIKIT_SOURCES})
@@ -199,7 +204,7 @@ if (NOT EMSCRIPTEN)
     )
     target_link_libraries(test_dom PRIVATE imthorgui)
 
-    # --- ctest: те же проверки, что в scripts/run_tests.cmd ---
+    # --- ctest: те же проверки, что в scripts/windows/run_tests.cmd ---
     enable_testing()
     add_test(NAME frame_dedup COMMAND test_frame_dedup)
     add_test(NAME text_metrics COMMAND test_text_metrics)

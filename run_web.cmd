@@ -1,2 +1,2 @@
 @echo off
-call "%~dp0scripts\run_web.cmd" %*
+call "%~dp0scripts\windows\run_web.cmd" %*

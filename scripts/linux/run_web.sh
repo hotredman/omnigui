@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 DEMO_BIN=""
 if [ -f "build/demo" ]; then
@@ -25,7 +25,8 @@ if [ -z "$DEMO_BIN" ]; then
 fi
 
 echo "========================================================"
-echo " Launching OmniGUI: ImGui + Standard SDL3 (Desktop)"
+echo " Launching Dear ImGui Web DOM Backend..."
+echo " Browser will open automatically at http://localhost:8080"
 echo "========================================================"
 
-exec "$DEMO_BIN" --backend=sdl "$@"
+exec "$DEMO_BIN" --open-browser "$@"

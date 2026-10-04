@@ -3,7 +3,6 @@
 #include <imgui.h>
 #include <string>
 #include "ui/components/ThemePalette.hpp"
-#include "ui/components/charts/ChartStyle.hpp"
 
 // Цвета стилей компонентов (поля col*) не задаются константами: их собирает
 // UiTheme::ApplyPalette из семантики палитры текущей темы (ThemePalette)
@@ -780,7 +779,6 @@ public:
     ScrollbarStyle scrollbar;
     ListStyle list;
     ContentAreaStyle contentArea;
-    ChartStyle chart;
     ItemRowStyle itemRow;
     TagStyle tag;
     BadgeStyle badge;

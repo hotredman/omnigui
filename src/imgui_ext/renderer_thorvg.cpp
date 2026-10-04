@@ -816,10 +816,38 @@ void ThorVGRenderer::RenderDrawData(ImDrawData* draw_data) {
                 break;
             }
             case CmdType::Image:
-            case CmdType::ImageQuad:
-            case CmdType::ImageRounded:
-                // If custom image pixels available, can use DrawImage
+            case CmdType::ImageRounded: {
+                if (cmd.texture_id != 0) {
+                    auto* desc = reinterpret_cast<const ImageTextureDescriptor*>(cmd.texture_id);
+                    if (desc && desc->pixels && desc->width > 0 && desc->height > 0) {
+                        float dst_x = (cmd.p1.x - m_display_pos.x) * m_display_scale.x;
+                        float dst_y = (cmd.p1.y - m_display_pos.y) * m_display_scale.y;
+                        float dst_w = (cmd.p2.x - cmd.p1.x) * m_display_scale.x;
+                        float dst_h = (cmd.p2.y - cmd.p1.y) * m_display_scale.y;
+                        DrawImage(desc->pixels, desc->width, desc->height, dst_x, dst_y, dst_w, dst_h,
+                                  Color::FromImU32(cmd.col), cmd.rounding * m_display_scale.x);
+                    }
+                }
                 break;
+            }
+            case CmdType::ImageQuad: {
+                if (cmd.texture_id != 0) {
+                    auto* desc = reinterpret_cast<const ImageTextureDescriptor*>(cmd.texture_id);
+                    if (desc && desc->pixels && desc->width > 0 && desc->height > 0) {
+                        float min_x = (std::min)({cmd.p1.x, cmd.p2.x, cmd.p3.x, cmd.p4.x});
+                        float min_y = (std::min)({cmd.p1.y, cmd.p2.y, cmd.p3.y, cmd.p4.y});
+                        float max_x = (std::max)({cmd.p1.x, cmd.p2.x, cmd.p3.x, cmd.p4.x});
+                        float max_y = (std::max)({cmd.p1.y, cmd.p2.y, cmd.p3.y, cmd.p4.y});
+                        float dst_x = (min_x - m_display_pos.x) * m_display_scale.x;
+                        float dst_y = (min_y - m_display_pos.y) * m_display_scale.y;
+                        float dst_w = (max_x - min_x) * m_display_scale.x;
+                        float dst_h = (max_y - min_y) * m_display_scale.y;
+                        DrawImage(desc->pixels, desc->width, desc->height, dst_x, dst_y, dst_w, dst_h,
+                                  Color::FromImU32(cmd.col), 0.0f);
+                    }
+                }
+                break;
+            }
             case CmdType::FallbackMesh:
                 DrawFallbackMesh(dl, cmd);
                 break;
