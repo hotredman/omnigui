@@ -29,6 +29,8 @@
 #include "OmniKitShowcase.hpp"
 #include "omnikit.hpp"
 
+using namespace OmniKit;
+
 struct PerformanceMetrics {
     double cpu_usage_percent = 0.0;
     double ram_working_set_mb = 0.0;

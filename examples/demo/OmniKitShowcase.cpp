@@ -19,6 +19,8 @@
 // Страницы лежат в pages/ и показывают возможности библиотеки на абстрактных данных.
 namespace OmniKitShowcase {
 
+using namespace OmniKit;
+
 namespace {
 
 // Экраны навигации (пункты верхней части сайдбара)

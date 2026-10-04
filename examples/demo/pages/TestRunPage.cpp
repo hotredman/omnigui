@@ -7,6 +7,8 @@
 
 namespace OmniKitShowcase {
 
+using namespace OmniKit;
+
 namespace {
 
 // ----------------------------------------------------------------------------

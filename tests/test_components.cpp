@@ -11,6 +11,8 @@
 #include <cstdlib>
 #endif
 
+using namespace OmniKit;
+
 static int g_failures = 0;
 
 #define CHECK(cond)                                                                  \

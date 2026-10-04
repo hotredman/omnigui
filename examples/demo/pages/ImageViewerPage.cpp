@@ -5,6 +5,8 @@
 
 namespace OmniKitShowcase {
 
+using namespace OmniKit;
+
 namespace {
 
 OmniKit::ImageViewer s_imageViewer;

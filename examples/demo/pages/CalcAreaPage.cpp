@@ -6,6 +6,8 @@
 
 namespace OmniKitShowcase {
 
+using namespace OmniKit;
+
 namespace {
 
 enum class SpecimenShape : uint8_t {
