@@ -52,13 +52,13 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
     float fontH = ImGui::GetFontSize();
     float targetBoxH = theme.Scale(Style().boxHeight);
     float framePadY = std::max(2.0f, (targetBoxH - fontH) * 0.5f);
-    float actualHeight = targetBoxH; // Гарантированная высота для кнопки и поля ввода, равная targetBoxH
+    float actualHeight = targetBoxH; // Guaranteed height for button and input field equal to targetBoxH
     float iconSz = theme.Scale(Style().iconSize);
     float spacing = theme.Scale(Style().spacing);
     float padX = theme.Scale(Style().paddingX);
     float frameRounding = theme.Scale(Style().frameRounding);
 
-    // Вертикальное центрирование только в узком контейнере (например, тулбаре)
+    // Vertical centering only in narrow containers (e.g., toolbar)
     float winH = ImGui::GetWindowHeight();
     float targetCursorY = (winH < 60.0f) ? std::max(0.0f, std::floor((winH - actualHeight) * 0.5f))
                                          : ImGui::GetCursorPosY();
@@ -70,7 +70,7 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
     ImGui::PushID(this);
 
     if (!editable) {
-        // --- 0. Неактивный режим: статичный текст без карандаша и клика ---
+        // --- 0. Non-interactive mode: static text without pencil or click ---
         const char* displayStr = value.empty() ? " " : value.c_str();
         ImVec2 textSize = ImGui::CalcTextSize(displayStr);
         float textY = ImGui::GetCursorPosY() + std::floor((actualHeight - textSize.y) * 0.5f);
@@ -83,7 +83,7 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
     }
 
     if (!m_editing) {
-        // --- 1. Режим просмотра (Read-Only) ---
+        // --- 1. Read-Only mode ---
         const char* displayStr = value.empty() ? " " : value.c_str();
         ImVec2 textSize = ImGui::CalcTextSize(displayStr);
 
@@ -92,7 +92,7 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
 
         ImVec2 screenPos = ImGui::GetCursorScreenPos();
 
-        // Интерактивная невидимая кнопка для обработки наведения и клика
+        // Interactive invisible button for handling hover and click
         bool clicked = ImGui::InvisibleButton("##LabelHitbox", ImVec2(totalW, actualHeight));
         bool isHovered = ImGui::IsItemHovered();
 
@@ -104,29 +104,29 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
             StartEdit(value);
         }
 
-        // Отрисовка
+        // Rendering
         ImDrawList* dl = ImGui::GetWindowDrawList();
 
-        // 1. Иконка карандаша (центрирована строго по высоте actualHeight)
+        // 1. Pencil icon (strictly centered across actualHeight)
         ImU32 iconCol = isHovered ? Style().colIconHover : Style().colIcon;
         float iconY = screenPos.y + std::floor((actualHeight - iconSz) * 0.5f);
         Icon::DrawAt(Icon::Pencil, dl, ImVec2(screenPos.x + padX, iconY), iconSz, iconCol);
 
-        // 2. Текст (центрирован строго по высоте actualHeight)
+        // 2. Text (strictly centered across actualHeight)
         float textX = screenPos.x + padX + iconSz + spacing;
         float textY = screenPos.y + std::floor((actualHeight - textSize.y) * 0.5f);
         dl->AddText(ImVec2(textX, textY), theme.palette.textPrimary, displayStr);
 
     } else {
-        // --- 2. Режим редактирования (Editing) ---
+        // --- 2. Editing mode ---
         ImVec2 screenPos = ImGui::GetCursorScreenPos();
         ImDrawList* dl = ImGui::GetWindowDrawList();
 
-        // 1. Кнопка карандаша слева: строго квадратная (actualHeight x actualHeight)
+        // 1. Pencil button on the left: strictly square (actualHeight x actualHeight)
         ImVec2 btnMin = screenPos;
         ImVec2 btnMax = ImVec2(screenPos.x + actualHeight, screenPos.y + actualHeight);
 
-        // Хит-тест кнопки (работает мгновенно по первому клику, даже когда InputText активен)
+        // Button hit test (triggers immediately on first click even while InputText is active)
         bool btnHovered = ImGui::IsMouseHoveringRect(btnMin, btnMax);
         if (btnHovered) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -135,16 +135,16 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
 
         bool btnClicked = btnHovered && ImGui::IsMouseClicked(0);
 
-        // Фон кнопки и контур (с визуальным откликом при наведении)
+        // Button background and border (with hover feedback)
         ImU32 borderCol = btnHovered ? Style().colInputBorder : Style().colBtnBorder;
         ImU32 iconColor = btnHovered ? Style().colIconHover : Style().colIconActive;
         dl->AddRectFilled(btnMin, btnMax, Style().colBtnBg, frameRounding);
         dl->AddRect(btnMin, btnMax, borderCol, frameRounding, 0, 1.0f);
 
-        // Иконка карандаша строго в центре кнопки
+        // Pencil icon centered strictly within the button
         Icon::Draw(Icon::Pencil, dl, ImVec2((btnMin.x + btnMax.x) * 0.5f, (btnMin.y + btnMax.y) * 0.5f), iconSz, iconColor);
 
-        // Невидимая кнопка для позиционирования курсора
+        // Invisible button for cursor layout advancement
         ImGui::InvisibleButton("##IconBtn", ImVec2(actualHeight, actualHeight));
 
         if (btnClicked) {
@@ -152,7 +152,7 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
                 std::string def = onDefaultValue();
                 strncpy(m_buffer, def.c_str(), sizeof(m_buffer) - 1);
                 m_buffer[sizeof(m_buffer) - 1] = '\0';
-                ImGui::ClearActiveID(); // Освобождаем внутреннее владение текстом InputText для мгновенного обновления
+                ImGui::ClearActiveID(); // Release internal InputText ownership for immediate text update
                 m_focusRequested = true;
             } else {
                 if (value != m_buffer) {
@@ -162,14 +162,14 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
             }
         }
 
-        // Переход на ту же строку и фиксация той же вертикальной координаты
+        // Advance along the same line and preserve identical vertical coordinate
         ImGui::SameLine(0, spacing);
         ImGui::SetCursorPosY(targetCursorY);
 
-        // 2. Поле ввода (InputText)
+        // 2. Input field (InputText)
         float inputW = width > 0.0f ? (width - actualHeight - spacing) : 0.0f;
         if (inputW <= 0.0f) {
-            // Динамический размер поля ввода
+            // Dynamic input field sizing
             ImVec2 bufSize = ImGui::CalcTextSize(m_buffer);
             inputW = std::max(theme.Scale(Style().minInputWidth), bufSize.x + theme.Scale(40.0f));
         }
@@ -204,7 +204,7 @@ bool EditableLabel::Render(std::string& value, const EditableLabelOptions& optio
         } else if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             CancelEdit();
         } else if (!m_justOpened && !isActive && !btnHovered && !btnClicked && ImGui::IsMouseClicked(0)) {
-            // Клик вне поля ввода и вне кнопки -> сохранение и выход
+            // Click outside input field and button -> commit and exit
             if (value != m_buffer) {
                 valueChanged = true;
             }

@@ -8,16 +8,16 @@ namespace OmniKit {
 
 namespace ChartCore {
 
-// Генерация «красивых» шагов сетки (1/2/5 x 10^n), выровненных по сетке
+// Generation of "nice" grid steps (1/2/5 x 10^n) aligned with the grid
 std::vector<double> GenerateTicks(double min, double max, int count = 5);
 
-// Генерация промежуточных тиков для минорной сетки (в 5 раз чаще)
+// Generation of intermediate ticks for the minor grid (5x frequency)
 std::vector<double> MinorTicks(double min, double max, int majorCount = 5);
 
-// Форматирование числового значения метки оси
+// Format numeric axis label value
 std::string FormatTickValue(double val);
 
-// Проекция координат между пространством данных и экранными пикселями
+// Coordinate projection between data space and screen pixels
 struct Projection {
     ChartBounds bounds;
     ChartPad pad;
@@ -39,10 +39,10 @@ struct Projection {
     ChartPoint ToData(const ImVec2& screenPt) const;
 };
 
-// Бинарный поиск ближайшей точки по координате X за O(log N)
+// Binary search for the closest point by X coordinate in O(log N)
 int NearestIndexByX(const std::vector<ChartPoint>& points, double targetX);
 
-// Отсечение прямой линии по прямоугольнику [xmin, xmax] x [ymin, ymax] алгоритмом Liang-Barsky
+// Liang-Barsky line clipping against rectangle [xmin, xmax] x [ymin, ymax]
 bool ClipInfiniteLineToRect(double x1, double y1, double x2, double y2,
                             double xmin, double ymin, double xmax, double ymax,
                             double& outX1, double& outY1, double& outX2, double& outY2);

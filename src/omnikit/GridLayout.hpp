@@ -7,24 +7,24 @@
 
 namespace OmniKit {
 
-// Параметры сетки (designated initializers):
+// Grid layout options (designated initializers):
 //
 //     GridLayout grid({.cols = 2, .rows = 2});
-//     if (auto cell = grid.Cell(0, 0, 2, 1)) { chart.Render(cell.Size()); }   // ячейка на 2 колонки
+//     if (auto cell = grid.Cell(0, 0, 2, 1)) { chart.Render(cell.Size()); }   // 2-column wide cell
 struct GridLayoutOptions {
     int                   cols  = 1;
     int                   rows  = 1;
-    float                 gapX  = -1.0f;   // базовые px; < 0 — UiTheme::SpacingLarge()
+    float                 gapX  = -1.0f;   // base px; < 0 — UiTheme::SpacingLarge()
     float                 gapY  = -1.0f;
-    std::optional<ImVec2> sizePx;          // итоговый размер всей сетки, px; по умолчанию — всё свободное место
+    std::optional<ImVec2> sizePx;          // resolved total grid size, px; defaults to fill available space
 };
 
 // ============================================================================
-// Прямоугольная сетка NxM на 100% свободного места (GridLayout, RAII-область)
+// Rectangular NxM grid filling available space (GridLayout, RAII scope)
 // ============================================================================
 class GridLayout : public Scope {
 public:
-    // RAII-ячейка для цикла: if (auto cell = grid.Cell(col, row)) { ... }
+    // RAII cell for loops: if (auto cell = grid.Cell(col, row)) { ... }
     class CellScope : public Scope {
     public:
         ~CellScope();
@@ -53,15 +53,15 @@ public:
     explicit GridLayout(const GridLayoutOptions& options = {});
     ~GridLayout();
 
-    // 1. Ячейка по координатам, с опциональным colSpan / rowSpan:
+    // 1. Cell by coordinates, with optional colSpan / rowSpan:
     // if (auto cell = grid.Cell(0, 0, 1, 2)) { ... }
     CellScope Cell(int col, int row, int colSpan = 1, int rowSpan = 1);
 
-    // 2. Следующая ячейка по порядку слева направо, сверху вниз:
+    // 2. Next cell in sequence (left-to-right, top-to-bottom):
     // while (auto cell = grid.NextCell()) { ... }
     CellScope NextCell();
 
-    // Геометрия
+    // Geometry
     int GetCols() const { return m_cols; }
     int GetRows() const { return m_rows; }
     float GetCellWidth() const { return m_cellWidth; }
@@ -70,7 +70,7 @@ public:
     float GetGapY() const { return m_gapY; }
     ImVec2 GetTotalSize() const { return m_totalSize; }
 
-    // Активные размеры ячейки в текущем потоке (опрашиваются компонентами, например Card)
+    // Active cell dimensions in current thread (queried by components, e.g. Card)
     static float CurrentCellWidth();
     static float CurrentCellHeight();
 

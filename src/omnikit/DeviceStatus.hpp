@@ -9,49 +9,49 @@
 namespace OmniKit {
 
 enum class DeviceState {
-    Disconnected, // Серый: прибор обесточен / оффлайн
-    Connecting,   // Жёлтый: опрос, подключение, рукопожатие
-    Idle,         // Зелёный: связь есть, прибор в покое и готов к работе
-    Running,      // Синий: активный рабочий процесс
-    Paused,       // Янтарный/оранжевый: пауза
-    Fault         // Красный: авария, перегрузка, сбой
+    Disconnected, // Gray: device de-energized / offline
+    Connecting,   // Yellow: polling, connecting, handshake
+    Idle,         // Green: online, idle, and ready for operation
+    Running,      // Blue: active operating routine
+    Paused,       // Amber/orange: paused
+    Fault         // Red: fault, overload, malfunction
 };
 
-// Параметры плашки статуса устройства (designated initializers):
+// Device status panel options (designated initializers):
 //
 //     if (DeviceStatus("Cluster 07", state, {.status = "STANDBY", .action = "S"})) { ... }
-//     if (DeviceStatus("Cluster 07", state)) { ... }   // кнопка питания (Connect / Disconnect)
+//     if (DeviceStatus("Cluster 07", state)) { ... }   // power button (Connect / Disconnect)
 struct DeviceStatusOptions {
-    const char* status = nullptr;       // текст статуса; nullptr — стандартный для состояния
-    const char* action = nullptr;       // короткий глиф (1–2 символа) в квадратной кнопке; nullptr — иконка питания
-    bool        showAction = true;      // показывать кнопку действия
-    bool        actionDisabled = false; // кнопка видна, но выключена
-    float       width = 0.0f;           // базовые px (масштабируются внутри); 0 — по стилю темы
-    UiKey       key = {};               // идентичность; по умолчанию — deviceName
+    const char* status = nullptr;       // status text; nullptr — default for state
+    const char* action = nullptr;       // short glyph (1–2 chars) in square button; nullptr — power icon
+    bool        showAction = true;      // show action button
+    bool        actionDisabled = false; // button is visible but disabled
+    float       width = 0.0f;           // base px (scaled internally); 0 — from theme style
+    UiKey       key = {};               // identity; defaults to deviceName
 
-    // Кандидаты на имя устройства: если не пусто, ширина подбирается автоматически под самое
-    // длинное имя / статус (плашка не «прыгает» при смене имени); width тогда игнорируется
+    // Device name candidates: if non-empty, width is sized automatically to the longest
+    // name / status (preventing layout jitter on title change); width is then ignored
     std::vector<std::string> titleCandidates;
 
-    const DeviceStatusStyle* style = nullptr;   // оверрайд стиля; nullptr — из темы
+    const DeviceStatusStyle* style = nullptr;   // style override; nullptr — from theme
 };
 
-// Плашка статуса устройства с кнопкой действия.
-// Возвращает true, если кнопка действия была нажата
+// Device status panel with an action button.
+// Returns true if the action button was clicked.
 bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusOptions& options = {},
                   std::source_location loc = std::source_location::current());
 
-// Предварительный расчет требуемой ширины плашки с учетом полной геометрии (в финальных px):
-// замеряет список кандидатов на имя устройства (titleCandidates), текущее имя (currentTitle),
-// все возможные состояния ("ОТКЛЮЧЕН", "ПОДКЛЮЧЕНИЕ" и др.), отступы, светодиод и кнопку действия.
+// Pre-computes required panel width accounting for complete geometry (in resolved px):
+// measures candidate device names (titleCandidates), current name (currentTitle),
+// all potential states ("DISCONNECTED", "CONNECTING", etc.), paddings, LED, and action button.
 float DeviceStatusWidth(const std::vector<std::string>& titleCandidates = {},
                         const std::string& currentTitle = "",
                         const DeviceStatusStyle* style = nullptr);
 
-// Стандартный текст состояния
+// Default state label text
 const char* DeviceStateText(DeviceState state);
 
-// Цвет светодиода состояния
+// State LED indicator color
 ImU32 DeviceStateColor(DeviceState state, const DeviceStatusStyle& style);
 
 } // namespace OmniKit

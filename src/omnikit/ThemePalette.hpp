@@ -6,19 +6,20 @@ namespace OmniKit {
 enum class ThemeMode { Dark, Light };
 
 // ============================================================================
-// Палитра темы оформления (канон evo-machine-cs: tokens.css + theme-*.css).
+// Theme palette (canon evo-machine-cs: tokens.css + theme-*.css).
 //
-// Слой 1 — примитивы: тема-независимые оттенки (шкалы slate/sky/emerald/
-// amber/red). Слой 2 — ThemePalette: семантика (фон приложения, поверхность,
-// рамка, текст, акцент, статусы, графики), у тёмной и светлой темы свои
-// значения. Слой 3 — стили компонентов в UiTheme собираются только из
-// семантики палитры: смена темы = смена палитры, компоненты цветов не хранят.
+// Layer 1 — Primitives: theme-independent shades (slate/sky/emerald/
+// amber/red scales). Layer 2 — ThemePalette: semantics (application background,
+// surface, border, text, accent, statuses, charts), with dark and light themes
+// having their own values. Layer 3 — Component styles in UiTheme are built
+// exclusively from palette semantics: changing theme = changing palette;
+// components do not store raw colors.
 // ============================================================================
 
-// Слой 1: примитивы
+// Layer 1: Primitives
 namespace Tone {
 constexpr ImU32 Rgba(int r, int g, int b, int a = 255) { return IM_COL32(r, g, b, a); }
-// Тот же оттенок с прозрачностью (0..1)
+// Same shade with alpha transparency (0..1)
 constexpr ImU32 Alpha(ImU32 color, float alpha) {
     return (color & ~IM_COL32_A_MASK) | (static_cast<ImU32>(alpha * 255.0f + 0.5f) << IM_COL32_A_SHIFT);
 }
@@ -34,9 +35,9 @@ constexpr ImU32 Slate500 = Rgba(100, 116, 139);
 constexpr ImU32 Slate600 = Rgba(71, 85, 105);
 constexpr ImU32 Slate700 = Rgba(51, 65, 85);
 constexpr ImU32 Slate800 = Rgba(30, 41, 59);
-constexpr ImU32 Slate850 = Rgba(22, 32, 50);   // Промежуточный (evo-machine-cs: slate-hover-dark)
+constexpr ImU32 Slate850 = Rgba(22, 32, 50);   // Intermediate (evo-machine-cs: slate-hover-dark)
 constexpr ImU32 Slate900 = Rgba(15, 23, 42);
-constexpr ImU32 Slate925 = Rgba(11, 19, 41);   // Каркас тёмной темы (evo-machine-cs: bg-row-deep)
+constexpr ImU32 Slate925 = Rgba(11, 19, 41);   // Dark theme frame (evo-machine-cs: bg-row-deep)
 constexpr ImU32 Slate950 = Rgba(2, 6, 23);
 
 constexpr ImU32 Sky300 = Rgba(186, 230, 253);
@@ -65,10 +66,10 @@ constexpr ImU32 Red700 = Rgba(185, 28, 28);
 constexpr ImU32 Red800 = Rgba(153, 27, 27);
 }  // namespace Tone
 
-// Слой 2: семантика темы
+// Layer 2: Theme semantics
 struct ThemePalette {
-    // Статус: заливка (кнопка, светодиод) с hover/нажатием, текст на
-    // поверхности, тинт-подложка и рамка (бейдж, баннер)
+    // Status: solid fill (button, LED indicator) with hover/active states,
+    // text on surface, tinted background and border (badge, banner)
     struct Status {
         ImU32 solid;
         ImU32 solidHover;
@@ -78,57 +79,57 @@ struct ThemePalette {
         ImU32 border;
     };
 
-    // Поверхности
-    ImU32 bgApp;            // Холст рабочей области
-    ImU32 bgChrome;         // Каркас: шапка, полоса проекта, сайдбар, строка состояния
-    ImU32 bgSurface;        // Карточка, панель
-    ImU32 bgMuted;          // Приглушённая подложка на поверхности (шапка таблицы)
-    ImU32 bgInset;          // Поле ввода, табло, холст графика
-    ImU32 bgPopup;          // Выпадающий список, меню, модальное окно
-    ImU32 bgControl;        // Нейтральный контрол / чип в покое (полупрозрачный)
+    // Surfaces
+    ImU32 bgApp;            // Workspace canvas background
+    ImU32 bgChrome;         // Frame: header, project bar, sidebar, status bar
+    ImU32 bgSurface;        // Card, panel
+    ImU32 bgMuted;          // Muted surface background (e.g., table header)
+    ImU32 bgInset;          // Input field, readout display, chart canvas
+    ImU32 bgPopup;          // Dropdown, menu, modal window
+    ImU32 bgControl;        // Neutral control / chip at rest (semi-transparent)
     ImU32 bgControlHover;
     ImU32 bgControlActive;
-    ImU32 fillSubtle;       // Подложка элемента на поверхности (строка-карточка, зебра)
-    ImU32 fillHover;        // Подсветка строки / пункта при наведении
-    ImU32 overlay;          // Затемнение под модальным окном
+    ImU32 fillSubtle;       // Element background on surface (card row, zebra striping)
+    ImU32 fillHover;        // Row / item highlight on hover
+    ImU32 overlay;          // Dimming backdrop behind modal dialogs
 
-    // Границы
-    ImU32 border;           // Рамка поверхности и контрола
-    ImU32 borderStrong;     // Рамка при наведении
-    ImU32 borderSubtle;     // Рамка чипа, строки-карточки
-    ImU32 divider;          // Разделители
+    // Borders
+    ImU32 border;           // Surface and control border
+    ImU32 borderStrong;     // Border on hover / focus
+    ImU32 borderSubtle;     // Chip, card-row border
+    ImU32 divider;          // Dividers
 
-    // Текст
+    // Text
     ImU32 textPrimary;
-    ImU32 textSecondary;    // Подписи, вторичный текст
-    ImU32 textMuted;        // Подсказки, заглушки
+    ImU32 textSecondary;    // Labels, secondary text
+    ImU32 textMuted;        // Hints, placeholders
     ImU32 textDisabled;
-    ImU32 textOnAccent;     // Текст на цветной заливке
+    ImU32 textOnAccent;     // Text on colored solid fills
 
-    // Акцент (бренд, выбор, фокус) и статусы
-    ImU32 accent;           // Текст / иконка / полоска активного
-    ImU32 accentBg;         // Тинт выбранного
+    // Accent (brand, selection, focus) and statuses
+    ImU32 accent;           // Active text / icon / indicator bar
+    ImU32 accentBg;         // Selected item tint background
     ImU32 accentBorder;
-    Status primary;         // Основное действие (заливка кнопки, тумблер)
+    Status primary;         // Primary action (button fill, toggle)
     Status success;
     Status warning;
     Status danger;
     Status info;
-    ImU32 signalOff;        // Светодиод: нет связи / выключен
+    ImU32 signalOff;        // LED: disconnected / inactive
 
-    // Графики
+    // Charts
     ImU32 chartBg;
     ImU32 chartGridMajor;
     ImU32 chartGridMinor;
     ImU32 chartAxis;
     ImU32 chartText;
-    ImU32 chartLine;        // Кривая испытания
+    ImU32 chartLine;        // Test curve / plot series line
     ImU32 chartCrosshair;
-    ImU32 chartProjection;  // Проекции маркеров на оси
+    ImU32 chartProjection;  // Marker projections on axes
     ImU32 tooltipBg;
     ImU32 tooltipText;
 
-    // Полоса прокрутки
+    // Scrollbar
     ImU32 scrollThumb;
     ImU32 scrollThumbHover;
     ImU32 scrollThumbActive;

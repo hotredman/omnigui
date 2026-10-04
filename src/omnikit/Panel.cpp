@@ -18,7 +18,7 @@ Panel::Panel(const PanelOptions& options)
 }
 
 Panel::~Panel() {
-    // EndChild обязателен, даже если BeginChild вернул false
+    // EndChild is required even if BeginChild returned false
     if (m_open && m_stickToEnd && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
         ImGui::SetScrollHereY(1.0f);
     }

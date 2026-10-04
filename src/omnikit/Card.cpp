@@ -110,8 +110,8 @@ Card::Card(const CardOptions& options)
     ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 
     m_open = ImGui::BeginChild(childId, size, childFlags, windowFlags);
-    // Фон, рамка, скругление и отступы применены к окну карточки; дальше —
-    // содержимое, которое их не наследует (вложенный список не перекрашивает фон)
+    // Background, border, rounding, and padding are applied to the card window;
+    // following content does not inherit them (nested list does not overwrite background)
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(3);
     m_ended = false;
@@ -133,7 +133,7 @@ Card::Card(const CardOptions& options)
         ImGui::Dummy(ImVec2(textSize.x, textSize.y));
         theme.PopFont();
 
-        // Запоминаем границу заголовка для отложенного перехода перед первым полем
+        // Record title boundary for deferred advance before the first field
         m_rowMaxY = pos.y + textSize.y;
         m_rowSpacing = theme.Scale(m_style.titleSpacing);
         m_needsRowAdvance = true;
@@ -208,7 +208,7 @@ float Card::ResolveHeight(std::optional<UiSize> size, std::optional<UiSize> fall
 
 void Card::PrepareField(OmniKit::Col col, float& outWidth) {
     if (col.IsFill()) {
-        // Если до этого были обычные элементы сетки — завершаем строку сетки
+        // If preceding items were standard grid elements, finish the grid row
         if (!m_inAutoRow && m_rowSpanUsed > 0) {
             m_rowSpanUsed = 0;
             m_rowStartX = 0.0f;
@@ -216,7 +216,7 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
             m_needsRowAdvance = true;
         }
 
-        // Отложенный переход на следующую строку
+        // Deferred advance to the next row
         if (m_needsRowAdvance && m_rowMaxY > 0.0f) {
             float startScreenX = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMin().x;
             float nextRowScreenY = m_rowMaxY + m_rowSpacing;
@@ -254,7 +254,7 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
     }
 
     if (col.IsAuto()) {
-        // Если до этого были обычные элементы сетки — завершаем строку сетки
+        // If preceding items were standard grid elements, finish the grid row
         if (!m_inAutoRow && m_rowSpanUsed > 0) {
             m_rowSpanUsed = 0;
             m_rowStartX = 0.0f;
@@ -262,18 +262,18 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
             m_needsRowAdvance = true;
         }
 
-        // Проверяем, помещается ли элемент в текущую строку auto-элементов
+        // Check whether the item fits into the current row of auto-elements
         if (m_inAutoRow) {
             float rightScreenX = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
             float prevRightScreenX = ImGui::GetItemRectMax().x;
             float remaining = rightScreenX - prevRightScreenX - m_columnSpacing;
             if (outWidth > 0.0f && outWidth > remaining + 2.0f) {
-                // Не помещается — переносим на следующую строку
+                // Does not fit — wrap to the next row
                 NextRow();
             }
         }
 
-        // Отложенный переход на следующую строку
+        // Deferred advance to the next row
         if (m_needsRowAdvance && m_rowMaxY > 0.0f) {
             float startScreenX = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMin().x;
             float nextRowScreenY = m_rowMaxY + m_rowSpacing;
@@ -285,21 +285,21 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
         }
 
         if (!m_inAutoRow) {
-            // Первый auto-элемент в строке
+            // First auto-element in the row
             m_rowStartX = ImGui::GetCursorPosX();
             m_rowStartY = ImGui::GetCursorPosY();
             m_rowMaxY = ImGui::GetCursorScreenPos().y;
             m_inAutoRow = true;
         } else {
-            // Последующий auto-элемент в строке
+            // Subsequent auto-element in the row
             ImGui::SameLine(0.0f, m_columnSpacing);
             ImGui::SetCursorPosY(m_rowStartY);
         }
         return;
     }
 
-    // Обработка обычных элементов сетки (Col 1..12):
-    // Если до этого была строка auto-элементов — переходим на новую строку
+    // Handle standard grid elements (Col 1..12):
+    // If previous items were in an auto-row, advance to a new row
     if (m_inAutoRow) {
         NextRow();
         m_inAutoRow = false;
@@ -307,7 +307,7 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
 
     int span = std::clamp(col.span, 1, 12);
 
-    // Автоперенос (Wrap): если на текущей строке уже есть элементы и новый не помещается
+    // Wrap: if current row already has items and the new item does not fit
     if (m_rowSpanUsed > 0 && (m_rowSpanUsed + span > 12)) {
         m_rowSpanUsed = 0;
         m_rowStartX = 0.0f;
@@ -315,7 +315,7 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
         m_needsRowAdvance = true;
     }
 
-    // Отложенный переход на следующую строку перед отрисовкой нового поля
+    // Deferred advance to next row before rendering new field
     if (m_needsRowAdvance && m_rowMaxY > 0.0f) {
         float startScreenX = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMin().x;
         float nextRowScreenY = m_rowMaxY + m_rowSpacing;
@@ -329,12 +329,12 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
     float s = m_columnSpacing;
 
     if (m_rowSpanUsed == 0) {
-        // Начало строки: фиксируем базовый X и Y
+        // Row start: record baseline X and Y
         m_rowStartX = ImGui::GetCursorPosX();
         m_rowStartY = ImGui::GetCursorPosY();
         m_rowMaxY = ImGui::GetCursorScreenPos().y;
     } else {
-        // Позиционируем строго СРАЗУ за левым элементом
+        // Position immediately following the left adjacent element
         float leftWidth = CalculateSpanWidth(m_rowSpanUsed);
         float nextPosX = m_rowStartX + leftWidth + s;
         ImGui::SameLine(0.0f, 0.0f);
@@ -342,7 +342,7 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
         ImGui::SetCursorPosY(m_rowStartY);
     }
 
-    // Если элемент завершает строку до 12 долей, отдаем ему ровно оставшуюся ширину до правого края карточки
+    // If item completes row up to 12 spans, allocate exactly the remaining width to right card edge
     if (m_rowSpanUsed + span >= 12) {
         float currentOffset = (m_rowSpanUsed == 0) ? 0.0f : (CalculateSpanWidth(m_rowSpanUsed) + s);
         outWidth = std::max(20.0f, fullW - currentOffset);
@@ -352,7 +352,7 @@ void Card::PrepareField(OmniKit::Col col, float& outWidth) {
 }
 
 void Card::FinishField(OmniKit::Col col) {
-    // Учитываем нижний край только что отрисованного поля
+    // Account for bottom edge of the newly rendered field
     float fieldBottom = ImGui::GetItemRectMax().y;
     if (fieldBottom > m_rowMaxY) {
         m_rowMaxY = fieldBottom;
@@ -366,8 +366,8 @@ void Card::FinishField(OmniKit::Col col) {
     int span = std::clamp(col.span, 1, 12);
     m_rowSpanUsed += span;
 
-    // Если строка заполнена полностью (12 долей) — помечаем необходимость перехода на новую строку.
-    // Курсор не перемещается здесь, чтобы не оставлять незаполненный SetCursorScreenPos перед EndChild()
+    // If row is full (12 spans), flag need to advance to next row.
+    // Cursor is not moved here to avoid dangling SetCursorScreenPos before EndChild()
     if (m_rowSpanUsed >= 12) {
         m_rowSpanUsed = 0;
         m_rowStartX = 0.0f;
@@ -399,7 +399,7 @@ Card::ContentListScope::ContentListScope(Card* parent, const char* key)
     }
 }
 
-// EndChild обязателен и тогда, когда BeginChild вернул false (требование ImGui)
+// EndChild is required even when BeginChild returns false (ImGui requirement)
 Card::ContentListScope::~ContentListScope() {
     if (m_parent) {
         m_parent->EndContentList();

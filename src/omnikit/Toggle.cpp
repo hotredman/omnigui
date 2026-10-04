@@ -14,7 +14,7 @@ bool Toggle(bool& value, const ToggleOptions& options, std::source_location loc)
     UiTheme& theme = UiTheme::Get();
     const ToggleStyle& style = options.style ? *options.style : theme.toggle;
 
-    // Геометрия: sizePx (контейнеры) перекрывает width; высота 0 — по стилю
+    // Geometry: sizePx (containers) overrides width; height 0 — from style
     const float width = (options.sizePx.x > 0.0f) ? options.sizePx.x
                       : (options.width > 0.0f ? theme.Scale(options.width) : 0.0f);
     const float height = options.sizePx.y;
@@ -23,7 +23,7 @@ bool Toggle(bool& value, const ToggleOptions& options, std::source_location loc)
     const float fontSizeLabel = style.fontSizeLabel * sizeFactor;
     const float fontSizeSublabel = style.fontSizeSublabel * sizeFactor;
 
-    // 1. Опорные размеры с учётом масштабирования темы
+    // 1. Reference dimensions considering theme scaling
     float switchW = style.switchWidth * scale * sizeFactor;
     float switchH = style.switchHeight * scale * sizeFactor;
     float knobPad = style.knobPadding * scale * sizeFactor;
@@ -33,7 +33,7 @@ bool Toggle(bool& value, const ToggleOptions& options, std::source_location loc)
     ImFont* fontMain = style.fontLabel ? style.fontLabel : theme.fontMedium;
     ImFont* fontSub  = style.fontSublabel ? style.fontSublabel : theme.fontRegular;
 
-    // 2. Расчет геометрии текста
+    // 2. Text geometry calculation
     ImVec2 labelSize(0.0f, 0.0f);
     ImVec2 sublabelSize(0.0f, 0.0f);
 
@@ -67,9 +67,9 @@ bool Toggle(bool& value, const ToggleOptions& options, std::source_location loc)
     float finalW = (width > 0.0f) ? width : totalContentW;
     float finalH = std::max(minH, std::max(switchH, totalTextH));
 
-    // 3. Интерактивная область (InvisibleButton)
+    // 3. Interactive area (InvisibleButton)
     ImVec2 cursorPos = ImGui::GetCursorScreenPos();
-    // Идентичность: явный key, иначе loc + label
+    // Identity: explicit key, otherwise loc + label
     {
         AutoIdScope idScope(options.key, label, loc);
         ImGui::InvisibleButton("##toggle", ImVec2(finalW, finalH));
@@ -88,16 +88,16 @@ bool Toggle(bool& value, const ToggleOptions& options, std::source_location loc)
         changed = true;
     }
 
-    // 4. Отрисовка
+    // 4. Rendering
     ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-    // Вертикальное центрирование тумблера
+    // Vertical toggle centering
     float switchY = cursorPos.y + (finalH - switchH) * 0.5f;
     ImVec2 trackMin(cursorPos.x, switchY);
     ImVec2 trackMax(cursorPos.x + switchW, switchY + switchH);
     float trackRounding = switchH * 0.5f;
 
-    // Выбор цветов трека (выключенный вид — приглушение DisabledScope)
+    // Track color selection (disabled appearance uses DisabledScope fading)
     ImU32 colTrack;
     ImU32 colBorder;
     if (value) {
@@ -111,7 +111,7 @@ bool Toggle(bool& value, const ToggleOptions& options, std::source_location loc)
     drawList->AddRectFilled(trackMin, trackMax, ImGui::GetColorU32(colTrack), trackRounding);
     drawList->AddRect(trackMin, trackMax, ImGui::GetColorU32(colBorder), trackRounding, 0, 1.0f);
 
-    // Круглый бегунок (Knob)
+    // Circular knob
     float knobRadius = (switchH - 2.0f * knobPad) * 0.5f;
     float knobXOff = trackMin.x + knobPad + knobRadius;
     float knobXOn  = trackMax.x - knobPad - knobRadius;
@@ -121,7 +121,7 @@ bool Toggle(bool& value, const ToggleOptions& options, std::source_location loc)
     ImU32 colKnob = value ? style.colKnobOn : style.colKnobOff;
     drawList->AddCircleFilled(ImVec2(knobCenterX, knobCenterY), knobRadius, ImGui::GetColorU32(colKnob), 16);
 
-    // 5. Отрисовка текста (Label + Sublabel)
+    // 5. Text rendering (Label + Sublabel)
     if (maxTextW > 0.0f) {
         float textX = cursorPos.x + switchW + labelSpacing;
         float textY = cursorPos.y + (finalH - totalTextH) * 0.5f;

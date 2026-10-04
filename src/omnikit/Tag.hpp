@@ -7,28 +7,28 @@
 
 namespace OmniKit {
 
-// Параметры тега-чипа (designated initializers):
+// Tag chip parameters (designated initializers):
 //
-//     if (Tag("vibration")) { ... }                       // кликабельный "# vibration"
+//     if (Tag("vibration")) { ... }                       // clickable "# vibration"
 //     Tag("readonly", {.clickable = false});
 struct TagOptions {
-    const char* prefix    = "#";       // префикс перед текстом; nullptr или "" — без префикса
+    const char* prefix    = "#";       // prefix before text; nullptr or "" — no prefix
     bool        clickable = true;
-    UiSize      size      = UiSize::Medium;  // масштаб чипа по шкале UiSize (Medium — стиль темы)
-    const char* tooltip   = nullptr;   // подсказка; nullptr — "Filter by tag #<text>"
+    UiSize      size      = UiSize::Medium;  // chip scale by UiSize (Medium is theme style)
+    const char* tooltip   = nullptr;   // tooltip; nullptr — "Filter by tag #<text>"
 };
 
-// Интерактивный или информационный тег-чип в стиле evo-machine-cs (# тег)
-// Возвращает true, если тег был нажат пользователем
+// Interactive or informational tag chip in evo-machine-cs style (# tag)
+// Returns true if the tag was clicked by the user
 bool Tag(const char* text, const TagOptions& options = {});
 
 struct TagListOptions {
-    UiSize size      = UiSize::Medium;   // размер всех тегов списка
-    float maxWidthPx = 0.0f;   // ширина переноса в финальных px; 0 — вся доступная ширина
+    UiSize size      = UiSize::Medium;   // size of all tags in list
+    float maxWidthPx = 0.0f;   // wrap width in final px; 0 — all available width
 };
 
-// Набор тегов с автоматическим переносом по доступной ширине.
-// Возвращает нажатый тег (или std::nullopt, если ничего не нажато)
+// Set of tags with auto-wrapping across available width.
+// Returns clicked tag (or std::nullopt if none clicked)
 std::optional<std::string> TagList(const std::vector<std::string>& tags,
                                    const TagListOptions& options = {});
 

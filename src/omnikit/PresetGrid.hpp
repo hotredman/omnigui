@@ -8,25 +8,25 @@
 
 namespace OmniKit {
 
-// Параметры сетки пресетов (designated initializers):
+// Preset grid options (designated initializers):
 //
 //     PresetGrid(rate, {10.0f, 50.0f, 100.0f}, {.unit = "Hz", .columns = 3});
 struct PresetGridOptions {
-    const char* unit          = nullptr;   // единица измерения на табло
+    const char* unit          = nullptr;   // Unit displayed on the readout
     int         columns       = 5;
-    UiSize      size          = UiSize::Medium;  // высота кнопок и табло по шкале UiSize
-    bool        showDisplay   = true;      // табло текущего значения над сеткой
-    const char* displayFormat = "%.1f";    // формат значения на табло
-    const char* buttonFormat  = "%.4g";    // формат подписи кнопки пресета
-    UiKey       key           = {};        // идентичность; по умолчанию — место вызова (loc)
-    const PresetGridStyle* style = nullptr;  // оверрайд стиля; nullptr — из темы
+    UiSize      size          = UiSize::Medium;  // Button and display height on the UiSize scale
+    bool        showDisplay   = true;      // Current value readout above grid
+    const char* displayFormat = "%.1f";    // Readout value format string
+    const char* buttonFormat  = "%.4g";    // Preset button label format string
+    UiKey       key           = {};        // Identity; default uses call-site location (loc)
+    const PresetGridStyle* style = nullptr;  // Style override; nullptr uses theme
 
-    // Внутренний механизм для контейнеров (Card), которые сами считают геометрию:
-    // финальные px (ширина, высота табло); 0 — авто. Не для кода приложения.
+    // Internal mechanism for containers (Card) managing their own layout geometry:
+    // final px (width, readout height); 0 for auto. Not intended for application code.
     ImVec2      sizePx        = ImVec2(0.0f, 0.0f);
 };
 
-// Селектор пресетов: табло значения + сетка кнопок. Возвращает true, если значение изменилось
+// Preset selector: value readout + button grid. Returns true if value changed
 bool PresetGrid(float& value, const std::vector<float>& presets, const PresetGridOptions& options = {},
                 std::source_location loc = std::source_location::current());
 bool PresetGrid(double& value, const std::vector<double>& presets, const PresetGridOptions& options = {},

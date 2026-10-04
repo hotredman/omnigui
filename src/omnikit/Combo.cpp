@@ -40,7 +40,7 @@ void RenderComboLabel(const char* label, float width, const ComboStyle& style) {
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
-    // Клипируем строго по ширине width, чтобы длинный лейбл никогда не вылезал на соседнее поле
+    // Clip strictly to width so a long label never overlaps adjacent fields
     dl->PushClipRect(pos, ImVec2(pos.x + width, pos.y + lineHeight + 2.0f), true);
     dl->AddText(pos, ImGui::GetColorU32(style.colLabel), label);
     dl->PopClipRect();
@@ -62,8 +62,8 @@ bool Combo(int& currentItem, const char* const items[], int itemsCount, const Co
     const ComboStyle& style = o.style ? *o.style : theme.combo;
     const char* label = o.label;
 
-    // Геометрия: sizePx (контейнеры) перекрывает size и width. Заданная высота
-    // берёт отступы и скругление из стиля списка, иначе — из метрик UiSize.
+    // Geometry: sizePx (containers) overrides size and width. Explicit height
+    // takes padding and rounding from the combo style, otherwise from UiSize metrics.
     const bool explicitHeight = o.sizePx.y > 0.0f;
     const ControlMetrics m = theme.GetMetrics(o.size);
 
@@ -94,7 +94,7 @@ bool Combo(int& currentItem, const char* const items[], int itemsCount, const Co
         }
     }
 
-    // Идентичность: явный key, иначе loc + label
+    // Identity: explicit key, otherwise loc + label
     AutoIdScope idScope(o.key, label, loc);
     ImGui::BeginGroup();
 
@@ -145,7 +145,7 @@ bool Combo(int& currentItem, const char* const items[], int itemsCount, const Co
     ImGui::PopStyleColor(9);
     ImGui::PopStyleVar(5);
 
-    // Отрисовка аккуратной стрелочки-шеврона справа
+    // Render neat chevron arrow on the right
     {
         ImVec2 itemMin = ImGui::GetItemRectMin();
         ImVec2 itemMax = ImGui::GetItemRectMax();

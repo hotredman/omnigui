@@ -27,7 +27,7 @@ StatusBar::StatusBar(const StatusBarOptions& options)
 
     m_open = ImGui::Begin("##StatusBarWindow", nullptr, flags);
     if (m_open) {
-        // Верхняя линия-разделитель полосы
+        // Top divider line for the bar
         const ImVec2 pos = ImGui::GetWindowPos();
         ImGui::GetWindowDrawList()->AddLine(
             pos, ImVec2(pos.x + io.DisplaySize.x, pos.y), Style().colTopLine,
@@ -36,7 +36,7 @@ StatusBar::StatusBar(const StatusBarOptions& options)
 }
 
 StatusBar::~StatusBar() {
-    // ImGui::End() обязателен независимо от результата Begin
+    // ImGui::End() is required regardless of Begin result
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
@@ -64,7 +64,7 @@ void StatusBar::Text(const std::string& text, const StatusBarTextOptions& option
     const float width = std::min(options.maxWidth > 0.0f ? theme.Scale(options.maxWidth) : available, available);
     const float itemWidth = std::min(textSize.x, width);
 
-    // Элемент под текстом: место в строке и зона подсказки
+    // Element under text: layout space and tooltip hit area
     ImGui::SetCursorScreenPos(start);
     {
         AutoIdScope idScope(options.key, text.c_str(), loc, m_textCount++);

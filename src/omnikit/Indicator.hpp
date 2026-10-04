@@ -8,16 +8,16 @@ namespace OmniKit {
 
 class ContextMenu;
 
-// Параметры индикатора (designated initializers):
+// Indicator parameters (designated initializers):
 //
 //     Indicator speed({.title = "THROUGHPUT", .precision = 1, .unit = "MB/s", .digits = 5, .tare = true});
 struct IndicatorOptions {
     std::string title;
     double      value     = 0.0;
-    int         precision = 2;       // знаков после запятой, 0..5
+    int         precision = 2;       // decimal places, 0..5
     std::string unit;
-    int         digits    = 0;       // число разрядов для расчёта ширины плашки; 0 — по значению
-    bool        tare      = false;   // показывать кнопку обнуления
+    int         digits    = 0;       // number of digits for panel width calculation; 0 — based on value
+    bool        tare      = false;   // show tare/zero button
 };
 
 class Indicator {
@@ -26,7 +26,7 @@ public:
 
     explicit Indicator(const IndicatorOptions& options);
 
-    // Заголовок плашки выводится капсом (оформление компонента)
+    // The panel title is rendered in uppercase (component styling)
     void SetTitle(std::string title);
     void SetValue(const std::string& value);
     void SetValue(double value);
@@ -36,10 +36,10 @@ public:
     void SetShowTare(bool show);
     void SetAllowPrecisionChange(bool allow) { m_allowPrecisionChange = allow; }
     void SetOnTare(std::function<void()> callback);
-    // Выбор числа знаков в меню значения (программный SetPrecision не сообщает)
+    // Precision selection in the value menu (programmatic SetPrecision does not notify)
     void SetOnPrecisionChanged(std::function<void(int)> callback);
-    // Содержимое меню по клику на заголовок и на единицу измерения; без
-    // обработчика зона не кликабельна
+    // Menu content on clicking the title or the unit of measurement; without
+    // a handler, the zone is not clickable
     void SetOnRenderTitleMenu(MenuCallback callback);
     void SetOnRenderUnitMenu(MenuCallback callback);
     void SetTareLabel(std::string label) { m_tareLabel = std::move(label); }
@@ -54,14 +54,14 @@ public:
     const std::string& GetTareLabel() const { return m_tareLabel; }
     bool HasTare() const { return m_showTare; }
 
-    // Расчет ширины плашки на основе содержимого, числа разрядов и шрифтов стиля
+    // Calculates panel width based on content, number of digits, and style fonts
     float CalculateWidth() const;
     float CalculateWidth(const IndicatorStyle& style) const;
 
-    // Канонический рендер: 0 параметров, берёт настройки из UiTheme::Get()
+    // Canonical render: 0 parameters, uses settings from UiTheme::Get()
     void Render();
 
-    // Опциональный оверрайд стиля для единичного виджета
+    // Optional style override for a single widget
     void Render(const IndicatorStyle& style);
 
 private:
@@ -87,7 +87,7 @@ private:
         ImU32 color;
         float underlineThickness;
     };
-    // Состояния «меню открыто» зон: название, точность, единицы
+    // "Menu open" states for clickable zones: title, precision, units
     bool m_titleMenuOpen = false;
     bool m_precisionMenuOpen = false;
     bool m_unitMenuOpen = false;

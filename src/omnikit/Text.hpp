@@ -8,31 +8,31 @@
 
 namespace OmniKit {
 
-// Начертание текста: определяет шрифт и цвет по умолчанию
+// Text role: determines font and default color
 enum class TextRole {
-    Body,   // обычный текст
-    Title,  // заголовок (жирный)
-    Muted   // приглушённый вспомогательный текст
+    Body,   // standard body text
+    Title,  // title heading (bold)
+    Muted   // muted secondary text
 };
 
-// Параметры текста (designated initializers):
+// Text parameters (designated initializers):
 //
 //     Text("Connected", {.variant = UiVariant::Success, .icon = Icon::Check});
 //     Text("Section", {.role = TextRole::Title});
 //     Text(longDescription, {.variant = UiVariant::Secondary, .wrap = true});
 struct TextOptions {
-    UiVariant             variant = UiVariant::Default;   // семантический цвет (у Muted не используется)
+    UiVariant             variant = UiVariant::Default;   // semantic color (not used for Muted)
     TextRole              role    = TextRole::Body;
-    Icon                  icon    = Icon::None;           // иконка слева от текста
-    std::optional<UiSize> size;                           // кегль по метрикам UiSize; не задан — по умолчанию
-    bool                  wrap    = false;                // многострочный текст с переносом по границе контейнера (без иконки)
+    Icon                  icon    = Icon::None;           // icon to the left of text
+    std::optional<UiSize> size;                           // font size by UiSize metrics; unset — default
+    bool                  wrap    = false;                // multiline text wrapped at container boundary (no icon)
 };
 
-// Выводит строку текста в текущую позицию раскладки
+// Displays a string of text at current layout position
 void Text(const char* text, const TextOptions& options = {});
 void Text(const std::string& text, const TextOptions& options = {});
 
-// printf-форматирование в std::string: Text(Format("%.1f MB/s", v), {.role = TextRole::Muted})
+// printf formatting to std::string: Text(Format("%.1f MB/s", v), {.role = TextRole::Muted})
 #if defined(__GNUC__)
 __attribute__((format(printf, 1, 2)))
 #endif

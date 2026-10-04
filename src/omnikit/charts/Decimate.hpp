@@ -7,9 +7,9 @@ namespace OmniKit {
 
 namespace ChartCore {
 
-// Min/max-децимация точек для рендеринга по пиксельным колонкам:
-// разбивает точки на колонки-корзины и оставляет минимальную и максимальную точки в исходном порядке.
-// Гарантирует сохранение пиков и впадин сигнала при любом N без искажений.
+// Min/max point decimation for pixel-column rendering:
+// splits points into column bins and preserves min and max points in their original order.
+// Guarantees preservation of signal peaks and valleys for any N without distortion.
 std::vector<ChartPoint> DecimateMinMax(const std::vector<ChartPoint>& points, int columns);
 
 } // namespace ChartCore

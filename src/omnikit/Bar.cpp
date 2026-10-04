@@ -39,7 +39,7 @@ Bar::Bar(const BarMetrics& metrics, const char* windowName, const char* zonesId,
     m_open = ImGui::Begin(windowName, nullptr, flags);
 
     if (m_open) {
-        // Отрисовка нижней разделительной линии
+        // Draw bottom separator line
         const float lineY = posY + m_height - metrics.separatorSize;
         ImGui::GetWindowDrawList()->AddLine(
             ImVec2(0, lineY),
@@ -56,7 +56,7 @@ Bar::Bar(const BarMetrics& metrics, const char* windowName, const char* zonesId,
 }
 
 Bar::~Bar() {
-    // ImGui::End() обязателен независимо от результата Begin
+    // ImGui::End() is required regardless of Begin's return value
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);

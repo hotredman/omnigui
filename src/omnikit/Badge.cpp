@@ -38,7 +38,7 @@ ImVec2 BadgeDraw(ImDrawList* dl, ImVec2 pos, const char* text, const BadgeOption
     float w = textSz.x + padX * 2.0f;
     float h = textSz.y + padY * 2.0f;
 
-    // За краем видимой области не рисуется; размер нужен раскладке всё равно
+    // Clipped if outside visible rect; the layout still needs the computed size
     if (!ImGui::IsRectVisible(pos, ImVec2(pos.x + w, pos.y + h))) {
         theme.PopFont();
         return ImVec2(w, h);

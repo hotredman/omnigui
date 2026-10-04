@@ -108,7 +108,7 @@ void RealtimeChart::UpdateBoundsWithPoint(double x, double y) {
     m_rawMaxX = std::max(m_rawMaxX, x);
     m_rawMaxY = std::max(m_rawMaxY, y);
 
-    // Автомасштаб с запасом +10% сверху и справа
+    // Auto-scale with +10% headroom on top and right
     m_bounds.maxX = std::max(1.0, m_rawMaxX * 1.10);
     m_bounds.maxY = std::max(1.0, m_rawMaxY * 1.10);
 }
@@ -145,12 +145,12 @@ void RealtimeChart::Render(ImVec2 size) {
     ImVec2 origin = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
-    // 1. Холст графика и внешняя граница
+    // 1. Chart canvas and outer border
     float radius = style.Scale(style.cornerRadius);
     dl->AddRectFilled(origin, ImVec2(origin.x + canvasSize.x, origin.y + canvasSize.y), style.colBg, radius);
     dl->AddRect(origin, ImVec2(origin.x + canvasSize.x, origin.y + canvasSize.y), style.colBorder, radius, 0, style.borderSize);
 
-    // 2. Создание проекции координат
+    // 2. Coordinate projection creation
     ChartPad scaledPad = m_pad;
     scaledPad.left = style.Scale(m_pad.left);
     scaledPad.right = style.Scale(m_pad.right);
@@ -159,7 +159,7 @@ void RealtimeChart::Render(ImVec2 size) {
 
     ChartCore::Projection proj = ChartCore::Projection::Create(m_bounds, scaledPad, origin, canvasSize);
 
-    // 3. Сетка и тики
+    // 3. Grid and ticks
     std::vector<double> ticksX = ChartCore::GenerateTicks(m_bounds.minX, m_bounds.maxX, 5);
     std::vector<double> ticksY = ChartCore::GenerateTicks(m_bounds.minY, m_bounds.maxY, 5);
 
@@ -168,7 +168,7 @@ void RealtimeChart::Render(ImVec2 size) {
 
     style.PushFont(style.fontRegular, style.tickFontSize);
 
-    // Вертикальные линии сетки и подписи X
+    // Vertical grid lines and X labels
     for (double tx : ticksX) {
         float sx = proj.ToScreenX(tx);
         if (sx >= proj.plotMin.x - 1.0f && sx <= proj.plotMax.x + 1.0f) {
@@ -180,7 +180,7 @@ void RealtimeChart::Render(ImVec2 size) {
         }
     }
 
-    // Горизонтальные линии сетки и подписи Y
+    // Horizontal grid lines and Y labels
     for (double ty : ticksY) {
         float sy = proj.ToScreenY(ty);
         if (sy >= proj.plotMin.y - 1.0f && sy <= proj.plotMax.y + 1.0f) {
@@ -192,16 +192,16 @@ void RealtimeChart::Render(ImVec2 size) {
         }
     }
 
-    // 4. Внутренняя рамка области графика
+    // 4. Inner chart area border
     dl->AddRect(proj.plotMin, proj.plotMax, style.colAxis, 0.0f, 0, 1.0f);
 
     style.PopFont();
 
-    // 5. Заголовки осей
+    // 5. Axis titles
     style.PushFont(style.fontMedium, style.axisTitleFontSize);
     const ImU32 colTitle = style.colAxisTitle;
 
-    // Заголовок оси Y (сверху слева)
+    // Y axis title (top left)
     if (!m_yLabel.empty()) {
         std::string yTitle = m_yLabel + (m_yUnit.empty() ? "" : (" (" + m_yUnit + ")"));
         float yPos = (proj.plotMin.y - origin.y >= style.Scale(24.0f))
@@ -210,7 +210,7 @@ void RealtimeChart::Render(ImVec2 size) {
         dl->AddText(ImVec2(proj.plotMin.x + style.Scale(6.0f), yPos), colTitle, yTitle.c_str());
     }
 
-    // Заголовок оси X (снизу справа вдоль графика)
+    // X axis title (bottom right along chart)
     if (!m_xLabel.empty()) {
         std::string xTitle = m_xLabel + (m_xUnit.empty() ? "" : (" (" + m_xUnit + ")"));
         ImVec2 xTitleSz = ImGui::CalcTextSize(xTitle.c_str());
@@ -219,7 +219,7 @@ void RealtimeChart::Render(ImVec2 size) {
 
     style.PopFont();
 
-    // 6. Отрисовка кривой с отсечением по области графика
+    // 6. Curve rendering with chart area clipping
     dl->PushClipRect(proj.plotMin, proj.plotMax, true);
 
     if (m_points.empty()) {
@@ -237,7 +237,7 @@ void RealtimeChart::Render(ImVec2 size) {
         const ImU32 lineColor = m_lineColor ? m_lineColor : style.colLine;
         dl->AddPolyline(m_screenPoints.data(), static_cast<int>(m_screenPoints.size()), lineColor, 0, style.Scale(m_lineThickness));
 
-        // Яркая точка-маркер на конце кривой (текущая точка испытания)
+        // Bright marker point at curve tip (current test point)
         if (m_showHeadMarker) {
             ImVec2 headPos = m_screenPoints.back();
             dl->AddCircleFilled(headPos, style.Scale(6.0f), ChartStyle::WithAlpha(lineColor, 0.28f));
@@ -247,7 +247,7 @@ void RealtimeChart::Render(ImVec2 size) {
 
     dl->PopClipRect();
 
-    // Резервируем пространство в компоновщике ImGui
+    // Reserve space in ImGui layout
     ImGui::Dummy(canvasSize);
 
     ImGui::PopID();

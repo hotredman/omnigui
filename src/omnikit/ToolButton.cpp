@@ -9,7 +9,7 @@ namespace OmniKit {
 void ApplyToolbarVerticalCentering(float s, bool allowMoveUp) {
     const UiTheme& theme = UiTheme::Get();
     float winH = ImGui::GetWindowHeight();
-    // В компактных полосах (тулбар, шапка) центрируем кнопку по вертикали, предотвращая растягивание
+    // In compact bars (toolbar, header) center button vertically to prevent stretching
     if (winH <= theme.HeaderHeight() * 1.15f) {
         float targetY = std::max(0.0f, std::floor((winH - s) * 0.5f));
         if (allowMoveUp || ImGui::GetCursorPosY() < targetY) {
@@ -64,7 +64,7 @@ bool ToolButton(const ToolButtonOptions& o, std::source_location loc) {
     DisabledScope disabledScope(o.disabled);
     const UiTheme& theme = UiTheme::Get();
 
-    // Сторона квадрата: sidePx (контейнеры) > size > размер из темы
+    // Square side: sidePx (containers) > size > theme size
     float s;
     if (o.sidePx > 0.0f)       s = o.sidePx;
     else if (o.size)           s = theme.GetMetrics(*o.size).height;
@@ -72,7 +72,7 @@ bool ToolButton(const ToolButtonOptions& o, std::source_location loc) {
 
     ApplyToolbarVerticalCentering(s);
 
-    // Идентичность: явный key, иначе loc + glyph/icon
+    // Identity: explicit key, otherwise loc + glyph/icon
     AutoIdScope idScope(o.key, o.glyph, loc, static_cast<int>(o.icon.GetId()));
 
     ImVec2 screenPos = ImGui::GetCursorScreenPos();
@@ -90,7 +90,7 @@ bool ToolButton(const ToolButtonOptions& o, std::source_location loc) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     float radius = theme.Scale(theme.toolButton.cornerRadius);
 
-    // Подложка и контур
+    // Background and border
     dl->AddRectFilled(screenPos, ImVec2(screenPos.x + s, screenPos.y + s), ImGui::GetColorU32(bgCol), radius);
     if (theme.toolButton.borderSize > 0.0f) {
         dl->AddRect(screenPos, ImVec2(screenPos.x + s, screenPos.y + s), ImGui::GetColorU32(borderCol), radius, 0, theme.toolButton.borderSize);
@@ -98,14 +98,14 @@ bool ToolButton(const ToolButtonOptions& o, std::source_location loc) {
 
     const float pressOffset = active ? 1.0f : 0.0f;
 
-    // Векторная пиктограмма
+    // Vector icon
     if (o.icon != Icon::None) {
         ImVec2 center(screenPos.x + s * 0.5f + pressOffset, screenPos.y + s * 0.5f + pressOffset);
         float iconSz = s * theme.toolButton.iconScale;
         o.icon.Draw(dl, center, iconSz, ImGui::GetColorU32(fgCol));
     }
 
-    // Текстовый символ / глиф
+    // Text character / glyph
     if (o.glyph && o.glyph[0] != '\0') {
         ImFont* font = theme.toolButton.font ? theme.toolButton.font : (theme.buttonFont ? theme.buttonFont : theme.defaultFont);
         float fontSz = theme.Scale(theme.toolButton.fontSize);
@@ -122,7 +122,7 @@ bool ToolButton(const ToolButtonOptions& o, std::source_location loc) {
         }
     }
 
-    // Всплывающая подсказка
+    // Tooltip
     if (o.tooltip && o.tooltip[0] != '\0' && hovered) {
         ImGui::SetTooltip("%s", o.tooltip);
     }

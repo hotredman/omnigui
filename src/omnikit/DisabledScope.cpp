@@ -12,7 +12,7 @@ DisabledScope::DisabledScope(bool disabled) {
 
 DisabledScope::~DisabledScope() {
     const ImGuiContext& g = *ImGui::GetCurrentContext();
-    // Активный элемент отрисован в этом кадре внутри выключенной области
+    // Active item was rendered this frame inside the disabled scope
     const bool activeInside = g.ActiveId != 0 && g.ActiveIdIsAlive == g.ActiveId &&
                               m_activeAliveBefore != g.ActiveId;
     if (Active() && activeInside) {

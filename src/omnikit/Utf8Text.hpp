@@ -9,10 +9,10 @@
 namespace OmniKit {
 
 // ============================================================================
-// Текст UTF-8 для оформления интерфейса
+// UTF-8 text formatting utilities
 // ============================================================================
 
-// Верхний регистр: латиница и кириллица (включая ё); прочие символы — как есть
+// Uppercase: Latin and Cyrillic (including yo); other characters untouched
 inline std::string Utf8ToUpper(std::string_view text) {
     std::string out;
     out.reserve(text.size());
@@ -22,11 +22,11 @@ inline std::string Utf8ToUpper(std::string_view text) {
             out += static_cast<char>(lead - 'a' + 'A');
             continue;
         }
-        // Кириллица U+0400..U+047F: 0xD0/0xD1 + байт продолжения
+        // Cyrillic U+0400..U+047F: 0xD0/0xD1 + continuation byte
         if ((lead == 0xD0 || lead == 0xD1) && i + 1 < text.size()) {
             unsigned code = ((lead & 0x1Fu) << 6) | (static_cast<unsigned char>(text[i + 1]) & 0x3Fu);
-            if (code >= 0x430 && code <= 0x44F) code -= 0x20;       // а..я -> А..Я
-            else if (code >= 0x450 && code <= 0x45F) code -= 0x50;  // ѐ..џ (ё) -> Ѐ..Џ (Ё)
+            if (code >= 0x430 && code <= 0x44F) code -= 0x20;       // lowercase cyrillic -> uppercase cyrillic
+            else if (code >= 0x450 && code <= 0x45F) code -= 0x50;  // cyrillic io/extended -> uppercase
             out += static_cast<char>(0xC0 | (code >> 6));
             out += static_cast<char>(0x80 | (code & 0x3F));
             ++i;
@@ -37,8 +37,8 @@ inline std::string Utf8ToUpper(std::string_view text) {
     return out;
 }
 
-// Копирует строку в char-буфер фиксированного размера: обрезает по границе символа UTF-8
-// и всегда ставит завершающий нуль (переносимая замена strncpy_s)
+// Copies string into fixed-size char buffer: truncates at UTF-8 character boundary
+// and always null-terminates (portable alternative to strncpy_s)
 inline void CopyTruncated(char* dst, std::size_t capacity, const std::string& src) {
     if (!dst || capacity == 0) return;
     std::size_t n = std::min(src.size(), capacity - 1);

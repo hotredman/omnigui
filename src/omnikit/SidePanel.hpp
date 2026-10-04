@@ -12,46 +12,46 @@ enum class SidePanelSide {
     Right
 };
 
-// Параметры боковой панели (designated initializers):
+// Side panel options (designated initializers):
 //
-//     if (SidePanel panel({.width = 260}); panel) { ... }                         // фиксированная ширина
-//     if (SidePanel panel(s_width, {.minWidth = 240, .maxWidth = 600}); panel) { ... } // со сплиттером
+//     if (SidePanel panel({.width = 260}); panel) { ... }                         // fixed width
+//     if (SidePanel panel(s_width, {.minWidth = 240, .maxWidth = 600}); panel) { ... } // with splitter
 struct SidePanelOptions {
-    float                width    = 320.0f;                 // базовые px; для панели со сплиттером берётся из переданной переменной
+    float                width    = 320.0f;                 // Base px; for panel with splitter, sourced from passed variable
     SidePanelSide        side     = SidePanelSide::Right;
-    float                minWidth = 240.0f;                 // границы ширины для панели со сплиттером
+    float                minWidth = 240.0f;                 // Width bounds for panel with splitter
     float                maxWidth = 600.0f;
-    const char*          key      = nullptr;                // идентичность; nullptr — "##SidePanel" (нужен, если панелей несколько в одной области)
-    const SidePanelStyle* style   = nullptr;                // оверрайд стиля; nullptr — из темы
+    const char*          key      = nullptr;                // Identity; nullptr uses "##SidePanel" (needed if multiple panels share a region)
+    const SidePanelStyle* style   = nullptr;                // Style override; nullptr uses theme
 };
 
 // ============================================================================
-// Боковая панель (RAII-область): дочернее окно заданной ширины во всю
-// оставшуюся высоту. Со сплиттером ширину можно менять мышью.
+// Side panel (RAII scope): child window of specified width filling all
+// remaining height. With a splitter, width can be resized with mouse drag.
 // ============================================================================
 class SidePanel : public Scope {
 public:
     using Side = SidePanelSide;
 
-    // 1. Фиксированная ширина (без сплиттера)
+    // 1. Fixed width (without splitter)
     explicit SidePanel(const SidePanelOptions& options = {});
 
-    // 2. Изменяемая ширина со сплиттером: width читается и пишется панелью
+    // 2. Resizable width with splitter: width is read and written by the panel
     SidePanel(float& width, const SidePanelOptions& options = {});
 
     ~SidePanel();
 
-    // Текущая ширина (базовые px)
+    // Current width (base px)
     float GetWidth() const { return m_width; }
 
-    // Полная ширина вместе со сплиттером в px (с учётом масштаба)
+    // Total width including splitter in px (scaled)
     float GetTotalWidth() const;
 
-    // Статический расчёт полной ширины (в пикселях, с учётом масштаба)
+    // Static calculation of total width (in pixels, scaled)
     static float CalcTotalWidth(
         float width,
         bool resizable = false,
-        const SidePanelStyle* style = nullptr   // nullptr — стиль из темы
+        const SidePanelStyle* style = nullptr   // nullptr uses theme style
     );
 
 private:

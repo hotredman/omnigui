@@ -84,7 +84,7 @@ static TextureInfo LoadTextureFromAsset(const std::string& assetPath) {
     return LoadTextureFromFile(assetPath);
 }
 
-// Встроенная процедурная векторная отрисовка
+// Built-in procedural vector rendering
 static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float size, ImU32 color) {
     if (!dl || id == Icon::None) return;
 
@@ -94,9 +94,9 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
     float stroke = std::max(1.0f, 1.3f * s);
 
     switch (id) {
-        // --- Сайдбар и общие пиктограммы ---
+        // --- Sidebar and general pictograms ---
         case Icon::Database: {
-            // База данных: 3 цилиндрических диска
+            // Database: 3 cylindrical disks
             dl->AddRect(ImVec2(cx - 6.5f * s, cy - 6.0f * s), ImVec2(cx + 6.5f * s, cy - 2.5f * s), color, 1.5f * s, 0, stroke);
             dl->AddRect(ImVec2(cx - 6.5f * s, cy - 1.5f * s), ImVec2(cx + 6.5f * s, cy + 2.0f * s), color, 1.5f * s, 0, stroke);
             dl->AddRect(ImVec2(cx - 6.5f * s, cy + 3.0f * s), ImVec2(cx + 6.5f * s, cy + 6.5f * s), color, 1.5f * s, 0, stroke);
@@ -104,7 +104,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::List: {
-            // Журнал: 3 горизонтальные строки со списками-буллетами
+            // Log: 3 horizontal rows with bulleted list items
             dl->AddLine(ImVec2(cx - 4.5f * s, cy - 4.5f * s), ImVec2(cx + 6.5f * s, cy - 4.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 4.5f * s, cy),             ImVec2(cx + 6.5f * s, cy),             color, stroke);
             dl->AddLine(ImVec2(cx - 4.5f * s, cy + 4.5f * s), ImVec2(cx + 4.5f * s, cy + 4.5f * s), color, stroke);
@@ -115,7 +115,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Cog: {
-            // Шестерня машины: обод со спицами
+            // Machine gear: rim with spokes
             dl->AddCircle(center, 4.2f * s, color, 16, stroke);
             dl->AddCircleFilled(center, 1.6f * s, color);
             for (int i = 0; i < 8; ++i) {
@@ -129,7 +129,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Target: {
-            // Мишень калибровки: окружность и перекрестие
+            // Calibration target: circle and crosshair
             dl->AddCircle(center, 5.5f * s, color, 16, stroke);
             dl->AddCircleFilled(center, 1.5f * s, color);
             dl->AddLine(ImVec2(cx - 7.5f * s, cy), ImVec2(cx - 4.5f * s, cy), color, stroke);
@@ -140,7 +140,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Gamepad: {
-            // Корпус геймпада
+            // Gamepad body
             dl->AddRect(ImVec2(cx - 7.0f * s, cy - 4.5f * s), ImVec2(cx + 7.0f * s, cy + 4.5f * s), color, 2.0f * s, 0, stroke);
             dl->AddLine(ImVec2(cx - 4.5f * s, cy - 2.0f * s), ImVec2(cx - 4.5f * s, cy + 2.0f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 6.5f * s, cy),             ImVec2(cx - 2.5f * s, cy),             color, stroke);
@@ -150,7 +150,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Gear: {
-            // Шестеренка установок (6 зубцов)
+            // Settings gear (6 teeth)
             dl->AddCircle(center, 3.8f * s, color, 12, stroke);
             dl->AddCircleFilled(center, 1.4f * s, color);
             for (int i = 0; i < 6; ++i) {
@@ -164,7 +164,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::LineChart: {
-            // Документ с ломаной линией диаграммы
+            // Document with polyline chart
             dl->AddRect(ImVec2(cx - 5.5f * s, cy - 6.5f * s), ImVec2(cx + 5.5f * s, cy + 6.5f * s), color, 1.5f * s, 0, stroke);
             ImVec2 pts[4] = {
                 ImVec2(cx - 3.5f * s, cy + 2.5f * s),
@@ -177,7 +177,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Clipboard: {
-            // Планшет с зажимом (клипборд)
+            // Clipboard with top clip
             dl->AddRect(ImVec2(cx - 5.5f * s, cy - 6.0f * s), ImVec2(cx + 5.5f * s, cy + 6.5f * s), color, 1.5f * s, 0, stroke);
             dl->AddRectFilled(ImVec2(cx - 2.5f * s, cy - 7.5f * s), ImVec2(cx + 2.5f * s, cy - 5.0f * s), color, 1.0f * s);
             dl->AddLine(ImVec2(cx - 3.5f * s, cy - 1.0f * s), ImVec2(cx + 3.5f * s, cy - 1.0f * s), color, stroke);
@@ -186,16 +186,16 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::BarChart: {
-            // Столбчатая гистограмма (3 столбика разной высоты)
+            // Column bar chart (3 bars of differing height)
             dl->AddRectFilled(ImVec2(cx - 5.5f * s, cy + 1.0f * s), ImVec2(cx - 2.5f * s, cy + 6.0f * s), color, 0.5f * s);
             dl->AddRectFilled(ImVec2(cx - 1.5f * s, cy - 2.5f * s), ImVec2(cx + 1.5f * s, cy + 6.0f * s), color, 0.5f * s);
             dl->AddRectFilled(ImVec2(cx + 2.5f * s, cy - 6.0f * s), ImVec2(cx + 5.5f * s, cy + 6.0f * s), color, 0.5f * s);
             break;
         }
 
-        // --- Пульт и управление приводом (Remote Control) ---
+        // --- Remote control and actuator drive (Remote Control) ---
         case Icon::Play: {
-            // Треугольник вправо (ПУСК)
+            // Right triangle (START)
             ImVec2 p1(cx - 4.0f * s, cy - 5.5f * s);
             ImVec2 p2(cx - 4.0f * s, cy + 5.5f * s);
             ImVec2 p3(cx + 5.5f * s, cy);
@@ -204,31 +204,31 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Square: {
-            // Правильный квадрат (СТОП)
+            // Regular square (STOP)
             dl->AddRectFilled(ImVec2(cx - 5.0f * s, cy - 5.0f * s), ImVec2(cx + 5.0f * s, cy + 5.0f * s), color, 1.2f * s);
             break;
         }
 
         case Icon::Pause: {
-            // Две параллельные вертикальные полосы (Пауза)
+            // Two parallel vertical bars (Pause)
             dl->AddRectFilled(ImVec2(cx - 4.8f * s, cy - 5.5f * s), ImVec2(cx - 1.5f * s, cy + 5.5f * s), color, 0.8f * s);
             dl->AddRectFilled(ImVec2(cx + 1.5f * s, cy - 5.5f * s), ImVec2(cx + 4.8f * s, cy + 5.5f * s), color, 0.8f * s);
             break;
         }
 
         case Icon::RotateCcw: {
-            // Возврат: круговая стрелка с горизонтальным плечом и четким треугольным наконечником влево
+            // Return: circular arrow with horizontal arm and distinct left-pointing arrowhead
             float r = 4.6f * s;
             ImVec2 arcCenter(cx + 0.6f * s, cy + 0.5f * s);
             float topY = arcCenter.y - r;
 
-            // Наконечник стрелки (треугольник, смотрящий строго влево)
+            // Arrow tip (triangle pointing strictly left)
             ImVec2 tip(cx - 5.2f * s, topY);
             ImVec2 baseTop(cx - 1.4f * s, topY - 2.6f * s);
             ImVec2 baseBot(cx - 1.4f * s, topY + 2.6f * s);
             dl->AddTriangleFilled(tip, baseTop, baseBot, color);
 
-            // Плечо от основания треугольника и дуга по часовой стрелке до нижнего сектора
+            // Arm extending from triangle base and clockwise arc to lower sector
             const int nArc = 14;
             ImVec2 arcPts[1 + nArc];
             arcPts[0] = ImVec2(cx - 1.4f * s, topY);
@@ -242,7 +242,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::ArrowDownToLine: {
-            // Стрелка вниз в линию/платформу (Разгрузка)
+            // Downward arrow into line/platform (Unload)
             dl->AddLine(ImVec2(cx - 6.0f * s, cy + 5.5f * s), ImVec2(cx + 6.0f * s, cy + 5.5f * s), color, stroke * 1.3f);
             dl->AddLine(ImVec2(cx, cy - 6.0f * s), ImVec2(cx, cy + 2.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx, cy + 2.5f * s), ImVec2(cx - 3.8f * s, cy - 1.0f * s), color, stroke);
@@ -252,18 +252,18 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
 
         case Icon::Refresh:
         case Icon::RefreshCw: {
-            // Сброс аварии / Заводские: круговая стрелка по часовой стрелке (Refresh / Reset)
+            // Fault reset / Defaults: clockwise circular arrow (Refresh / Reset)
             float r = 4.6f * s;
             ImVec2 arcCenter(cx - 0.6f * s, cy + 0.5f * s);
             float topY = arcCenter.y - r;
 
-            // Наконечник стрелки (треугольник, смотрящий строго вправо)
+            // Arrow tip (triangle pointing strictly right)
             ImVec2 tip(cx + 5.2f * s, topY);
             ImVec2 baseTop(cx + 1.4f * s, topY - 2.6f * s);
             ImVec2 baseBot(cx + 1.4f * s, topY + 2.6f * s);
             dl->AddTriangleFilled(tip, baseTop, baseBot, color);
 
-            // Плечо от вершины дуги к основанию стрелки и дуга по часовой стрелке (через низ и лево к вершине)
+            // Arm from arc vertex to arrow base and clockwise arc (through bottom and left to vertex)
             const int nArc = 14;
             ImVec2 arcPts[1 + nArc];
             arcPts[0] = ImVec2(cx + 1.4f * s, topY);
@@ -278,7 +278,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
 
         case Icon::Upload:
         case Icon::ArrowUp: {
-            // Стрелка вверх (ВВЕРХ / Записать)
+            // Upward arrow (UP / Write)
             dl->AddLine(ImVec2(cx, cy + 5.5f * s), ImVec2(cx, cy - 5.0f * s), color, stroke);
             dl->AddLine(ImVec2(cx, cy - 5.0f * s), ImVec2(cx - 4.5f * s, cy - 0.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx, cy - 5.0f * s), ImVec2(cx + 4.5f * s, cy - 0.5f * s), color, stroke);
@@ -287,7 +287,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
 
         case Icon::Download:
         case Icon::ArrowDown: {
-            // Стрелка вниз (ВНИЗ / Прочитать)
+            // Downward arrow (DOWN / Read)
             dl->AddLine(ImVec2(cx, cy - 5.5f * s), ImVec2(cx, cy + 5.0f * s), color, stroke);
             dl->AddLine(ImVec2(cx, cy + 5.0f * s), ImVec2(cx - 4.5f * s, cy + 0.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx, cy + 5.0f * s), ImVec2(cx + 4.5f * s, cy + 0.5f * s), color, stroke);
@@ -295,7 +295,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::ChevronsUp: {
-            // Сдвоенные шевроны вверх
+            // Double chevrons up
             dl->AddLine(ImVec2(cx - 5.0f * s, cy - 2.0f * s), ImVec2(cx, cy - 6.0f * s), color, stroke);
             dl->AddLine(ImVec2(cx + 5.0f * s, cy - 2.0f * s), ImVec2(cx, cy - 6.0f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 5.0f * s, cy + 3.5f * s), ImVec2(cx, cy - 0.5f * s), color, stroke);
@@ -304,7 +304,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::ChevronsDown: {
-            // Сдвоенные шевроны вниз
+            // Double chevrons down
             dl->AddLine(ImVec2(cx - 5.0f * s, cy - 3.5f * s), ImVec2(cx, cy + 0.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx + 5.0f * s, cy - 3.5f * s), ImVec2(cx, cy + 0.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 5.0f * s, cy + 2.0f * s), ImVec2(cx, cy + 6.0f * s), color, stroke);
@@ -312,10 +312,10 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
             break;
         }
 
-        // --- Навигация и прокрутка (Navigation / Carousel / Scrolling) ---
+        // --- Navigation and scrolling (Navigation / Carousel / Scrolling) ---
         case Icon::ChevronLeft:
         case Icon::ArrowLeft: {
-            // Шеврон влево (<): аккуратный компактный геометрический наконечник
+            // Left chevron (<): neat compact geometric arrowhead
             ImVec2 top(cx + 1.8f * s, cy - 3.8f * s);
             ImVec2 tip(cx - 1.8f * s, cy);
             ImVec2 bot(cx + 1.8f * s, cy + 3.8f * s);
@@ -326,7 +326,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
 
         case Icon::ChevronRight:
         case Icon::ArrowRight: {
-            // Шеврон вправо (>): аккуратный компактный геометрический наконечник
+            // Right chevron (>): neat compact geometric arrowhead
             ImVec2 top(cx - 1.8f * s, cy - 3.8f * s);
             ImVec2 tip(cx + 1.8f * s, cy);
             ImVec2 bot(cx - 1.8f * s, cy + 3.8f * s);
@@ -335,13 +335,13 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
             break;
         }
 
-        // --- Системные и элементы шапки ---
+        // --- System and header controls ---
         case Icon::Power: {
-            // Кнопка питания: разомкнутый сверху круг (дуга 306°) и вертикальная черта
+            // Power button: circle open at top (306° arc) and vertical line
             float r = 5.0f * s;
             const int nPts = 24;
             ImVec2 arcPts[nPts];
-            // Симметричный разрыв вверху: от -0.35*pi по часовой стрелке до 1.35*pi
+            // Symmetric top opening: from -0.35*pi clockwise to 1.35*pi
             float startAngle = -0.35f * 3.14159265f;
             float endAngle   =  1.35f * 3.14159265f;
             for (int i = 0; i < nPts; ++i) {
@@ -352,7 +352,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
             dl->AddCircleFilled(arcPts[0], stroke * 0.5f, color);
             dl->AddCircleFilled(arcPts[nPts - 1], stroke * 0.5f, color);
 
-            // Вертикальная черта сверху вниз к центру
+            // Vertical line from top down to center
             ImVec2 lineTop(cx, cy - 5.8f * s);
             ImVec2 lineBot(cx, cy - 0.5f * s);
             dl->AddLine(lineTop, lineBot, color, stroke);
@@ -362,7 +362,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Maximize: {
-            // Раздвигающиеся 4 угла полноэкранного режима
+            // 4 expanding corners for fullscreen mode
             float d = 5.5f * s;
             float l = 2.8f * s;
             dl->AddLine(ImVec2(cx - d, cy - d), ImVec2(cx - d + l, cy - d), color, stroke);
@@ -377,26 +377,26 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Minimize: {
-            // 4 сходящихся угла к центру (Оконный режим / Выход из полного экрана)
+            // 4 corners contracting toward center (Windowed mode / Exit fullscreen)
             float d = 5.5f * s;
             float m = 1.8f * s;
-            // Верхний левый
+            // Top-left
             dl->AddLine(ImVec2(cx - d, cy - m), ImVec2(cx - m, cy - m), color, stroke);
             dl->AddLine(ImVec2(cx - m, cy - d), ImVec2(cx - m, cy - m), color, stroke);
-            // Верхний правый
+            // Top-right
             dl->AddLine(ImVec2(cx + d, cy - m), ImVec2(cx + m, cy - m), color, stroke);
             dl->AddLine(ImVec2(cx + m, cy - d), ImVec2(cx + m, cy - m), color, stroke);
-            // Нижний левый
+            // Bottom-left
             dl->AddLine(ImVec2(cx - d, cy + m), ImVec2(cx - m, cy + m), color, stroke);
             dl->AddLine(ImVec2(cx - m, cy + d), ImVec2(cx - m, cy + m), color, stroke);
-            // Нижний правый
+            // Bottom-right
             dl->AddLine(ImVec2(cx + d, cy + m), ImVec2(cx + m, cy + m), color, stroke);
             dl->AddLine(ImVec2(cx + m, cy + d), ImVec2(cx + m, cy + m), color, stroke);
             break;
         }
 
         case Icon::Sun: {
-            // Солнце: диск и 8 радиальных лучей
+            // Sun: disk and 8 radial rays
             dl->AddCircle(center, 3.2f * s, color, 12, stroke);
             for (int i = 0; i < 8; ++i) {
                 float angle = i * (3.14159265f / 4.0f);
@@ -409,10 +409,10 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Moon: {
-            // Элегантный полумесяц ночной темы (классический серп Луны)
-            // Внешняя дуга диска Луны
+            // Elegant dark theme crescent (classic crescent moon)
+            // Moon disk outer arc
             float x1 = cx - 0.4f * s, y1 = cy + 0.4f * s, r1 = 5.5f * s;
-            // Внутренняя вырезающая дуга тени (увеличенный радиус тени для изящного силуэта)
+            // Shadow cutout inner arc (enlarged shadow radius for graceful silhouette)
             float x2 = cx + 1.25f * s, y2 = cy - 1.25f * s, r2 = 5.25f * s;
 
             float dx = x2 - x1, dy = y2 - y1;
@@ -448,13 +448,13 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
                 inner[i] = ImVec2(x2 + r2 * std::cos(ang2), y2 + r2 * std::sin(ang2));
             }
 
-            // Заливка триангуляцией выпуклых квад-полос
+            // Fill by triangulation of convex quad strips
             for (int i = 0; i < N; ++i) {
                 dl->AddTriangleFilled(outer[i], outer[i + 1], inner[i + 1], color);
                 dl->AddTriangleFilled(outer[i], inner[i + 1], inner[i], color);
             }
 
-            // Сглаживающий антиалиасинг контура
+            // Contour antialiasing stroke
             ImVec2 poly[N * 2];
             for (int i = 0; i <= N; ++i) {
                 poly[i] = outer[i];
@@ -467,14 +467,14 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Zero: {
-            // Нулевая точка / тарирование
+            // Zero point / tare
             dl->AddCircle(center, 5.0f * s, color, 16, stroke);
             dl->AddCircleFilled(center, 1.8f * s, color);
             break;
         }
 
         case Icon::Check: {
-            // Галочка подтверждения
+            // Confirmation checkmark
             ImVec2 p1(cx - 5.0f * s, cy + 0.2f * s);
             ImVec2 p2(cx - 1.5f * s, cy + 4.2f * s);
             ImVec2 p3(cx + 5.5f * s, cy - 4.5f * s);
@@ -484,13 +484,13 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Pencil: {
-            // Карандаш под 45 градусов (направление от верхнего левого к нижнему правому)
+            // Pencil at 45 degrees (pointing from top-left to bottom-right)
             const float invSqrt2 = 0.70710678f;
             float ux = invSqrt2 * s;
             float uy = invSqrt2 * s;
             float vx = -invSqrt2 * s;
             float vy =  invSqrt2 * s;
-            float hw = 2.0f; // полуширина корпуса
+            float hw = 2.0f; // body half-width
 
             ImVec2 p_tip(cx + 6.2f * ux, cy + 6.2f * uy);
             ImVec2 p_cone_l(cx + 2.6f * ux + hw * vx, cy + 2.6f * uy + hw * vy);
@@ -499,14 +499,14 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
             ImVec2 p_back_l(cx - 5.5f * ux + hw * vx, cy - 5.5f * uy + hw * vy);
             ImVec2 p_back_r(cx - 5.5f * ux - hw * vx, cy - 5.5f * uy - hw * vy);
 
-            // Контур корпуса карандаша
+            // Pencil body outline
             ImVec2 poly[5] = { p_back_l, p_back_r, p_cone_r, p_tip, p_cone_l };
             dl->AddPolyline(poly, 5, color, ImDrawFlags_Closed, stroke);
 
-            // Линия отсечки грифеля
+            // Pencil lead division line
             dl->AddLine(p_cone_l, p_cone_r, color, stroke);
 
-            // Залитый кончик грифеля
+            // Filled pencil lead tip
             ImVec2 lead_tip(cx + 6.2f * ux, cy + 6.2f * uy);
             ImVec2 lead_l(cx + 4.4f * ux + 0.9f * vx, cy + 4.4f * uy + 0.9f * vy);
             ImVec2 lead_r(cx + 4.4f * ux - 0.9f * vx, cy + 4.4f * uy - 0.9f * vy);
@@ -516,7 +516,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Plus: {
-            // Знак плюс: центрированное перекрестие равной длины
+            // Plus sign: centered cross of equal length
             float arm = 4.6f * s;
             float lineStroke = stroke * 1.35f;
             ImVec2 l(cx - arm, cy), r(cx + arm, cy);
@@ -563,7 +563,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Close: {
-            // Крестик закрытия / очистки / сброса: центрированное диагональное перекрестие (X)
+            // Close / clear / reset cross: centered diagonal cross (X)
             float arm = 3.8f * s;
             float lineStroke = stroke * 1.35f;
             ImVec2 p1(cx - arm, cy - arm), p2(cx + arm, cy + arm);
@@ -579,9 +579,9 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Aa: {
-            // Пиктограмма двух букв "Aa" (масштаб интерфейса / типографика)
-            // 1. Прописная буква 'A' (слева)
-            float ax = cx - 0.35f * s; // оптический центрирующий сдвиг пары
+            // Dual letters "Aa" pictogram (interface scale / typography)
+            // 1. Uppercase letter 'A' (left)
+            float ax = cx - 0.35f * s; // optical centering shift of the pair
             ImVec2 p_top(ax - 3.2f * s, cy - 5.5f * s);
             ImVec2 p_bot_l(ax - 6.4f * s, cy + 5.5f * s);
             ImVec2 p_bot_r(ax + 0.0f * s, cy + 5.5f * s);
@@ -590,11 +590,11 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
             dl->AddLine(ImVec2(ax - 5.0f * s, cy + 1.4f * s),
                         ImVec2(ax - 1.4f * s, cy + 1.4f * s), color, stroke * 1.15f);
 
-            // 2. Строчная буква 'a' (справа)
+            // 2. Lowercase letter 'a' (right)
             ImVec2 bowlCenter(ax + 3.8f * s, cy + 2.5f * s);
             float bowlR = 2.6f * s;
             dl->AddCircle(bowlCenter, bowlR, color, 14, stroke * 1.2f);
-            // Вертикальный штрих (ножка) 'a' с легким нижним хвостиком
+            // Vertical stem of 'a' with a slight bottom terminal
             dl->AddLine(ImVec2(ax + 6.4f * s, cy - 0.1f * s),
                         ImVec2(ax + 6.4f * s, cy + 4.5f * s), color, stroke * 1.2f);
             dl->AddLine(ImVec2(ax + 7.1f * s, cy + 5.5f * s),
@@ -603,7 +603,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Folder: {
-            // Папка: верхний ярлык-закладка и прямоугольный корпус
+            // Folder: top tab and rectangular body
             dl->AddLine(ImVec2(cx - 6.0f * s, cy - 4.5f * s), ImVec2(cx - 2.5f * s, cy - 4.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 2.5f * s, cy - 4.5f * s), ImVec2(cx - 1.0f * s, cy - 2.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 1.0f * s, cy - 2.5f * s), ImVec2(cx + 6.0f * s, cy - 2.5f * s), color, stroke);
@@ -612,37 +612,37 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
         }
 
         case Icon::Trash: {
-            // Корзина: крышка с ручкой и корпус с 2 вертикальными ребрами
+            // Trash: lid with handle and body with 2 vertical ribs
             dl->AddLine(ImVec2(cx - 6.0f * s, cy - 3.5f * s), ImVec2(cx + 6.0f * s, cy - 3.5f * s), color, stroke * 1.2f);
             dl->AddLine(ImVec2(cx - 2.2f * s, cy - 3.5f * s), ImVec2(cx - 2.2f * s, cy - 5.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 2.2f * s, cy - 5.5f * s), ImVec2(cx + 2.2f * s, cy - 5.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx + 2.2f * s, cy - 5.5f * s), ImVec2(cx + 2.2f * s, cy - 3.5f * s), color, stroke);
-            // Корпус ведра
+            // Bucket body
             dl->AddLine(ImVec2(cx - 4.5f * s, cy - 3.5f * s), ImVec2(cx - 3.8f * s, cy + 5.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx + 4.5f * s, cy - 3.5f * s), ImVec2(cx + 3.8f * s, cy + 5.5f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 3.8f * s, cy + 5.5f * s), ImVec2(cx + 3.8f * s, cy + 5.5f * s), color, stroke);
-            // Внутренние ребра
+            // Inner ribs
             dl->AddLine(ImVec2(cx - 1.4f * s, cy - 1.5f * s), ImVec2(cx - 1.4f * s, cy + 3.5f * s), color, stroke * 0.9f);
             dl->AddLine(ImVec2(cx + 1.4f * s, cy - 1.5f * s), ImVec2(cx + 1.4f * s, cy + 3.5f * s), color, stroke * 0.9f);
             break;
         }
 
         case Icon::Copy: {
-            // Два наложенных документа (дублирование)
-            // Задний лист
+            // Two overlapping documents (duplicate)
+            // Back sheet
             dl->AddRect(ImVec2(cx - 3.0f * s, cy - 6.0f * s), ImVec2(cx + 5.5f * s, cy + 2.5f * s), color, 1.0f * s, 0, stroke);
-            // Передний лист
+            // Front sheet
             dl->AddRect(ImVec2(cx - 5.5f * s, cy - 2.5f * s), ImVec2(cx + 3.0f * s, cy + 6.0f * s), color, 1.0f * s, 0, stroke);
             break;
         }
 
         case Icon::ExternalLink: {
-            // Квадрат со стрелкой наружу (открыть)
+            // Square with outward arrow (open)
             dl->AddLine(ImVec2(cx + 1.0f * s, cy - 5.0f * s), ImVec2(cx - 5.0f * s, cy - 5.0f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 5.0f * s, cy - 5.0f * s), ImVec2(cx - 5.0f * s, cy + 5.0f * s), color, stroke);
             dl->AddLine(ImVec2(cx - 5.0f * s, cy + 5.0f * s), ImVec2(cx + 5.0f * s, cy + 5.0f * s), color, stroke);
             dl->AddLine(ImVec2(cx + 5.0f * s, cy + 5.0f * s), ImVec2(cx + 5.0f * s, cy - 1.0f * s), color, stroke);
-            // Стрелка наружу в правый верхний угол
+            // Outward arrow pointing to top-right corner
             dl->AddLine(ImVec2(cx - 0.5f * s, cy + 0.5f * s), ImVec2(cx + 5.5f * s, cy - 5.5f * s), color, stroke * 1.2f);
             dl->AddLine(ImVec2(cx + 2.0f * s, cy - 5.5f * s), ImVec2(cx + 5.5f * s, cy - 5.5f * s), color, stroke * 1.2f);
             dl->AddLine(ImVec2(cx + 5.5f * s, cy - 2.0f * s), ImVec2(cx + 5.5f * s, cy - 5.5f * s), color, stroke * 1.2f);
@@ -658,7 +658,7 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
 } // anonymous namespace
 
 // -----------------------------------------------------------------------------
-// Методы класса Icon
+// Icon class methods
 // -----------------------------------------------------------------------------
 void Icon::Draw(ImDrawList* dl, ImVec2 center, float size, ImU32 color) const {
     if (!dl || m_type == SourceType::None || size <= 0.0f) return;

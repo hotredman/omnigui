@@ -6,7 +6,7 @@
 
 namespace OmniKit {
 
-// Параметры окна подтверждения (designated initializers):
+// Confirmation modal options (designated initializers):
 //
 //     ConfirmModal deleteRun({.title = "Delete run?", .message = "This cannot be undone.",
 //                             .confirmLabel = "Delete"});
@@ -14,24 +14,24 @@ struct ConfirmModalOptions {
     const char* title        = "";
     const char* message      = "";
     const char* confirmLabel = "Confirm";
-    UiVariant   variant      = UiVariant::Danger;   // цвет подтверждающей кнопки
+    UiVariant   variant      = UiVariant::Danger;   // confirmation button color variant
 };
 
 // ============================================================================
-// Модальное окно подтверждения: заголовок, поясняющий текст, кнопки «Отмена» и
-// подтверждающая (цвет — по варианту). Объект хранит собственное состояние
-// «открыто», поэтому идентификаторы окну не нужны.
+// Confirmation modal dialog: title, descriptive text, Cancel and confirm
+// buttons (colored by variant). The object stores its own open/closed state,
+// so explicit window identifiers are not needed.
 // ============================================================================
 class ConfirmModal {
 public:
     explicit ConfirmModal(const ConfirmModalOptions& options = {});
 
     void Open() { m_open = true; }
-    // Текст, зависящий от введённых значений: задаётся перед Open
+    // Message dependent on runtime values: set prior to Open()
     void SetMessage(std::string message) { m_message = std::move(message); }
     bool IsOpen() const { return m_open; }
 
-    // Раз в кадр; true — оператор подтвердил
+    // Called once per frame; returns true when the operator confirms
     bool Render();
 
 private:

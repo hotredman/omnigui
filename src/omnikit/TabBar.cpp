@@ -14,7 +14,7 @@ bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const
     const UiVariant* variants = options.variants;
     bool changed = false;
 
-    // Идентичность панели: ключ либо подпись первой вкладки / место вызова
+    // Bar identity: key or label of the first tab / call-site location
     std::string id = "##tabs_";
     if (options.key) {
         if (options.key.type == UiKey::Type::String && options.key.str) {
@@ -37,7 +37,7 @@ bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const
         return o;
     };
 
-    // Headless-режим без активного окна ImGui (для минималистичных юнит-тестов)
+    // Headless mode without active ImGui window (for minimalist unit tests)
     if (ImGui::GetCurrentWindowRead() == nullptr) {
         for (int i = 0; i < itemsCount; ++i) {
             bool isSelected = (selectedIndex == i);
@@ -54,14 +54,14 @@ bool TabBar(const char* const items[], int itemsCount, int& selectedIndex, const
         return changed;
     }
 
-    // Полноценный адаптивный рендеринг через карусель со стрелками при переполнении
+    // Full adaptive rendering via carousel with arrows on overflow
     float tabH = theme.GetMetrics(options.size).height;
     CarouselStyle cStyle = theme.carousel;
     cStyle.itemSpacing = theme.Scale(style.itemSpacing);
     cStyle.scrollStep = theme.Scale(160.0f);
     cStyle.arrowWidth = theme.Scale(20.0f);
     cStyle.hideDisabledArrows = true;
-    cStyle.paddingY = 2.0f; // запас от субпиксельного клиппинга скруглений
+    cStyle.paddingY = 2.0f; // Margin to prevent subpixel clipping of rounded corners
 
     ImGuiID storageId = ImGui::GetID(id.c_str());
     ImGuiStorage* storage = ImGui::GetStateStorage();
@@ -131,11 +131,11 @@ bool TabItem(const char* label, bool isSelected, const TabItemOptions& options,
     const UiVariant variant = options.variant;
 
     if (options.sameLine) {
-        // Настраиваемый зазор между вкладками по горизонтали
+        // Configurable horizontal gap between tabs
         ImGui::SameLine(0.0f, theme.Scale(style.itemSpacing));
     }
 
-    // Расчет габаритов
+    // Dimension calculation
     const float sizeFactor = theme.SizeFactor(options.size);
     float tabH = (options.sizePx.y > 0.0f) ? options.sizePx.y : theme.GetMetrics(options.size).height;
     float tabW = options.sizePx.x;
@@ -151,12 +151,12 @@ bool TabItem(const char* label, bool isSelected, const TabItemOptions& options,
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImVec2 size(tabW, tabH);
 
-    // Невидимая кнопка для обработки ввода
+    // Invisible button for input handling
     AutoIdScope idScope(options.key, label, loc);
     bool pressed = ImGui::InvisibleButton("##tab", size);
     bool hovered = ImGui::IsItemHovered();
 
-    // Отрисовка
+    // Rendering
     ImDrawList* dl = ImGui::GetWindowDrawList();
     float radius = theme.Scale(style.cornerRadius);
 
@@ -182,7 +182,7 @@ bool TabItem(const char* label, bool isSelected, const TabItemOptions& options,
     }
 
     if (marked) {
-        // Подчёркивание цвета варианта: вкладка выделена и на активной, и на неактивной
+        // Underline in variant color: tab is highlighted whether active or inactive
         const float thick = theme.Scale(3.0f);
         dl->AddRectFilled(ImVec2(pos.x + radius, pos.y + size.y - thick),
                           ImVec2(pos.x + size.x - radius, pos.y + size.y), textCol, thick * 0.5f);

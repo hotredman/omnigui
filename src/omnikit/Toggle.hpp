@@ -9,26 +9,26 @@
 namespace OmniKit {
 
 // =========================================================================================
-// Компонент переключателя Toggle (современный тумблер-слайдер в стиле @evo/ui/Toggle.svelte)
+// Toggle component (modern slider switch styled after @evo/ui/Toggle.svelte)
 // =========================================================================================
 
-// Параметры переключателя (designated initializers):
+// Toggle parameters (designated initializers):
 //
 //     Toggle(enabled, {.label = "Auto", .sublabel = "Adjusts on its own"});
 //
-// Идентичность выводится из key, иначе из места вызова (loc) и подписи.
+// Identity is inferred from key, otherwise from call site (loc) and label.
 struct ToggleOptions {
     const char* label    = nullptr;
-    UiSize      size     = UiSize::Medium;    // масштаб по шкале UiSize (Medium — стиль темы)
-    const char* sublabel = nullptr;           // пояснение под подписью
-    float       width    = 0.0f;              // базовые px (до масштаба); 0 — по содержимому
+    UiSize      size     = UiSize::Medium;    // scale by UiSize (Medium is theme style)
+    const char* sublabel = nullptr;           // explanation below label
+    float       width    = 0.0f;              // base px (before scale); 0 — content sized
     bool        disabled = false;
-    UiKey       key      = {};                // явная идентичность
-    ImVec2      sizePx   = {};                // для контейнеров с посчитанной геометрией: итоговые px, перекрывает width
-    const ToggleStyle* style = nullptr;       // nullptr — стиль текущей темы
+    UiKey       key      = {};                // explicit identity
+    ImVec2      sizePx   = {};                // for containers with precomputed geometry: final px, overrides width
+    const ToggleStyle* style = nullptr;       // nullptr — current theme style
 };
 
-// Переключает value по клику; возвращает true в кадре изменения
+// Toggles value on click; returns true in the frame of change
 bool Toggle(bool& value, const ToggleOptions& options = {},
             std::source_location loc = std::source_location::current());
 

@@ -42,7 +42,7 @@ bool Tag(const char* label, const TagOptions& options) {
         ImGui::Dummy(ImVec2(w, h));
     }
 
-    // Плашка за краем видимой области не рисуется (как встроенные виджеты)
+    // Chip outside visible bounds is not drawn (like native widgets)
     if (!ImGui::IsItemVisible()) {
         theme.PopFont();
         return clicked;

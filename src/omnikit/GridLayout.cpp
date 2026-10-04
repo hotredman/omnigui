@@ -31,7 +31,7 @@ GridLayout::~GridLayout() {
     if (m_cellOpen) {
         EndCell();
     }
-    // Восстанавливаем позицию курсора под всей областью сетки и регистрируем габарит в ImGui
+    // Restore cursor position below the entire grid area and register dimensions in ImGui
     ImGui::SetCursorScreenPos(ImVec2(m_originScreenPos.x, m_originScreenPos.y + m_totalSize.y));
     ImGui::Dummy(ImVec2(m_totalSize.x, 0.0f));
 }
@@ -103,7 +103,7 @@ bool GridLayout::BeginCell(int col, int row, int colSpan, int rowSpan) {
     float width = 0.0f;
     float height = 0.0f;
 
-    // Пиксель-в-пиксель: если ячейка закрывает правый или нижний край сетки, притягиваем точно к краю
+    // Pixel-perfect alignment: if cell touches right or bottom grid edge, snap exactly to boundary
     if (col + colSpan >= m_cols) {
         width = std::max(10.0f, m_totalSize.x - (posX - m_originScreenPos.x));
     } else {

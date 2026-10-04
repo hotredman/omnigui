@@ -15,7 +15,7 @@ public:
     AnalysisChart();
     explicit AnalysisChart(const ChartOptions& options, const ChartStyle* customStyle = nullptr);
 
-    // 1. Конфигурация осей
+    // 1. Axis configuration
     void SetXAxis(const std::string& label, const std::string& unit = "");
     void SetYAxis(const std::string& label, const std::string& unit = "");
     const std::string& GetXLabel() const { return m_xLabel; }
@@ -23,11 +23,11 @@ public:
     const std::string& GetYLabel() const { return m_yLabel; }
     const std::string& GetYUnit() const { return m_yUnit; }
 
-    // 2. Отступы области графика (для размещения тиков и подписей)
+    // 2. Chart area margins (for ticks and labels)
     void SetPad(const ChartPad& pad) { m_pad = pad; }
     const ChartPad& GetPad() const { return m_pad; }
 
-    // 3. Опции и стили графика
+    // 3. Chart options and styles
     void SetOptions(const ChartOptions& options) { m_options = options; }
     const ChartOptions& GetOptions() const { return m_options; }
     ChartOptions& GetOptions() { return m_options; }
@@ -42,13 +42,13 @@ public:
     void SetStyle(const ChartStyle& style) { m_style = style; m_hasCustomStyle = true; }
     const ChartStyle& GetStyle() const { return m_style; }
 
-    // 4. Серии данных (кривые)
+    // 4. Data series (curves)
     void AddSeries(ChartSeries series);
     void SetSeries(std::vector<ChartSeries> series);
     const std::vector<ChartSeries>& GetSeries() const { return m_series; }
     std::vector<ChartSeries>& GetSeries() { return m_series; }
 
-    // 5. Оверлеи (маркеры и линии)
+    // 5. Overlays (markers and lines)
     void AddMarker(ChartMarker marker);
     void SetMarkers(std::vector<ChartMarker> markers);
     const std::vector<ChartMarker>& GetMarkers() const { return m_markers; }
@@ -59,11 +59,11 @@ public:
     const std::vector<ChartLine>& GetLines() const { return m_lines; }
     std::vector<ChartLine>& GetLines() { return m_lines; }
 
-    // Очистка данных
-    void ClearData(); // Очищает серии, маркеры и линии
-    void Clear();     // Очищает данные и сбрасывает зум
+    // Clear data
+    void ClearData(); // Clears series, markers, and lines
+    void Clear();     // Clears data and resets zoom
 
-    // 6. Масштаб и диапазон
+    // 6. Scale and range
     void SetZoom(double minX, double maxX);
     void ResetZoom();
     bool IsZoomed() const { return m_zoomWindowX.has_value(); }
@@ -71,14 +71,14 @@ public:
     ChartBounds GetDataBounds() const;
     ChartBounds GetActiveBounds() const;
 
-    // 7. Зонд / Наведение
+    // 7. Probe / Hover
     const ChartHoverInfo& GetHoverInfo() const { return m_hoverInfo; }
     void SetCustomTooltip(std::function<void(const ChartHoverInfo&)> callback) {
         m_customTooltip = std::move(callback);
     }
 
-    // 8. Отрисовка виджета
-    // Размер в px; 0 по оси — всё свободное место. Идентичность — сам объект графика
+    // 8. Widget rendering
+    // Size in px; 0 on an axis means all available space. Identity is the chart object itself
     void Render(ImVec2 sizePx = ImVec2(0.0f, 0.0f));
 
 private:

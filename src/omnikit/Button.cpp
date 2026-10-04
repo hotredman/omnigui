@@ -14,12 +14,12 @@ static const char* FindTextEnd(const char* text) {
     return p;
 }
 
-// Выбор шрифта и размера в зависимости от высоты кнопки (четная шкала 14..22pt):
-// Крупные кнопки пульта (ПУСК/СТОП >= 44px) получают 22pt Bold,
-// Выделенные кнопки управления (Пауза/Сброс аварии 38..43px) получают 20pt Medium,
-// Стандартные кнопки (34..37px) получают 18pt Medium,
-// Компактные кнопки (28..33px) получают 16pt Medium,
-// Миниатюрные кнопки (< 28px) получают 14pt Medium
+// Selects font and size based on button height (even scale 14..22pt):
+// Large control buttons (START/STOP >= 44px) use 22pt Bold,
+// Highlighted control buttons (Pause/Fault Reset 38..43px) use 20pt Medium,
+// Standard buttons (34..37px) use 18pt Medium,
+// Compact buttons (28..33px) use 16pt Medium,
+// Miniature buttons (< 28px) use 14pt Medium
 static ImFont* PickButtonFont(const UiTheme& theme, float h, float& fontPt) {
     if (h >= theme.Scale(44.0f)) {
         fontPt = 22.0f;
@@ -43,7 +43,7 @@ bool Button(const char* label, std::source_location loc) {
 bool ButtonPx(ImVec2 size, const ButtonOptions& o, std::source_location loc) {
     const char* label = o.label;
     {
-        // Незаданные оси берутся из options: ширина — width, высота — size
+        // Unspecified axes are taken from options: width — width, height — size
         const UiTheme& t = UiTheme::Get();
         if (size.x <= 0.0f) {
             if (o.width == Fill) size.x = ImGui::GetContentRegionAvail().x;
@@ -68,7 +68,7 @@ bool ButtonPx(ImVec2 size, const ButtonOptions& o, std::source_location loc) {
         pushedColors = 4;
     }
 
-    // Стандартная высота кнопки в дизайн-системе: Medium (36px, масштабируется под DPI)
+    // Standard button height in the design system: Medium (36px, scaled for DPI)
     float h = (size.y > 0.0f) ? size.y : theme.GetMetrics(UiSize::Medium).height;
 
     float fontPt = 18.0f;
@@ -85,13 +85,13 @@ bool ButtonPx(ImVec2 size, const ButtonOptions& o, std::source_location loc) {
     float gap = (hasLabel && icon != Icon::None) ? theme.Scale(8.0f) : 0.0f;
     float totalW = iconSize + gap + textSize.x;
 
-    // Горизонтальный паддинг по умолчанию: 14px с каждой стороны (для кнопок с текстом)
+    // Default horizontal padding: 14px on each side (for buttons with text)
     float padX = theme.Scale(14.0f);
     float minW = hasLabel ? (totalW + padX * 2.0f) : (size.x > 0.0f ? size.x : h);
     float w = (size.x > 0.0f) ? std::max(size.x, minW) : minW;
 
     ImVec2 screenPos = ImGui::GetCursorScreenPos();
-    // Идентичность: явный key, иначе compile-time source_location + подпись/иконка
+    // Identity: explicit key, otherwise compile-time source_location + label/icon
     bool clicked = false;
     {
         AutoIdScope idScope(o.key, label, loc, static_cast<int>(icon.GetId()));

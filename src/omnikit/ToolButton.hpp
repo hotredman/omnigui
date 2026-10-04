@@ -9,34 +9,34 @@
 
 namespace OmniKit {
 
-// Квадратная плоская кнопка панелей инструментов: иконка или короткий текстовый
-// глиф ("Aa", "+") с состоянием «выбрана». Параметры — designated initializers:
+// Square flat toolbar button: icon or short text
+// glyph ("Aa", "+") with selected state. Parameters are designated initializers:
 //
 //     ToolButton({.icon = Icon::Cog, .tooltip = "Settings"});
 //     ToolButton({.glyph = "Aa", .tooltip = "Font", .selected = isOn});
 //
-// Идентичность выводится из key, иначе из места вызова (loc), глифа или иконки.
+// Identity is inferred from key, otherwise from call site (loc), glyph, or icon.
 struct ToolButtonOptions {
     Icon        icon     = Icon::None;
-    const char* glyph    = nullptr;                 // текст вместо иконки
+    const char* glyph    = nullptr;                 // text instead of icon
     UiVariant   variant  = UiVariant::Default;
-    std::optional<UiSize> size;                     // сторона квадрата; не задан — размер из темы
+    std::optional<UiSize> size;                     // square side; unset — theme size
     const char* tooltip  = nullptr;
     bool        selected = false;
     bool        disabled = false;
-    ImU32       iconColor = 0;                      // 0 — цвет по состоянию (только для иконки)
-    UiKey       key      = {};                      // явная идентичность
-    float       sidePx   = 0.0f;                    // для компонентов с посчитанной геометрией: сторона в итоговых px, перекрывает size
+    ImU32       iconColor = 0;                      // 0 — color by state (icon only)
+    UiKey       key      = {};                      // explicit identity
+    float       sidePx   = 0.0f;                    // for components with precomputed geometry: side in final px, overrides size
 };
 
-// Возвращает true в кадре клика
+// Returns true in the frame of click
 bool ToolButton(const ToolButtonOptions& options,
                 std::source_location loc = std::source_location::current());
 
-// Вертикальное выравнивание элемента высотой itemHeightPx по центру панели (Header и т.п.).
-// Работает только в окнах высотой с шапку; в обычных окнах ничего не делает.
-// allowMoveUp = true — разрешает сдвигать курсор и вверх (нужно после SameLine, когда
-// курсор унаследовал Y предыдущего, более низкого элемента)
+// Vertical alignment of an item with itemHeightPx centered in bar (Header, etc.).
+// Operates only in windows matching header height; does nothing in standard windows.
+// allowMoveUp = true allows moving cursor upward (needed after SameLine when
+// cursor inherited Y of previous shorter element)
 void ApplyToolbarVerticalCentering(float itemHeightPx, bool allowMoveUp = false);
 
 } // namespace OmniKit

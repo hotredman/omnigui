@@ -6,25 +6,25 @@
 namespace OmniKit {
 
 // ============================================================================
-// Выключенная область интерфейса (аналог <fieldset disabled>): всё, что
-// отрисовано внутри, неинтерактивно и приглушено (UiTheme::kDisabledAlpha).
-// Работает на любом уровне — страница, карточка, поле. Области вкладываются:
-// внутри выключенной выключено всё, DisabledScope(false) ничего не меняет.
+// Disabled interface scope (analogous to <fieldset disabled>): everything
+// rendered inside is non-interactive and dimmed (UiTheme::kDisabledAlpha).
+// Operates at any nesting level — page, card, field. Scopes nest properly:
+// within a disabled scope everything remains disabled, and DisabledScope(false) is a no-op.
 //
-// Элемент, активный в момент выключения (поле, в которое печатают с
-// клавиатуры), отпускается — правка не продолжается внутри выключенной
-// области. ImGui сам отпускает только элемент под указателем мыши.
+// An item active at the moment of disabling (e.g., text field with keyboard
+// focus) is released so editing does not persist inside a disabled scope.
+// ImGui itself only releases hovered mouse items.
 // ============================================================================
 class DisabledScope : public Scope {
 public:
     explicit DisabledScope(bool disabled);
     ~DisabledScope();
 
-    // Точка отрисовки — внутри выключенной области (любой вложенности)
+    // Whether current render position is within a disabled scope (at any nesting level)
     static bool Active();
 
 private:
-    ImGuiID m_activeAliveBefore = 0;  // Активный элемент, отрисованный до области
+    ImGuiID m_activeAliveBefore = 0;  // Active item alive before entering the scope
 };
 
 } // namespace OmniKit

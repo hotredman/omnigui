@@ -9,12 +9,12 @@
 namespace OmniKit {
 
 // ============================================================================
-// UiKey — универсальный ключ идентификации элемента интерфейса.
-// Поддерживает:
-//  - строковый идентификатор: .key = "start_btn"
-//  - целочисленный индекс:    .key = i (в циклах, без аллокаций std::to_string)
-//  - указатель на данные:     .key = &my_entity
-//  - пустой ключ:             UiKey{} (по умолчанию)
+// UiKey — universal UI element identification key.
+// Supports:
+//  - string identifier: .key = "start_btn"
+//  - integer index:     .key = i (in loops, without std::to_string allocations)
+//  - data pointer:      .key = &my_entity
+//  - empty key:         UiKey{} (default)
 // ============================================================================
 struct UiKey {
     enum class Type : uint8_t { None, String, Int, Ptr };
@@ -50,9 +50,9 @@ struct UiKey {
 };
 
 // ============================================================================
-// HashLocation — constexpr FNV-1a хэш места вызова в исходном коде.
-// Вычисляется в compile-time при инлайнинге, гарантирует уникальный seed для
-// каждого места вызова виджета в исходнике.
+// HashLocation — constexpr FNV-1a hash of call site in source code.
+// Evaluated at compile time during inlining; guarantees unique seed for
+// each widget call site in source code.
 // ============================================================================
 constexpr ImGuiID HashLocation(std::source_location loc) noexcept {
     const char* file = loc.file_name();
@@ -70,10 +70,10 @@ constexpr ImGuiID HashLocation(std::source_location loc) noexcept {
 }
 
 // ============================================================================
-// AutoIdScope — RAII-область идентификации виджета:
-//  1. Если пользователь явно задал options.key — проталкивает этот ключ.
-//  2. Иначе формирует уникальный ID из места вызова (loc) и подписи/иконки (label/icon).
-//  3. При выходе из области снимает ID со стека ImGui.
+// AutoIdScope — RAII widget identity scope:
+//  1. If user explicitly specified options.key, pushes this key.
+//  2. Otherwise forms unique ID from call site (loc) and label/icon.
+//  3. Pops ID from ImGui stack upon exiting scope.
 // ============================================================================
 class AutoIdScope {
 public:

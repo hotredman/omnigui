@@ -1,5 +1,5 @@
-// Поля формы Card: кнопки, значения, числа, переключатели, текст, комбо.
-// Геометрия строк и колонок, жизненный цикл карточки — в Card.cpp.
+// Card form fields: buttons, values, numbers, toggles, text, combos.
+// Row/column geometry and card lifecycle are in Card.cpp.
 #include "omnikit/Card.hpp"
 #include "omnikit/DisabledScope.hpp"
 #include "omnikit/Button.hpp"
@@ -20,7 +20,7 @@ namespace OmniKit {
 
 namespace {
 
-// Рамка поля по его состоянию
+// Field outline variant based on its state
 UiVariant VariantOf(FieldState state) {
     return state == FieldState::Modified ? UiVariant::Warning : UiVariant::Default;
 }
@@ -255,7 +255,7 @@ bool Card::Toggle(bool& value, const FieldOptions& o, std::source_location loc)
     bool changed = OmniKit::Toggle(value, {.label = o.label, .sublabel = o.sublabel, .disabled = o.disabled,
                                     .key = o.key, .sizePx = {w, frameHeight}}, loc);
     if (state == FieldState::Modified) {
-        // У переключателя нет рамки-варианта: изменённое отмечаем контуром вокруг него
+        // Toggles do not have a border variant: highlight modified state with an outer contour
         const float pad = theme.Scale(3.0f);
         ImGui::GetWindowDrawList()->AddRect(
             ImVec2(ImGui::GetItemRectMin().x - pad, ImGui::GetItemRectMin().y - pad),
@@ -328,7 +328,7 @@ void Card::Display(const std::string& value, const FieldOptions& o, std::source_
     AutoIdScope idScope(o.key, label ? label : "display", loc);
     ImGui::BeginGroup();
 
-    // Заголовок (Label) над полем
+    // Label above the field
     if (label && label[0] != '\0') {
         ImFont* font = style.labelFont ? style.labelFont : theme.fontRegular;
         theme.PushFont(font, style.labelFontSize);
@@ -348,7 +348,7 @@ void Card::Display(const std::string& value, const FieldOptions& o, std::source_
         ImGui::SetCursorScreenPos(ImVec2(pos.x, pos.y + lineHeight + spacing));
     }
 
-    // Рамка только для чтения
+    // Read-only frame
     float targetH = ResolveHeight(o.size);
     float frameH = (targetH > 0.0f) ? targetH : theme.GetMetrics(UiSize::Medium).height;
     ImVec2 minPos = ImGui::GetCursorScreenPos();
@@ -360,7 +360,7 @@ void Card::Display(const std::string& value, const FieldOptions& o, std::source_
         dl->AddRect(minPos, maxPos, style.colBorder, theme.Scale(style.frameRounding), 0, style.borderSize);
     }
 
-    // Текст значения
+    // Value text
     ImFont* valFont = style.valueFont ? style.valueFont : theme.fontMedium;
     theme.PushFont(valFont, style.valueFontSize);
 

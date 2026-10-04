@@ -9,13 +9,13 @@
 
 namespace OmniKit {
 
-// Параметры группы действий
+// Action group options
 struct ActionGroupOptions {
-    float topOffset = -1.0f;   // базовые px; <0 — выровнять по центру строки таблицы
+    float topOffset = -1.0f;   // base px; < 0 — align to table row center
 };
 
-// Группа действий в строке таблицы (автоматический UiSize::Mini и отступы).
-// RAII-область без собственного ID: в циклах оборачивайте строки в IdScope.
+// Action group in a table row (automatic UiSize::Mini and spacing).
+// RAII scope without its own ID: wrap rows in IdScope when inside loops.
 //
 //     IdScope row(i);
 //     if (ActionGroup actions; actions) {
@@ -36,7 +36,7 @@ public:
     }
     ~ActionGroup() = default;
 
-    // size принудительно UiSize::Mini
+    // Forces size to UiSize::Mini
     bool Button(ButtonOptions options) {
         BeforeNextItem();
         options.size = UiSize::Mini;

@@ -9,7 +9,7 @@ namespace OmniKit {
 
 namespace {
 
-// Ключи состояния поля в хранилище окна (ID поля + смещение — не пересекаются с чужими)
+// Field state keys in window storage (field ID + offset — non-colliding)
 constexpr ImGuiID kKeepOpen = 0x51;
 constexpr ImGuiID kHighlight = 0xA3;
 constexpr ImGuiID kShown = 0x7C;
@@ -23,7 +23,7 @@ bool EnterPressed() {
 bool DrawTextSuggest(ImVec2 rectMin, ImVec2 rectMax, UiSize size, const TextSuggestFieldState& field,
                      const TextSuggest& suggest, std::string& value) {
     ImGuiStorage* storage = ImGui::GetStateStorage();
-    const ImGuiID key = ImGui::GetID("##suggest");   // уникален внутри PushID поля
+    const ImGuiID key = ImGui::GetID("##suggest");   // unique within field's PushID
     int highlight = storage->GetInt(key ^ kHighlight, -1);
     const bool wasShown = storage->GetBool(key ^ kShown, false);
     const bool keepOpen = storage->GetBool(key ^ kKeepOpen, false);
@@ -39,7 +39,7 @@ bool DrawTextSuggest(ImVec2 rectMin, ImVec2 rectMax, UiSize size, const TextSugg
     if (field.activated || field.edited)
         highlight = -1;
 
-    // Enter обрабатывает само поле (оно теряет активность): выбираем подсвеченное
+    // Enter is handled by field itself (it loses active status): select highlighted
     if (field.deactivated && wasShown && EnterPressed() && highlight >= 0 && highlight < count)
         pick(highlight);
 
@@ -70,7 +70,7 @@ bool DrawTextSuggest(ImVec2 rectMin, ImVec2 rectMax, UiSize size, const TextSugg
         ImVec2 pos(rectMin.x, rectMax.y + theme.Scale(input.suggestGap));
         ImVec2 pivot(0.0f, 0.0f);
         if (pos.y + estimated > ImGui::GetIO().DisplaySize.y && rectMin.y - estimated > 0.0f) {
-            pos = ImVec2(rectMin.x, rectMin.y - theme.Scale(input.suggestGap));   // не помещается снизу — над полем
+            pos = ImVec2(rectMin.x, rectMin.y - theme.Scale(input.suggestGap));   // does not fit below — place above field
             pivot = ImVec2(0.0f, 1.0f);
         }
         ImGui::SetNextWindowPos(pos, ImGuiCond_Always, pivot);
@@ -91,9 +91,9 @@ bool DrawTextSuggest(ImVec2 rectMin, ImVec2 rectMax, UiSize size, const TextSugg
                                        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
                                        ImGuiWindowFlags_NoCollapse;
         if (ImGui::Begin(windowName, nullptr, flags)) {
-            ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());   // над полями под списком
-            // Нажатая строка — активный элемент, а без этого флага ImGui считает окно «не наведённым»
-            // и список закрылся бы до отпускания кнопки (клик не дошёл бы до выбора)
+            ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());   // above fields under popup
+            // Pressed row is an active element; without this flag ImGui treats the window as unhovered
+            // and the popup would close before button release (click would not trigger selection)
             hoveredPopup = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
             ImDrawList* dl = ImGui::GetWindowDrawList();
 
@@ -141,7 +141,7 @@ bool DrawTextSuggest(ImVec2 rectMin, ImVec2 rectMax, UiSize size, const TextSugg
         ImGui::PopStyleVar(4);
     }
 
-    // Пока мышь над списком (нажатие на строку уводит активность с поля), список не закрывается
+    // As long as mouse is over popup (row press moves active focus away from field), popup stays open
     storage->SetBool(key ^ kKeepOpen, show && hoveredPopup && !picked);
     storage->SetBool(key ^ kShown, show);
     storage->SetInt(key ^ kHighlight, show ? highlight : -1);

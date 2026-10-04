@@ -230,7 +230,7 @@ ChartBounds AnalysisChart::GetActiveBounds() const {
         activeB.minX = m_zoomWindowX->first;
         activeB.maxX = m_zoomWindowX->second;
 
-        // Подгоняем ось Y под максимальное видимое значение в текущем окне X
+        // Fit Y axis to the maximum visible value in the current X window
         double visibleMaxY = 0.0;
         bool hasVisible = false;
 
@@ -304,7 +304,7 @@ void AnalysisChart::Render(ImVec2 size) {
     ChartCore::Projection proj = ChartCore::Projection::Create(activeBounds, scaledPad, origin, canvasSize);
 
     // =========================================================================
-    // Обработка интерактивности (Zoom, Pan, Reset)
+    // Interactivity handling (Zoom, Pan, Reset)
     // =========================================================================
     ImVec2 mousePos = ImGui::GetMousePos();
     bool mouseInPlot = (mousePos.x >= proj.plotMin.x && mousePos.x <= proj.plotMax.x &&
@@ -312,7 +312,7 @@ void AnalysisChart::Render(ImVec2 size) {
 
     bool boundsChanged = false;
 
-    // 1. Зум колесом мыши
+    // 1. Mouse wheel zoom
     if (isHovered && mouseInPlot && m_options.zoomEnabled) {
         float wheel = ImGui::GetIO().MouseWheel;
         if (std::abs(wheel) > 0.01f) {
@@ -360,7 +360,7 @@ void AnalysisChart::Render(ImVec2 size) {
         }
     }
 
-    // 2. Панорамирование (Drag ЛКМ)
+    // 2. Pan (LMB drag)
     if (m_options.panEnabled && m_zoomWindowX.has_value() && isActive && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 2.0f)) {
         ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
         ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
@@ -385,40 +385,40 @@ void AnalysisChart::Render(ImVec2 size) {
         boundsChanged = true;
     }
 
-    // 3. Сброс зума по двойному клику
+    // 3. Double-click zoom reset
     if (isHovered && mouseInPlot && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
         ResetZoom();
         boundsChanged = true;
     }
 
     if (boundsChanged) {
-        // Пересчитываем проекцию с обновлённым окном зума
+        // Recalculate projection with updated zoom window
         activeBounds = GetActiveBounds();
         proj = ChartCore::Projection::Create(activeBounds, scaledPad, origin, canvasSize);
     }
 
     // =========================================================================
-    // Отрисовка
+    // Rendering
     // =========================================================================
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
-    // 1. Фон и рамка
+    // 1. Background and border
     dl->AddRectFilled(origin, ImVec2(origin.x + canvasSize.x, origin.y + canvasSize.y),
                       style.colBg, style.Scale(style.cornerRadius));
     dl->AddRect(origin, ImVec2(origin.x + canvasSize.x, origin.y + canvasSize.y),
                 style.colBorder, style.Scale(style.cornerRadius), 0, style.borderSize);
 
-    // 2. Сетка и оси
+    // 2. Grid and axes
     RenderGridAndAxes(dl, proj, style);
 
-    // 3. Серии и оверлеи внутри области отсечения графика
+    // 3. Series and overlays within chart clipping rect
     dl->PushClipRect(proj.plotMin, proj.plotMax, true);
     RenderSeriesCurves(dl, proj);
     RenderOverlayLines(dl, proj);
     RenderOverlayMarkers(dl, proj);
     dl->PopClipRect();
 
-    // 4. Интерактивный зонд (перекрестие и тултип)
+    // 4. Interactive probe (crosshair and tooltip)
     if (isHovered && mouseInPlot && m_options.crosshair) {
         RenderCrosshairAndTooltip(dl, proj, style);
     } else {
@@ -430,7 +430,7 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
     std::vector<double> xMajorTicks = ChartCore::GenerateTicks(proj.bounds.minX, proj.bounds.maxX, 5);
     std::vector<double> yMajorTicks = ChartCore::GenerateTicks(proj.bounds.minY, proj.bounds.maxY, 5);
 
-    // Минорная сетка (x5)
+    // Minor grid (x5)
     if (m_options.minorGrid) {
         std::vector<double> xMinorTicks = ChartCore::MinorTicks(proj.bounds.minX, proj.bounds.maxX, 5);
         for (double xVal : xMinorTicks) {
@@ -448,10 +448,10 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
         }
     }
 
-    // Мажорная сетка и числовые подписи
+    // Major grid and numeric labels
     style.PushFont(style.fontRegular, style.tickFontSize);
 
-    // Горизонтальные линии Y и числовые метки
+    // Horizontal Y lines and numeric labels
     for (double yVal : yMajorTicks) {
         float sy = proj.ToScreenY(yVal);
         if (sy >= proj.plotMin.y - 1.0f && sy <= proj.plotMax.y + 1.0f) {
@@ -465,7 +465,7 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
         }
     }
 
-    // Вертикальные линии X и числовые метки
+    // Vertical X lines and numeric labels
     for (double xVal : xMajorTicks) {
         float sx = proj.ToScreenX(xVal);
         if (sx >= proj.plotMin.x - 1.0f && sx <= proj.plotMax.x + 1.0f) {
@@ -479,15 +479,15 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
         }
     }
 
-    // Рамка области графика
+    // Chart area border
     dl->AddRect(proj.plotMin, proj.plotMax, style.colAxis, 0.0f, 0, 1.0f);
 
     style.PopFont();
 
-    // Заголовки осей
+    // Axis titles
     style.PushFont(style.fontMedium, style.axisTitleFontSize);
 
-    // Заголовок оси Y (сверху слева)
+    // Y axis title (top left)
     if (!m_yLabel.empty()) {
         std::string yTitle = m_yUnit.empty() ? m_yLabel : (m_yLabel + " (" + m_yUnit + ")");
         float yPos = (proj.plotMin.y - proj.origin.y >= style.Scale(24.0f))
@@ -497,7 +497,7 @@ void AnalysisChart::RenderGridAndAxes(ImDrawList* dl, const ChartCore::Projectio
                     style.colAxisTitle, yTitle.c_str());
     }
 
-    // Заголовок оси X (внизу справа)
+    // X axis title (bottom right)
     if (!m_xLabel.empty()) {
         std::string xTitle = m_xUnit.empty() ? m_xLabel : (m_xLabel + " (" + m_xUnit + ")");
         ImVec2 xSz = ImGui::CalcTextSize(xTitle.c_str());
@@ -594,7 +594,7 @@ void AnalysisChart::RenderOverlayLines(ImDrawList* dl, const ChartCore::Projecti
             DrawDashedLine(dl, p1, p2, lineColor, l.thickness, dashLen, gapLen);
         }
 
-        // Подпись линии
+        // Line label
         if (!l.label.empty()) {
             float t = std::clamp(l.labelPosition, 0.0f, 1.0f);
             ImVec2 lblPos(p1.x + (p2.x - p1.x) * t + style.Scale(8.0f),
@@ -619,21 +619,21 @@ void AnalysisChart::RenderOverlayMarkers(ImDrawList* dl, const ChartCore::Projec
 
         ImVec2 ptPos = proj.ToScreen(ChartPoint(m.x, m.y));
 
-        // Пунктирные проекции на оси
+        // Dashed projections to axes
         const ImU32 markerColor = m.color ? m.color : style.colLine;
         const ImU32 projCol = style.colProjection;
-        if (m.projectX) {  // на ось X (вниз)
+        if (m.projectX) {  // to X axis (downwards)
             DrawDashedLine(dl, ptPos, ImVec2(ptPos.x, proj.plotMax.y), projCol, 1.0f, 4.0f, 3.0f);
         }
-        if (m.projectY) {  // на ось Y (влево)
+        if (m.projectY) {  // to Y axis (leftwards)
             DrawDashedLine(dl, ptPos, ImVec2(proj.plotMin.x, ptPos.y), projCol, 1.0f, 4.0f, 3.0f);
         }
 
-        // Геометрическая форма маркера
+        // Marker geometric shape
         float s = style.Scale(m.size);
-        DrawMarkerShape(dl, ptPos, s, m.shape, markerColor, style.colBg);  // обводка — цветом холста
+        DrawMarkerShape(dl, ptPos, s, m.shape, markerColor, style.colBg);  // outline in canvas color
 
-        // Текстовая метка (label / sublabel)
+        // Text label (label / sublabel)
         if (!m.label.empty()) {
             style.PushFont(style.fontBold, 14.0f);
             ImVec2 lblPos(ptPos.x + s + style.Scale(4.0f), ptPos.y - style.Scale(14.0f));
@@ -653,11 +653,11 @@ void AnalysisChart::RenderOverlayMarkers(ImDrawList* dl, const ChartCore::Projec
 void AnalysisChart::RenderCrosshairAndTooltip(ImDrawList* dl, const ChartCore::Projection& proj, const ChartStyle& style) {
     ImVec2 mouse = ImGui::GetMousePos();
 
-    // 1. Линии перекрестия
+    // 1. Crosshair lines
     dl->AddLine(ImVec2(mouse.x, proj.plotMin.y), ImVec2(mouse.x, proj.plotMax.y), style.colCrosshair, style.crosshairWidth);
     dl->AddLine(ImVec2(proj.plotMin.x, mouse.y), ImVec2(proj.plotMax.x, mouse.y), style.colCrosshair, style.crosshairWidth);
 
-    // 2. Поиск ближайшей точки серии
+    // 2. Search for the closest series point
     double mouseDataX = proj.ToDataX(mouse.x);
     double mouseDataY = proj.ToDataY(mouse.y);
 
@@ -696,7 +696,7 @@ void AnalysisChart::RenderCrosshairAndTooltip(ImDrawList* dl, const ChartCore::P
             info.dataX = bestPt.x;
             info.dataY = bestPt.y;
 
-            // Подсветка точки кружком
+            // Highlight point with circle
             ImVec2 hlPos = proj.ToScreen(bestPt);
             const ImU32 seriesColor = m_series[static_cast<size_t>(bestSeries)].color;
             dl->AddCircleFilled(hlPos, 4.0f, seriesColor ? seriesColor : style.colLine);
@@ -706,7 +706,7 @@ void AnalysisChart::RenderCrosshairAndTooltip(ImDrawList* dl, const ChartCore::P
 
     m_hoverInfo = info;
 
-    // 3. Тултип
+    // 3. Tooltip
     if (m_customTooltip) {
         m_customTooltip(info);
     } else {

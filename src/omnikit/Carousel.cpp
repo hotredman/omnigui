@@ -61,7 +61,7 @@ void Carousel::Begin() {
     ImGui::BeginGroup();
     m_groupStarted = true;
 
-    // 1. Стрелка влево < (если содержимое превышает доступную ширину и не в самом начале ленты)
+    // 1. Left arrow < (if content exceeds available width and not at the very beginning of the ribbon)
     if (m_showLeftArrow) {
         bool atStart = (m_scrollX <= 1.0f);
         DisabledScope arrowScope(atStart);
@@ -94,18 +94,18 @@ void Carousel::Begin() {
         ImGui::SameLine(0.0f, m_spacing);
     }
 
-    // 2. Дочернее окно горизонтальной прокрутки
+    // 2. Child window for horizontal scrolling
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(m_spacing, 0.0f));
     float childH = m_cardH + theme.Scale(m_style.paddingY);
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, m_style.colBg);  // подложка — только окну ленты
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, m_style.colBg);  // background applied only to ribbon window
     m_open = ImGui::BeginChild(m_id, ImVec2(scrollAreaW, childH), false,
                                ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     ImGui::PopStyleColor();
     m_childStarted = true;
 
     if (m_open) {
-        // Прокрутка колесом мыши при наведении (без Shift)
+        // Mouse wheel scroll on hover (without Shift)
         if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && io.MouseWheel != 0.0f) {
             float step = theme.Scale(m_style.scrollStep) + m_spacing;
             m_targetScrollX -= io.MouseWheel * step;
@@ -117,7 +117,7 @@ void Carousel::Begin() {
 
         m_targetScrollX = std::clamp(m_targetScrollX, 0.0f, std::max(0.0f, m_maxScrollX));
 
-        // Плавная интерполяция (Lerp)
+        // Smooth interpolation (Lerp)
         float lerpFactor = std::clamp(m_style.scrollSpeed * io.DeltaTime, 0.01f, 1.0f);
         m_scrollX += (m_targetScrollX - m_scrollX) * lerpFactor;
         ImGui::SetScrollX(m_scrollX);
@@ -139,7 +139,7 @@ void Carousel::End() {
     }
 
     if (m_groupStarted) {
-        // 3. Стрелка вправо > (если содержимое превышает ширину и не в самом конце ленты)
+        // 3. Right arrow > (if content exceeds width and not at the very end of the ribbon)
         if (m_showRightArrow) {
             ImGui::SameLine(0.0f, m_spacing);
             bool atEnd = (m_scrollX >= m_maxScrollX - 2.0f);

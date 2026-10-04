@@ -41,7 +41,7 @@ ItemRow::ItemRow(const ItemRowOptions& options) {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(theme.Scale(6.0f), theme.Scale(st.spacingTitleDesc)));
 
     ImGui::BeginGroup();
-    // Устанавливаем системный отступ для всей группы — все переносимые строки (текст и теги) наследуют m_padX
+    // Set indentation for the entire group — all wrapped lines (text and tags) inherit m_padX
     ImGui::Indent(m_padX);
     ImGui::SetCursorScreenPos(ImVec2(m_startPos.x + m_padX, m_startPos.y + m_padY));
 }
@@ -79,7 +79,7 @@ void ItemRow::Finish() {
     ImU32 borderCol = hovered ? st.colBorderHover : st.colBorder;
     float rounding = theme.Scale(st.cornerRadius);
 
-    // Подложка строки за краем видимой области не рисуется
+    // Do not draw the row background if outside the visible area
     if (ImGui::IsRectVisible(pMin, pMax)) {
         dl->AddRectFilled(pMin, pMax, bgCol, rounding);
         dl->AddRect(pMin, pMax, borderCol, rounding, 0, st.borderSize);
@@ -87,7 +87,7 @@ void ItemRow::Finish() {
 
     m_splitter.Merge(dl);
 
-    // Точно позиционируем курсор для следующей карточки по st.itemSpacingY
+    // Accurately position the cursor for the next card using st.itemSpacingY
     float gap = theme.Scale(st.itemSpacingY);
     float itemSpacing = ImGui::GetStyle().ItemSpacing.y;
     float nextY = pMax.y + gap;
@@ -182,7 +182,7 @@ void ItemRow::DrawBadges() {
 }
 
 bool ItemRow::Action(const ItemRowActionOptions& options) {
-    // Действий больше, чем заявлено в ItemRowOptions::actions, — расширяем слот
+    // More actions than declared in ItemRowOptions::actions — expand the slot
     if (m_actionCount + 1 > m_totalActionsExpected) {
         m_totalActionsExpected = m_actionCount + 1;
     }

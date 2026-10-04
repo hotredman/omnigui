@@ -67,7 +67,7 @@ bool ColumnLayout::BeginCol(OmniKit::Col col) {
         EndCol();
     }
 
-    // Автоперенос на новую строку: если на текущей строке уже есть колонки и новая не помещается в 12 долей
+    // Auto-wrap to next row: if current row already has columns and the new column exceeds 12 spans
     if (m_rowSpanUsed > 0 && (m_rowSpanUsed + span > 12)) {
         m_rowSpanUsed = 0;
         m_accumulatedWidth = 0.0f;
@@ -75,7 +75,7 @@ bool ColumnLayout::BeginCol(OmniKit::Col col) {
         m_needsNewRowSpacing = true;
     }
 
-    // Переход на новую строку вниз с учетом вертикального отступа
+    // Advance to next row downward accounting for vertical spacing
     if (m_needsNewRowSpacing) {
         float avail = ImGui::GetContentRegionAvail().x;
         if (avail > 0.0f) {
@@ -88,12 +88,12 @@ bool ColumnLayout::BeginCol(OmniKit::Col col) {
         m_needsNewRowSpacing = false;
     }
 
-    // Позиционирование по горизонтали: первая колонка идет на текущей строке, последующие через SameLine
+    // Horizontal positioning: first column is placed on the current line, subsequent ones via SameLine
     if (m_colIndexInRow > 0) {
         ImGui::SameLine(0.0f, m_columnSpacing);
     }
 
-    // Расчет ширины: если колонка закрывает строку до 12 долей, отдаем точный остаток
+    // Width calculation: if column completes the row to 12 spans, allocate exact remaining width
     float width = 0.0f;
     if (m_rowSpanUsed + span >= 12) {
         float remaining = m_rowAvailWidth - m_accumulatedWidth - (m_colIndexInRow * m_columnSpacing);
@@ -125,7 +125,7 @@ void ColumnLayout::EndCol() {
     m_accumulatedWidth += m_activeWidth;
     m_colIndexInRow++;
 
-    // Если строка полностью заполнена 12 долями — следующая колонка начнется с новой строки
+    // If row is completely filled with 12 spans, the next column starts on a new row
     if (m_rowSpanUsed >= 12) {
         m_rowSpanUsed = 0;
         m_accumulatedWidth = 0.0f;

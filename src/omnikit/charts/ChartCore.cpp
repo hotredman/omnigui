@@ -93,7 +93,7 @@ float Projection::ToScreenX(double x) const {
 float Projection::ToScreenY(double y) const {
     double spanY = bounds.maxY - bounds.minY;
     if (spanY <= 0.0) spanY = 1.0;
-    // Ось Y направлена снизу вверх в графиках данных
+    // Y axis points upwards in data charts
     return plotMax.y - static_cast<float>((y - bounds.minY) / spanY) * plotHeight;
 }
 
@@ -127,7 +127,7 @@ int NearestIndexByX(const std::vector<ChartPoint>& points, double targetX) {
         return 0;
     }
 
-    // Проверяем монотонность X для безопасного бинарного поиска
+    // Check X monotonicity for safe binary search
     bool isMonotonic = true;
     for (size_t i = 1; i < std::min<size_t>(points.size(), 16); ++i) {
         if (points[i].x < points[i - 1].x) {
@@ -152,7 +152,7 @@ int NearestIndexByX(const std::vector<ChartPoint>& points, double targetX) {
         return (dHi < dLo) ? hi : lo;
     }
 
-    // Линейный поиск если массив не отсортирован
+    // Linear search if array is not sorted
     int bestIdx = 0;
     double bestDist = std::abs(points[0].x - targetX);
     for (size_t i = 1; i < points.size(); ++i) {

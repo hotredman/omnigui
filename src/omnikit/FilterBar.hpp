@@ -6,20 +6,20 @@
 
 namespace OmniKit {
 
-// Параметры панели фильтрации
+// Filter bar options
 struct FilterBarOptions {
-    const char* key    = "##FilterBar";   // идентичность панели
-    float       height = 0.0f;            // базовые px; 0 — theme.filterBar.height
+    const char* key    = "##FilterBar";   // bar identity
+    float       height = 0.0f;            // base px; 0 — theme.filterBar.height
 };
 
-// Параметры текстовой подписи панели (текст передаётся позиционно)
+// Filter bar label options (text passed positionally)
 struct FilterBarLabelOptions {
     UiVariant variant = UiVariant::Default;
 };
 
-// Внутристраничная панель фильтрации, поиска и действий (FilterBar)
-// Рендерится внутри рабочей области контента (в отличие от глобального Toolbar каркаса)
-// RAII-область; левая и правая зоны — вложенные RAII-области:
+// In-page filter, search, and action bar (FilterBar).
+// Renders inside the content work area (unlike the global shell Toolbar).
+// RAII scope; Left and Right zones are nested RAII scopes:
 //
 //     if (FilterBar bar({.key = "filters"}); bar) {
 //         if (auto left = bar.Left()) { FilterBar::Label("Search:"); ... }
@@ -27,7 +27,7 @@ struct FilterBarLabelOptions {
 //     }
 class FilterBar : public Scope {
 public:
-    // Левая зона панели (область открывается в конструкторе и закрывается в деструкторе)
+    // Left bar zone (scope opens in constructor and closes in destructor)
     class LeftScope : public Scope {
     public:
         explicit LeftScope(FilterBar& parent);
@@ -36,7 +36,7 @@ public:
         FilterBar* m_parent;
     };
 
-    // Правая зона панели, прижатая к правому краю
+    // Right bar zone, aligned to right edge
     class RightScope : public Scope {
     public:
         explicit RightScope(FilterBar& parent);
@@ -53,21 +53,21 @@ public:
 
     float GetAvailableWidth() const { return m_availWidth; }
 
-    // Доступная ширина для растягивающегося элемента в левой группе (в базовых unscaled пикселях)
-    // Если minWidth <= 0, используется theme.filterBar.minSearchWidth
+    // Available width for a stretching element in the left group (in base unscaled pixels).
+    // If minWidth <= 0, theme.filterBar.minSearchWidth is used
     float GetStretchWidth(float minWidth = 0.0f) const;
 
-    // Шаг между элементами в одной группе (theme.filterBar.itemSpacing)
+    // Spacing between items in the same group (theme.filterBar.itemSpacing)
     static void NextItem();
 
-    // Шаг между разными смысловыми группами (theme.filterBar.groupSpacing)
+    // Spacing between different semantic groups (theme.filterBar.groupSpacing)
     static void NextGroup();
 
-    // Произвольный шаг между элементами (базовые px)
+    // Arbitrary spacing between items (base px)
     static void Spacing(float spacing);
 
-    // Текстовая подпись внутри панели (вертикально отцентрированная под контролы UiSize::Small).
-    // Автоматически переводит каретку к связанному контролу с зазором theme.filterBar.labelSpacing
+    // Text label inside the bar (vertically centered relative to UiSize::Small controls).
+    // Automatically advances cursor to the associated control with theme.filterBar.labelSpacing gap
     static void Label(const char* text, const FilterBarLabelOptions& options = {});
 
 private:

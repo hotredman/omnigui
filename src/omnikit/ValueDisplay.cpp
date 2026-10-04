@@ -25,8 +25,8 @@ void ValueDisplay(const char* text, const ValueDisplayOptions& options)
         w = (avail > 0.0f) ? avail : theme.Scale(200.0f);
     }
 
-    // Высота: финальные px от контейнера либо высота поля ввода выбранного UiSize.
-    // Кегль при UiSize масштабируется от компактного стиля (рассчитан на 40 px)
+    // Height: final px from container or input field height of selected UiSize.
+    // Font size at UiSize scales from compact style (designed for 40 px)
     float h = options.sizePx.y;
     float fontFactor = 1.0f;
     if (h <= 0.0f) {
@@ -37,7 +37,7 @@ void ValueDisplay(const char* text, const ValueDisplayOptions& options)
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 innerPos = ImGui::GetCursorScreenPos();
 
-    // Стилизованная подложка с рамкой
+    // Styled background with border
     dl->AddRectFilled(innerPos, ImVec2(innerPos.x + w, innerPos.y + h), 
                       style.colBg, theme.Scale(style.cornerRadius));
     if (style.borderSize > 0.0f) {

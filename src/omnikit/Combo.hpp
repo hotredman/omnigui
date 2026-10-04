@@ -10,28 +10,28 @@
 
 namespace OmniKit {
 
-// Параметры выпадающего списка (designated initializers):
+// Combo box options (designated initializers):
 //
 //     Combo(mode, modes, 3, {.label = "Mode", .width = 200.0f});
 //
-// Идентичность выводится из key, иначе из места вызова (loc) и подписи.
+// Identity is derived from key, or from call site (loc) and label.
 struct ComboOptions {
-    const char* label   = nullptr;              // подпись над списком
+    const char* label   = nullptr;              // label above combo box
     UiVariant   variant = UiVariant::Default;
     UiSize      size    = UiSize::Medium;
-    float       width   = 0.0f;                 // базовые px (до масштаба); 0 — по содержимому; Fill — на всю ширину
-    UiKey       key     = {};                   // явная идентичность
-    ImVec2      sizePx  = {};                   // для контейнеров с посчитанной геометрией: итоговые px, перекрывают width и size
-    const ComboStyle* style = nullptr;          // nullptr — стиль текущей темы
+    float       width   = 0.0f;                 // base px (unscaled); 0 — fit content; Fill — stretch full width
+    UiKey       key     = {};                   // explicit identity
+    ImVec2      sizePx  = {};                   // for container components with computed geometry: resolved px, overrides width and size
+    const ComboStyle* style = nullptr;          // nullptr — current theme style
 };
 
-// Возвращает true в кадре выбора нового пункта
+// Returns true on the frame a new item is selected
 bool Combo(int& currentItem, const char* const items[], int itemsCount, const ComboOptions& options = {},
            std::source_location loc = std::source_location::current());
 bool Combo(int& currentItem, const std::vector<std::string>& items, const ComboOptions& options = {},
            std::source_location loc = std::source_location::current());
 
-// Строго типизированный enum + массив с автовыводом размера
+// Strongly-typed enum + array with deduced size
 template<typename EnumT, size_t N, std::enable_if_t<std::is_enum_v<EnumT>, int> = 0>
 bool Combo(EnumT& currentItem, const char* const (&items)[N], const ComboOptions& options = {},
            std::source_location loc = std::source_location::current()) {

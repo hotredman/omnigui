@@ -8,12 +8,12 @@
 
 namespace OmniKit {
 
-// Общая основа горизонтальных полос окна (Header, Toolbar): окно во всю ширину
-// экрана с тремя зонами — Left, Center и Right. Ширины Left/Right измеряются
-// после отрисовки и запоминаются в ImGuiStorage, поэтому Center получает
-// остаток и сам объект полосы не хранит состояния между кадрами.
+// Common foundation for full-width horizontal window bars (Header, Toolbar):
+// a full-width window with three zones — Left, Center, and Right. Left/Right widths
+// are measured after rendering and cached in ImGuiStorage, so Center receives
+// the remaining space and the bar object itself remains stateless between frames.
 
-// Базовые (немасштабированные) метрики полосы — общее подмножество HeaderStyle и ToolbarStyle
+// Base (unscaled) bar metrics — common subset of HeaderStyle and ToolbarStyle
 struct BarMetrics {
     float height;
     float paddingX;
@@ -32,13 +32,13 @@ BarMetrics MakeBarMetrics(const Style& s) {
              s.defaultLeftWidth, s.defaultRightWidth, s.colBg, s.colSeparator };
 }
 
-// Геометрия полосы в пикселях (после масштабирования), общая для зон
+// Bar geometry in pixels (after scaling), shared across zones
 struct BarLayout {
     float paddingX = 0.0f;
     float paddingY = 0.0f;
     float zoneSpacing = 0.0f;
-    float contentHeight = 0.0f;      // высота рабочей области зоны, px
-    float baseContentHeight = 0.0f;  // она же в базовых единицах (для компонентов, масштабирующих сами)
+    float contentHeight = 0.0f;      // zone client area height, px
+    float baseContentHeight = 0.0f;  // client area height in base units (for components that scale internally)
     float leftWidth = 0.0f;
     float rightWidth = 0.0f;
     ImGuiID storageId = 0;
@@ -46,23 +46,23 @@ struct BarLayout {
 
 class Bar;
 
-// Зона полосы. Не создаётся напрямую: Bar::Left()/Center()/Right()
+// Bar zone. Not instantiated directly: use Bar::Left()/Center()/Right()
 class BarZone : public Scope {
 public:
-    // Высота рабочей области зоны, px
+    // Height of the zone client area, px
     float Height() const { return m_layout ? m_layout->contentHeight : 0.0f; }
 
-    // Подпись, выровненная по вертикали по центру полосы
+    // Label vertically centered within the bar
     void Label(const char* text, UiVariant variant = UiVariant::Secondary);
 
-    // Кнопка высотой с рабочую область полосы (options.size игнорируется)
+    // Button sized to fill the zone content height (options.size is ignored)
     bool Button(const ButtonOptions& options);
 
 protected:
     BarZone(BarLayout* layout, bool active);
     ~BarZone() = default;
 
-    // Закрывает группу зоны и возвращает измеренную ширину
+    // Closes the zone group and returns measured width
     float EndZone();
 
     BarLayout* m_layout = nullptr;
@@ -79,7 +79,7 @@ private:
 class CenterZone : public BarZone {
 public:
     ~CenterZone();
-    // Ширина, оставшаяся между левой и правой зонами, px
+    // Remaining width between left and right zones, px
     float Width() const { return m_width; }
 private:
     friend class Bar;
@@ -107,8 +107,8 @@ public:
     float GetContentHeight() const { return m_layout.contentHeight; }
 
 protected:
-    // windowName / zonesId — идентификаторы окна и хранилища ширин зон;
-    // posY — верх полосы (px), height <= 0 — высота из метрик
+    // windowName / zonesId — window identifier and zone width storage identifier;
+    // posY — bar top coordinate (px), height <= 0 — height from metrics
     Bar(const BarMetrics& metrics, const char* windowName, const char* zonesId,
         float posY, float height);
 

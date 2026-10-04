@@ -5,16 +5,16 @@
 
 namespace OmniKit {
 
-// Параметры баннера статуса
+// Status banner options
 struct StatusBannerOptions {
-    UiVariant variant  = UiVariant::Primary;   // Primary — акцентный цвет темы
-    bool      busy     = false;                // фоновый процесс: добавляет «...»
-    float     progress = -1.0f;                // 0..1; <0 — прогресс неизвестен (только с busy)
+    UiVariant variant  = UiVariant::Primary;   // Primary uses theme accent color
+    bool      busy     = false;                // Background process: appends "..."
+    float     progress = -1.0f;                // 0..1; <0 unknown progress (only with busy)
 };
 
-// Семантический баннер статуса или фонового процесса:
+// Semantic status or background process banner:
 //
-//     StatusBanner("Loading", {.busy = true, .progress = 0.42f});   // «Loading: 42%...»
+//     StatusBanner("Loading", {.busy = true, .progress = 0.42f});   // "Loading: 42%..."
 //     StatusBanner("Low disk space", {.variant = UiVariant::Warning});
 inline void StatusBanner(const char* message, const StatusBannerOptions& options = {}) {
     const UiTheme& theme = UiTheme::Get();

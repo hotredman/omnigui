@@ -6,13 +6,13 @@
 
 namespace OmniKit {
 
-// Универсальный компонент рабочей области окна (ContentArea). RAII-область:
-// конструктор открывает окно, деструктор закрывает и снимает стили ImGui.
-// По умолчанию геометрия рассчитывается относительно Header, Toolbar, Sidebar
-// и StatusBar:
+// Universal main content area component (ContentArea). RAII scope:
+// constructor opens the window, destructor closes it and pops ImGui styles.
+// By default, geometry is computed relative to Header, Toolbar, Sidebar,
+// and StatusBar:
 //
 //     if (auto content = ContentArea()) { ... }
-// Геометрия области содержимого (итоговые px); значение < 0 берётся по умолчанию:
+// Content area geometry (resolved px); values < 0 fall back to defaults:
 //
 //     ContentArea({.posXPx = 200, .widthPx = 800});
 struct ContentAreaOptions {
@@ -20,18 +20,18 @@ struct ContentAreaOptions {
     float                   posYPx   = -1.0f;
     float                   widthPx  = -1.0f;
     float                   heightPx = -1.0f;
-    const ContentAreaStyle* style    = nullptr;   // оверрайд стиля; nullptr — из темы
+    const ContentAreaStyle* style    = nullptr;   // style override; nullptr — from theme
 };
 
 class ContentArea : public Scope {
 public:
-    // Геометрия каркаса: posX = SidebarWidth, posY = HeaderHeight + TopBarHeight,
-    // размер до нижнего правого угла (над строкой состояния)
+    // Scaffold geometry: posX = SidebarWidth, posY = HeaderHeight + TopBarHeight,
+    // sized to the bottom-right corner (above status bar)
     explicit ContentArea(const ContentAreaOptions& options = {});
 
     ~ContentArea();
 
-    // Размеры рабочей области
+    // Content area dimensions
     float GetPosX() const { return m_posX; }
     float GetPosY() const { return m_posY; }
     float GetWidth() const { return m_width; }

@@ -133,13 +133,13 @@ float Indicator::CalculateWidth(const IndicatorStyle& style) const {
 
     float padX = theme.Scale(style.padX);
 
-    // 1. Верхняя строка: ширина заголовка
+    // 1. Top row: title width
     ImFont* titleFont = style.titleFont ? style.titleFont : theme.smallFont;
     float titleW = titleFont ? 
         titleFont->CalcTextSizeA(theme.Scale(style.titleFontSize), FLT_MAX, 0.0f, m_title.c_str()).x :
         ImGui::CalcTextSize(m_title.c_str()).x;
 
-    // 2. Нижняя строка: резервируемая ширина числа по N символам
+    // 2. Bottom row: reserved numeric width based on N characters
     ImFont* valueFont = style.valueFont ? style.valueFont : theme.defaultFont;
     float valFontSize = theme.Scale(style.valueFontSize);
 
@@ -166,16 +166,16 @@ float Indicator::CalculateWidth(const IndicatorStyle& style) const {
         valueFont->CalcTextSizeA(valFontSize, FLT_MAX, 0.0f, sampleBuf).x :
         ImGui::CalcTextSize(sampleBuf).x;
 
-    // 3. Нижняя строка: ширина единицы измерения
+    // 3. Bottom row: unit width
     ImFont* unitFont = style.unitFont ? style.unitFont : theme.defaultFont;
     float unitW = unitFont ?
         unitFont->CalcTextSizeA(theme.Scale(style.unitFontSize), FLT_MAX, 0.0f, m_unit.c_str()).x :
         ImGui::CalcTextSize(m_unit.c_str()).x;
 
-    // 4. Опциональная кнопка тарирования
+    // 4. Optional tare button
     float tareW = m_showTare ? theme.Scale(style.tareBtnSize + 8.0f) : 0.0f;
 
-    // Сравнение ширины верхней и нижней строк
+    // Compare width of top and bottom rows
     float row1 = titleW;
     float row2 = valueW + theme.Scale(6.0f) + unitW + tareW;
     float contentW = std::max(row1, row2);
@@ -197,9 +197,9 @@ void Indicator::Render() {
     Render(UiTheme::Get().indicator);
 }
 
-// Кликабельный текст с выпадающим меню: невидимая кнопка по размеру текста,
-// пунктир под текстом при наведении и при открытом меню, подсказка; меню —
-// под текстом. Идентификаторы уникальны для экземпляра индикатора
+// Clickable text with dropdown menu: invisible button sized to text,
+// dotted underline on hover and when menu is open, tooltip; menu is positioned
+// below text. Identifiers are unique per indicator instance
 void Indicator::RenderMenuZone(const char* name, bool& menuOpen, const MenuZone& zone, const char* tooltip,
                                const MenuCallback& fillMenu) {
     const UiTheme& theme = UiTheme::Get();
@@ -242,15 +242,15 @@ void Indicator::Render(const IndicatorStyle& style) {
     float height = theme.Scale(style.height);
     float radius = theme.Scale(style.cornerRadius);
 
-    // 1. Фон карточки и контур
+    // 1. Card background and border
     drawList->AddRectFilled(pos, ImVec2(pos.x + width, pos.y + height), style.colBg, radius);
     drawList->AddRect(pos, ImVec2(pos.x + width, pos.y + height), style.colBorder, radius, 0, 1.0f);
 
-    // Внутренние отступы
+    // Internal padding
     float padX = theme.Scale(style.padX);
     float padY = theme.Scale(style.padY);
 
-    // 2. Верхняя строка: Заголовок капсом (меню выбора канала)
+    // 2. Top row: uppercase title (channel selection menu)
     ImVec2 labelPos(pos.x + padX, pos.y + padY);
     ImFont* titleFont = style.titleFont ? style.titleFont : theme.smallFont;
     float titleFontSize = theme.Scale(style.titleFontSize);
@@ -321,17 +321,17 @@ void Indicator::Render(const IndicatorStyle& style) {
             ImGui::SetTooltip("Tare / Zero Reset");
         }
 
-        // 4.1. Фон квадратной кнопки
+        // 4.1. Square button background
         ImU32 bgCol = active  ? style.colTareBtnActive :
                       hovered ? style.colTareBtnHover : style.colTareBtn;
         float btnRadius = theme.Scale(style.tareBtnRadius);
         drawList->AddRectFilled(btnPos, ImVec2(btnPos.x + btnSize, btnPos.y + btnSize), bgCol, btnRadius);
 
-        // 4.2. Контур квадратной кнопки
+        // 4.2. Square button border
         ImU32 borderCol = (hovered || active) ? style.colTareBorderHover : style.colTareBorder;
         drawList->AddRect(btnPos, ImVec2(btnPos.x + btnSize, btnPos.y + btnSize), borderCol, btnRadius, 0, 1.0f);
 
-        // 4.3. Символ / иконка внутри кнопки
+        // 4.3. Symbol / icon inside button
         ImU32 iconColor = (hovered || active) ? style.colTareIconHover : style.colTareIcon;
         ImVec2 center(btnPos.x + btnSize * 0.5f, btnPos.y + btnSize * 0.5f);
 
@@ -350,7 +350,7 @@ void Indicator::Render(const IndicatorStyle& style) {
         }
     }
 
-    // Резервируем место в потоке компоновщика ImGui
+    // Reserve layout space in ImGui flow
     ImGui::SetCursorScreenPos(pos);
     ImGui::Dummy(ImVec2(width, height));
 }

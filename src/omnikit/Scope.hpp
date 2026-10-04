@@ -1,21 +1,21 @@
 #pragma once
 
-// Базовый класс RAII-областей (Scope).
+// Base class for RAII scopes (Scope).
 //
-// Контракт:
-//   * конструктор открывает область (ImGui::Begin / BeginGroup / ...),
-//     деструктор её закрывает — публичных Begin()/End() нет;
-//   * объект живёт на стеке в рамках одного кадра, копировать и перемещать
-//     его нельзя (C++17 гарантирует исключение копии для prvalue, поэтому
-//     `auto bar = Toolbar();` и возврат областей из методов работают);
-//   * `explicit operator bool` — область открыта и в неё можно рисовать:
+// Contract:
+//   * The constructor opens the scope (ImGui::Begin / BeginGroup / ...),
+//     and the destructor closes it — there are no public Begin()/End() calls;
+//   * The object lives on the stack within a single frame; copying and moving
+//     are deleted (C++17 guarantees copy elision for prvalues, so
+//     `auto bar = Toolbar();` and returning scopes from methods work);
+//   * `explicit operator bool` indicates whether the scope is open and can be drawn into:
 //
 //         if (auto bar = Toolbar()) {
 //             if (auto left = bar.Left()) { left.Label("Session:"); }
 //         }
 //
-// Деструктор производного класса ОБЯЗАН закрывать область даже тогда, когда
-// Begin вернул false (ImGui::End() вызывается всегда, этого требует ImGui).
+// The destructor of a derived class MUST close the scope even when
+// Begin returned false (ImGui::End() must always be called, as required by ImGui).
 
 namespace OmniKit {
 
@@ -26,7 +26,7 @@ public:
     Scope(Scope&&) = delete;
     Scope& operator=(Scope&&) = delete;
 
-    // Область открыта и видима: содержимое можно рисовать
+    // Scope is open and visible: content can be rendered
     explicit operator bool() const noexcept { return m_open; }
 
 protected:

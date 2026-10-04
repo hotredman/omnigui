@@ -9,21 +9,21 @@
 
 namespace OmniKit {
 
-// Параметры диалога подтверждения (designated initializers):
+// Confirmation dialog options (designated initializers):
 //
 //     if (ConfirmDialog(showDelete, {.title = "Delete run?", .message = "This cannot be undone."})) { ... }
 struct ConfirmDialogOptions {
     std::string title;
     std::string message;
-    std::string detail;                              // дополнительная строка акцентным цветом
+    std::string detail;                              // additional line with accent color
     const char* confirmLabel = "Confirm";
-    UiVariant   variant      = UiVariant::Danger;    // цвет подтверждающей кнопки
+    UiVariant   variant      = UiVariant::Danger;    // confirmation button color variant
     Icon        icon         = Icon::None;
 };
 
-// Модальное диалоговое окно подтверждения опасных или необратимых действий (Удаление, Сброс).
-// Состояние «открыто» хранит приложение (bool, идентичность окна — его адрес).
-// Возвращает true в кадре, когда оператор подтвердил
+// Modal confirmation dialog for dangerous or irreversible actions (Delete, Reset).
+// The application holds the "open" state (bool, window identity derived from its address).
+// Returns true on the frame when the operator confirms.
 inline bool ConfirmDialog(bool& isOpen, const ConfirmDialogOptions& options)
 {
     ImGui::PushID(&isOpen);
@@ -94,18 +94,18 @@ inline bool ConfirmDialog(bool& isOpen, const ConfirmDialogOptions& options)
     return confirmed;
 }
 
-// Параметры диалога ввода текста
+// Prompt dialog options
 struct PromptDialogOptions {
     std::string title;
-    std::string prompt;                              // поясняющая строка над полем
+    std::string prompt;                              // explanatory text above input field
     const char* confirmLabel = "Confirm";
     UiVariant   variant      = UiVariant::Primary;
     Icon        icon         = Icon::None;
 };
 
-// Модальное диалоговое окно ввода текста (Дублирование, Создание, Переименование).
-// value читается при открытии и записывается при подтверждении.
-// Возвращает true в кадре, когда оператор подтвердил
+// Modal text input dialog (Duplicate, Create, Rename).
+// value is read upon opening and updated upon confirmation.
+// Returns true on the frame when the operator confirms.
 inline bool PromptDialog(bool& isOpen, std::string& value, const PromptDialogOptions& options)
 {
     ImGui::PushID(&isOpen);

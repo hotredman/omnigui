@@ -7,52 +7,52 @@
 
 namespace OmniKit {
 
-// Универсальный класс пиктограммы (Value Object).
-// Объединяет встроенный типовой каталог векторных пиктограмм дизайн-системы
-// и поддержку внешних иконок из файлов и ассетов без дублирования деклараций.
+// Universal pictogram class (Value Object).
+// Combines a built-in catalog of vector icons from the design system
+// with support for external icons from files and assets without duplicating declarations.
 class Icon {
 public:
-    // Каталог встроенных пиктограмм дизайн-системы
+    // Catalog of built-in design system pictograms
     enum Id : uint8_t {
         None = 0,
 
-        // Сайдбар и общие (типовые имена по физической форме)
-        Database,        // Стек цилиндрических дисков БД (Архив)
-        List,            // Список строк с точками-буллетами (Журнал событий)
-        Cog,             // Шестерня машины со спицами (Параметры машины)
-        Target,          // Мишень с перекрестием (Калибровка датчиков)
-        Gamepad,         // Корпус геймпада (Пульт управления)
-        Gear,            // Инженерная шестеренка 6 зубцов (Установки / Настройки)
-        LineChart,       // Документ с ломаной линией диаграммы (Обработка результатов)
-        Clipboard,       // Планшет с зажимом-клипсой (Паспорт образца)
-        BarChart,        // Столбчатая гистограмма (Серия испытаний)
+        // Sidebar and general (named by visual shape)
+        Database,        // Database cylinder disk stack (Archive)
+        List,            // Bulleted item list (Event Log)
+        Cog,             // Spoked machinery gear (Machine Parameters)
+        Target,          // Crosshair target (Sensor Calibration)
+        Gamepad,         // Gamepad body (Control Panel)
+        Gear,            // 6-toothed engineering gear (Settings / Setup)
+        LineChart,       // Document with polyline chart (Result Processing)
+        Clipboard,       // Clipboard with top clip (Sample Sheet)
+        BarChart,        // Column bar chart (Test Series)
 
-        // Пульт и управление приводом (Remote Control)
-        Play,            // Залитый треугольник вправо («ПУСК»)
-        Square,          // Залитый правильный квадрат («СТОП»)
-        Pause,           // Две параллельные вертикальные полосы («Пауза»)
-        RotateCcw,       // Изогнутая стрелка возврата против часовой («Возврат»)
-        ArrowDownToLine, // Стрелка вниз в лоток/платформу («Разгрузка»)
-        RefreshCw,       // Круговая стрелка обновления («Сброс аварии»)
-        ArrowUp,         // Треугольная стрелка вверх («ВВЕРХ»)
-        ArrowDown,       // Треугольная стрелка вниз («ВНИЗ»)
-        ChevronsUp,      // Сдвоенные стрелки вверх (Ускоренно вверх)
-        ChevronsDown,    // Сдвоенные стрелки вниз (Ускоренно вниз)
+        // Remote control and actuator drive (Remote Control)
+        Play,            // Filled right-pointing triangle ("START")
+        Square,          // Filled regular square ("STOP")
+        Pause,           // Two parallel vertical bars ("Pause")
+        RotateCcw,       // Curved counter-clockwise return arrow ("Return")
+        ArrowDownToLine, // Downward arrow into tray/platform ("Unload")
+        RefreshCw,       // Circular refresh arrow ("Fault Reset")
+        ArrowUp,         // Triangular upward arrow ("UP")
+        ArrowDown,       // Triangular downward arrow ("DOWN")
+        ChevronsUp,      // Double upward chevrons (Fast Up)
+        ChevronsDown,    // Double downward chevrons (Fast Down)
 
-        // Навигация и прокрутка (Navigation / Carousel / Scrolling)
-        ChevronLeft,     // Шеврон влево (<) для горизонтальной прокрутки каруселей/табов
-        ChevronRight,    // Шеврон вправо (>) для горизонтальной прокрутки каруселей/табов
-        ArrowLeft,       // Стрелка влево (псевдоним ChevronLeft)
-        ArrowRight,      // Стрелка вправо (псевдоним ChevronRight)
+        // Navigation and scrolling (Navigation / Carousel / Scrolling)
+        ChevronLeft,     // Left chevron (<) for horizontal scrolling of carousels/tabs
+        ChevronRight,    // Right chevron (>) for horizontal scrolling of carousels/tabs
+        ArrowLeft,       // Left arrow (alias for ChevronLeft)
+        ArrowRight,      // Right arrow (alias for ChevronRight)
 
-        // Системные и шапка (Header / Controls)
-        Power,           // Круг с вертикальной чертой сверху (Включение питания)
-        Maximize,        // 4 раздвигающихся угла (Полный экран)
-        Minimize,        // 4 сходящихся угла (Оконный режим)
-        Sun,             // Солнце с лучами (Светлая тема)
-        Moon,            // Серп луны (Тёмная тема)
-        Zero,            // Мишень обнуления с точкой в центре (Тарирование)
-        Check,           // Галочка выбора
+        // System and header (Header / Controls)
+        Power,           // Circle with top vertical line (Power switch)
+        Maximize,        // 4 expanding corners (Fullscreen)
+        Minimize,        // 4 contracting corners (Windowed mode)
+        Sun,             // Sun with rays (Light theme)
+        Moon,            // Crescent moon (Dark theme)
+        Zero,            // Tare zero target with center dot (Tare)
+        Check,           // Checkmark selection
         Pencil,          // Pencil / Edit in place
         Plus,            // Plus / Create / Add / Zoom in
         Minus,           // Minus / Remove / Zoom out
@@ -60,16 +60,16 @@ public:
         Aa,              // Dual letters Aa (Interface scale / Fonts)
         Image,           // Image frame with landscape picture
 
-        // Действия с данными и ПЛК (Machine Actions)
-        Upload,          // Стрелка вверх («Записать» в ПЛК / Выгрузка)
-        Download,        // Стрелка вниз («Прочитать» из ПЛК / Загрузка)
-        Refresh,         // Круговая стрелка («Заводские» / Сброс аварии / Обновление)
+        // Data actions and PLC (Machine Actions)
+        Upload,          // Upward arrow ("Write" to PLC / Upload)
+        Download,        // Downward arrow ("Read" from PLC / Download)
+        Refresh,         // Circular arrow ("Factory Defaults" / Fault Reset / Refresh)
 
-        // Архив и файлы (Archive / File Actions)
-        Folder,          // Папка (Открыть папку данных)
-        Trash,           // Корзина (Удалить проект)
-        Copy,            // Два документа (Дублировать проект)
-        ExternalLink,    // Стрелка наружу (Открыть проект)
+        // Archive and files (Archive / File Actions)
+        Folder,          // Folder (Open data directory)
+        Trash,           // Trash can (Delete project)
+        Copy,            // Two documents (Duplicate project)
+        ExternalLink,    // Outward arrow (Open project)
     };
 
     enum class SourceType : uint8_t {
@@ -79,7 +79,7 @@ public:
         File
     };
 
-    // Конструкторы
+    // Constructors
     Icon() noexcept = default;
     Icon(Id id) noexcept
         : m_type(id == None ? SourceType::None : SourceType::Builtin)
@@ -87,7 +87,7 @@ public:
         , m_tintable(true)
     {}
 
-    // Фабричные методы для внешних файлов и ассетов
+    // Factory methods for external files and assets
     static Icon File(std::string_view filePath, bool tintable = true) {
         if (filePath.empty()) return Icon();
         return Icon(SourceType::File, filePath, tintable);
@@ -104,7 +104,7 @@ public:
         return Asset(assetPath, tintable);
     }
 
-    // Состояние и тип
+    // State and type queries
     bool IsEmpty() const noexcept { return m_type == SourceType::None; }
     bool IsValid() const noexcept { return m_type != SourceType::None; }
     explicit operator bool() const noexcept { return IsValid(); }
@@ -114,7 +114,7 @@ public:
     const std::string& GetPath() const noexcept { return m_path; }
     bool IsTintable() const noexcept { return m_tintable; }
 
-    // Операторы сравнения с Id (например: icon == Icon::None или icon != Icon::Play)
+    // Comparison operators with Id (e.g., icon == Icon::None or icon != Icon::Play)
     bool operator==(Id id) const noexcept {
         if (id == None) return m_type == SourceType::None;
         return m_type == SourceType::Builtin && m_id == id;
@@ -129,7 +129,7 @@ public:
         return icon != id;
     }
 
-    // Операторы сравнения между объектами Icon
+    // Comparison operators between Icon instances
     bool operator==(const Icon& other) const noexcept {
         if (m_type != other.m_type) return false;
         if (m_type == SourceType::None) return true;
@@ -140,12 +140,12 @@ public:
         return !(*this == other);
     }
 
-    // Методы отрисовки экземпляра
+    // Instance rendering methods
     void Draw(ImDrawList* dl, ImVec2 center, float size, ImU32 color) const;
     void DrawAt(ImDrawList* dl, ImVec2 pos, float size, ImU32 color) const;
     void Render(float size, ImU32 color) const;
 
-    // Статические утилиты отрисовки
+    // Static rendering utilities
     static void Draw(const Icon& icon, ImDrawList* dl, ImVec2 center, float size, ImU32 color) {
         icon.Draw(dl, center, size, color);
     }
@@ -170,7 +170,7 @@ private:
     std::string m_path;
 };
 
-// Псевдоним типа для удобства
+// Type alias for convenience
 using IconId = Icon::Id;
 
 } // namespace OmniKit

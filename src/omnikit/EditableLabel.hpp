@@ -9,25 +9,25 @@
 
 namespace OmniKit {
 
-// Параметры редактируемой метки (designated initializers):
+// Editable label options (designated initializers):
 //
 //     title.Render(value, {.widthPx = zone.Width(), .defaultValue = [] { return std::string("Session"); }});
 struct EditableLabelOptions {
-    float                        widthPx      = 0.0f;              // итоговая ширина, px; 0 — по содержимому, < 0 — всё свободное место
-    TextRole                     role         = TextRole::Title;   // Title — жирный заголовок, Body — обычный текст
-    std::function<std::string()> defaultValue;                     // если задан, кнопка в режиме правки подставляет дефолтное имя
-    bool                         editable     = true;              // false — статичный заголовок без карандаша и реакции на клик
+    float                        widthPx      = 0.0f;              // resolved width, px; 0 — fit content, < 0 — fill available space
+    TextRole                     role         = TextRole::Title;   // Title — bold title font, Body — regular text
+    std::function<std::string()> defaultValue;                     // if set, button in edit mode fills default name
+    bool                         editable     = true;              // false — static title without pencil icon or click response
 };
 
 class EditableLabel {
 public:
     EditableLabel(const EditableLabelStyle* customStyle = nullptr);
 
-    // Отрисовка редактируемой метки.
-    // Возвращает true, если значение было изменено и зафиксировано (Enter, кнопка или потеря фокуса).
-    // Если задан options.defaultValue, клик по кнопке с карандашом в режиме редактирования подставляет дефолтное имя.
-    // Если options.editable == false, отображается как статичный заголовок без иконки карандаша и без реакции на клик.
-    // Идентичность — сам объект (метка должна жить между кадрами).
+    // Renders the editable label.
+    // Returns true if the value was modified and committed (Enter, button click, or focus loss).
+    // If options.defaultValue is set, clicking the pencil button during edit mode supplies the default name.
+    // If options.editable == false, renders as a static label without a pencil icon or click interaction.
+    // Identity: the object itself (the label must persist across frames).
     bool Render(std::string& value, const EditableLabelOptions& options = {});
 
     bool IsEditing() const { return m_editing; }
@@ -36,7 +36,7 @@ public:
     void CommitEdit(std::string& targetValue);
 
 private:
-    // Явно переданный стиль; nullptr — стиль текущей темы (смена темы видна сразу)
+    // Explicitly passed style; nullptr — current theme style (theme changes take effect immediately)
     const EditableLabelStyle* m_customStyle = nullptr;
     const EditableLabelStyle& Style() const { return m_customStyle ? *m_customStyle : UiTheme::Get().editableLabel; }
     bool m_editing = false;

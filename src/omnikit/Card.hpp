@@ -21,53 +21,53 @@
 
 namespace OmniKit {
 
-// Состояние поля в карточке: обычное, изменено (в машину не записано), нет значения
-// (не считано — вместо ввода прочерк)
+// Field state in card: normal, modified (not yet written to device), no value
+// (not read — renders dash placeholder instead of input)
 enum class FieldState { Normal, Modified, NoValue };
 
-// Параметры самой карточки (designated initializers):
+// Card options (designated initializers):
 //
 //     if (Card card({.title = "Stream Actions"})) { ... }
 //     if (Card card({.title = "Log", .stretchY = true})) { ... }
 //
-// Идентичность карточки (ImGui ID) берётся из key, иначе из title. Две карточки без
-// title и без key в одном окне конфликтуют — задайте key.
+// Card identity (ImGui ID) is taken from key, or defaults to title. Two cards without
+// a title and without a key in the same window will collide — provide an explicit key.
 struct CardOptions {
     const char* title    = nullptr;
-    UiKey       key      = {};          // идентичность; по умолчанию — title
-    float       width    = 0.0f;        // базовые px (масштабируются); 0 — ширина колонки/ячейки раскладки
-    float       height   = 0.0f;        // базовые px (масштабируются); 0 — по содержимому
-    bool        stretchY = false;       // растянуть по вертикали на всю оставшуюся высоту
-    const CardStyle* style = nullptr;   // оверрайд стиля; nullptr — из темы
+    UiKey       key      = {};          // identity; defaults to title
+    float       width    = 0.0f;        // base px (scaled); 0 — width of column/layout cell
+    float       height   = 0.0f;        // base px (scaled); 0 — fit content
+    bool        stretchY = false;       // stretch vertically to fill remaining height
+    const CardStyle* style = nullptr;   // style override; nullptr — from theme
 };
 
-// Параметры любого элемента карточки (поля, кнопки, табло). Применяются только те поля,
-// которые имеют смысл для конкретного элемента; остальные игнорируются:
+// Options for any card item (input field, button, value display). Only fields applicable
+// to the specific element are used; all others are ignored:
 //
 //     card.Float(rate,  {.label = "Rate", .unit = "Hz", .col = Col::Half()});
 //     card.Toggle(on,   {.label = "Enable", .sublabel = "Verifies liveness"});
 //     card.Button({.label = "Save", .variant = UiVariant::Primary, .icon = Icon::Check});
 struct FieldOptions {
-    const char* label    = nullptr;     // подпись (над полем / на кнопке)
-    const char* sublabel = nullptr;     // Toggle: вторая строка
-    const char* unit     = nullptr;     // единица измерения
-    const char* format   = nullptr;     // printf-формат числа; nullptr — "%.2f"
-    const char* hint     = nullptr;     // Text: плейсхолдер; nullptr — " — "
-    UiVariant   variant  = UiVariant::Default;  // Button / Value: семантический стиль
+    const char* label    = nullptr;     // label (above field / on button)
+    const char* sublabel = nullptr;     // Toggle: second line
+    const char* unit     = nullptr;     // unit of measurement
+    const char* format   = nullptr;     // printf number format; nullptr — "%.2f"
+    const char* hint     = nullptr;     // Text: placeholder; nullptr — " — "
+    UiVariant   variant  = UiVariant::Default;  // Button / Value: semantic style
     Icon        icon     = Icon::None;  // Button
     const char* tooltip  = nullptr;     // Button
-    std::optional< OmniKit::Col> col;         // доля строки; по умолчанию Half (табло и пресеты — Full)
-    std::optional<UiSize>  size;        // высота; по умолчанию — высота текущей Row()
+    std::optional< OmniKit::Col> col;         // row fraction; defaults to Half (value displays and preset grids — Full)
+    std::optional<UiSize>  size;        // height; defaults to current Row() height
     bool        disabled = false;
-    UiKey       key      = {};          // идентичность; по умолчанию — label
-    std::optional<bool> alignBottom;    // Toggle: выровнять по нижней кромке соседних полей
-    int         columns  = 5;           // PresetGrid: число колонок сетки пресетов
-    const TextSuggest* suggest = nullptr;  // Text: подсказки под полем (список строит вызывающий)
+    UiKey       key      = {};          // identity; defaults to label
+    std::optional<bool> alignBottom;    // Toggle: align to bottom baseline of adjacent fields
+    int         columns  = 5;           // PresetGrid: number of preset grid columns
+    const TextSuggest* suggest = nullptr;  // Text: suggestions below field (caller builds list)
 };
 
 class Card : public Scope {
 public:
-    // RAII-строка сетки карточки с общей высотой элементов:  if (auto row = card.Row()) { ... }
+    // RAII row for card grid with uniform item height:  if (auto row = card.Row()) { ... }
     class RowScope : public Scope {
     public:
         RowScope(Card* parent, std::optional<UiSize> size);
@@ -76,7 +76,7 @@ public:
         Card* m_parent = nullptr;
     };
 
-    // RAII-ячейка сетки для произвольных виджетов:  if (auto c = card.Col(Col::Third())) { ... }
+    // RAII grid cell for arbitrary widgets:  if (auto c = card.Col(Col::Third())) { ... }
     class ColumnScope : public Scope {
     public:
         ColumnScope(Card* parent, OmniKit::Col col);
@@ -88,7 +88,7 @@ public:
         float m_width = 0.0f;
     };
 
-    // RAII-область скроллируемого списка контента (занимает оставшуюся высоту карточки)
+    // RAII scrollable content list region (fills remaining card height)
     class ContentListScope : public Scope {
     public:
         ContentListScope(Card* parent, const char* key);
@@ -97,29 +97,29 @@ public:
         Card* m_parent = nullptr;
     };
 
-    // Открывает стилизованную карточку (стиль — из UiTheme::Get().card)
+    // Opens a styled card (style defaults to UiTheme::Get().card)
     Card(const CardOptions& options = {});
     explicit Card(const char* title) : Card(CardOptions{.title = title}) {}
     ~Card();
 
-    // 2D-сетка: управление строками и колонками
+    // 2D grid: row and column management
     RowScope Row(std::optional<UiSize> size = UiSize::Medium);
     ColumnScope Col(OmniKit::Col col = OmniKit::Col::Half());
 
-    // Принудительный переход на следующую строку сетки
+    // Explicitly advances to next grid row
     void NextRow();
 
-    // Кнопки с семантическими стилями; disabled — кнопка видна, но неактивна.
-    // Col::Auto() даёт ширину по содержимому (не привязана к 12-колоночной сетке)
+    // Buttons with semantic styles; disabled — button is visible but non-interactive.
+    // Col::Auto() sizes to content (unconstrained by 12-column grid)
     bool Button(const FieldOptions& options,
                 std::source_location loc = std::source_location::current());
 
-    // Кнопка удержания: true, пока её держат нажатой (движение «пока держат»). Неактивная — всегда false
+    // Hold button: true while held down (momentary action). Non-interactive/disabled returns false.
     bool HoldButton(const FieldOptions& options,
                     std::source_location loc = std::source_location::current());
 
-    // Информационное/расчётное табло (ValueDisplay); label — подпись над табло.
-    // Без размера высота — 80 базовых px; std::nullopt вместо числа — прочерк
+    // Informational/computed value display (ValueDisplay); label — caption above display.
+    // Without explicit size, height is 80 base px; std::nullopt renders a dash placeholder
     void Value(double value, const FieldOptions& options = {},
                std::source_location loc = std::source_location::current());
     void Value(const char* text, const FieldOptions& options = {},
@@ -127,19 +127,19 @@ public:
     void Value(std::optional<double> value, const FieldOptions& options = {},
                std::source_location loc = std::source_location::current());
 
-    // Селектор пресетов со встроенным табло (PresetGrid); unit — единица на табло,
-    // columns — число колонок сетки пресетов, format — формат значения на табло
+    // Preset selector with embedded display (PresetGrid); unit — display unit,
+    // columns — preset grid column count, format — display value format
     bool PresetGrid(float& value, const std::vector<float>& presets, const FieldOptions& options = {},
                     std::source_location loc = std::source_location::current());
     bool PresetGrid(double& value, const std::vector<double>& presets, const FieldOptions& options = {},
                     std::source_location loc = std::source_location::current());
 
-    // Состояние полей карточки по адресу поля (float/int/bool/enum): без провайдера
-    // все поля обычные. Провайдер живёт не дольше карточки
+    // Card field state queried by field address (float/int/bool/enum): without provider,
+    // all fields are Normal. Provider lifetime must not exceed the card
     using FieldStateProvider = std::function<FieldState(const void* field, std::size_t size)>;
     void SetFieldStates(FieldStateProvider provider) { m_fieldStates = std::move(provider); }
 
-    // Поля ввода в 12-колоночной сетке
+    // Input fields in 12-column grid
     bool Float(float& value, const FieldOptions& options,
                std::source_location loc = std::source_location::current());
     bool Float(std::optional<float>& value, const FieldOptions& options,
@@ -155,7 +155,7 @@ public:
     bool Toggle(bool& value, const FieldOptions& options,
                 std::source_location loc = std::source_location::current());
 
-    // Поле только для чтения: подпись над значением
+    // Read-only field: label above value
     void Display(const std::string& value, const FieldOptions& options,
                  std::source_location loc = std::source_location::current());
 
@@ -164,14 +164,14 @@ public:
     bool Combo(int& currentItem, const std::vector<std::string>& items, const FieldOptions& options,
                std::source_location loc = std::source_location::current());
 
-    // Массив с автовыводом размера
+    // Array with deduced size
     template<std::size_t N>
     bool Combo(int& currentItem, const char* const (&items)[N], const FieldOptions& options,
                std::source_location loc = std::source_location::current()) {
         return Combo(currentItem, items, static_cast<int>(N), options, loc);
     }
 
-    // Строго типизированные Enum и массивы с автовыводом размера
+    // Strongly-typed Enum and arrays with deduced size
     template<typename EnumT, std::size_t N, std::enable_if_t<std::is_enum_v<EnumT>, int> = 0>
     bool Combo(EnumT& currentItem, const char* const (&items)[N], const FieldOptions& options,
                std::source_location loc = std::source_location::current())
@@ -185,7 +185,7 @@ public:
         return false;
     }
 
-    // Геометрия 12-колоночной сетки
+    // 12-column grid geometry
     float GetFullWidth() const;
     float CalculateSpanWidth(int span) const;
     float GetColumnWidth(int span = 6) const { return CalculateSpanWidth(span); }
@@ -197,19 +197,19 @@ public:
 
     float CurrentRowHeight() const { return m_currentRowHeight; }
 
-    // Доступная высота внутри карточки до нижней границы
+    // Available height inside card down to bottom boundary
     float GetRemainingHeight() const;
     bool IsStretchY() const { return m_stretchY; }
 
-    // Скроллируемая область списка контента:  if (auto list = card.ContentList()) { ... }
+    // Scrollable content list region:  if (auto list = card.ContentList()) { ... }
     ContentListScope ContentList(const char* key = nullptr) {
         return ContentListScope(this, key);
     }
 
-    // Сообщение о пустом состоянии внутри карточки
+    // Empty state message inside card
     void Empty(const char* message, const char* detail = nullptr);
 
-    // Вспомогательные методы компоновки внутри карточки (инкапсуляция ImGui)
+    // Helper layout methods inside card (ImGui encapsulation)
     void SameLine(float spacing = -1.0f);
     void RightAlign(float itemWidth);
     void Spacing();
@@ -225,7 +225,7 @@ private:
     void EndContentList();
 
     FieldState StateOf(const void* field, std::size_t size) const;
-    // Прочерк на месте поля: та же подпись и ширина, ввода нет
+    // Dash placeholder in place of field: same label and width, no input
     void RenderNoValue(const FieldOptions& options, float width, float height,
                        std::source_location loc = std::source_location::current());
     bool ComboImpl(FieldState state, int& currentItem, const char* const items[], int itemsCount,
@@ -236,17 +236,17 @@ private:
                         std::source_location loc = std::source_location::current());
     void PrepareField(OmniKit::Col col, float& outWidth);
     void FinishField(OmniKit::Col col);
-    // Высота элемента в финальных px: явный size, иначе высота строки, иначе fallback; 0 — авто
+    // Item height in resolved px: explicit size, otherwise row height, otherwise fallback; 0 — auto
     float ResolveHeight(std::optional<UiSize> size, std::optional<UiSize> fallback = std::nullopt) const;
 
-    int m_rowSpanUsed = 0; // Использовано долей в текущей строке (0..12)
+    int m_rowSpanUsed = 0; // Spans used in current row (0..12)
     bool m_ended = false;
     float m_columnSpacing = 12.0f;
     float m_rowSpacing = 12.0f;
     float m_rowStartX = 0.0f;
     float m_rowStartY = 0.0f;
     float m_rowMaxY = 0.0f;
-    float m_currentRowHeight = 0.0f; // Текущая активная высота фреймов строки
+    float m_currentRowHeight = 0.0f; // Current active frame height of row
     bool m_needsRowAdvance = false;
     bool m_inAutoRow = false;
     bool m_stretchY = false;

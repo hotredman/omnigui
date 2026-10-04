@@ -14,61 +14,61 @@
 
 namespace OmniKit {
 
-// Режим расчета ширины колонки
+// Column width calculation mode
 enum class ColumnWidthMode {
-    Fixed,   // Фиксированная ширина в пикселях
-    Stretch, // Пропорциональное растяжение
-    Auto     // По содержимому ячейки
+    Fixed,   // Fixed width in pixels
+    Stretch, // Proportional stretch
+    Auto     // Based on cell content
 };
 
-// Выравнивание содержимого колонки
+// Column content alignment
 enum class ColumnAlign {
     Left,
     Center,
     Right
 };
 
-// Декларативное описание столбца таблицы
+// Declarative table column description
 template <typename T>
 struct TableColumn {
-    std::string id;                                     // Уникальный идентификатор столбца
-    std::string header;                                 // Заголовок столбца
-    float width = 0.0f;                                 // Базовые px, масштабируются (или вес растяжения)
-    ColumnWidthMode widthMode = ColumnWidthMode::Fixed; // Режим ширины
-    ColumnAlign align = ColumnAlign::Left;              // Выравнивание
-    bool sortable = true;                               // Разрешена ли сортировка по клику
-    bool resizable = true;                              // Разрешено ли менять ширину
-    bool hideable = true;                               // Разрешено ли скрывать столбец
-    bool visible = true;                                // Видимость столбца (для адаптивного скрытия)
+    std::string id;                                     // Unique column identifier
+    std::string header;                                 // Column header
+    float width = 0.0f;                                 // Base px, scaled (or stretch weight)
+    ColumnWidthMode widthMode = ColumnWidthMode::Fixed; // Width mode
+    ColumnAlign align = ColumnAlign::Left;              // Alignment
+    bool sortable = true;                               // Whether click sorting is allowed
+    bool resizable = true;                              // Whether width resizing is allowed
+    bool hideable = true;                               // Whether column hiding is allowed
+    bool visible = true;                                // Column visibility (for adaptive hiding)
 
-    // Функция сравнения элементов для сортировки (возвращает <0 если a < b, 0 если a == b, >0 если a > b)
+    // Element comparison function for sorting (returns <0 if a < b, 0 if a == b, >0 if a > b)
     std::function<int(const T& a, const T& b)> comparator;
 
-    // Рендерер содержимого ячейки
+    // Cell content renderer
     std::function<void(const T& item, int rowIndex)> renderCell;
 };
 
-// Постоянные параметры таблицы Table<T> (designated initializers)
+// Persistent parameters for Table<T> (designated initializers)
 struct TableOptions {
-    UiKey key = {};                     // идентичность; пустой — по адресу объекта таблицы
-    float rowHeight = 0.0f;             // базовые px; 0 — theme.table.rowHeight
-    bool saveSettings = false;          // сохранять порядок/ширины колонок в ini ImGui
-    const char* emptyTitle = nullptr;   // заголовок пустого состояния; nullptr — по умолчанию
+    UiKey key = {};                     // identity; empty — uses table object address
+    float rowHeight = 0.0f;             // base px; 0 — theme.table.rowHeight
+    bool saveSettings = false;          // save column order/widths in ImGui ini
+    const char* emptyTitle = nullptr;   // empty state title; nullptr — default
     const char* emptySubtitle = nullptr;
 };
 
-// Размер области таблицы в кадре; базовые px, 0 — всё свободное место контейнера
+// Table frame area size; base px, 0 — fills container space
 struct TableRenderOptions {
     float width = 0.0f;
     float height = 0.0f;
 };
 
-// Высокопроизводительная виртуализированная таблица (Table<T>)
-// Способна отображать десятки и сотни тысяч строк с 60+ FPS благодаря ImGuiListClipper
-// и индексной буферизации (фильтрация и сортировка оперируют массивом индексов без копирования моделей)
+// High-performance virtualized table (Table<T>)
+// Capable of displaying tens and hundreds of thousands of rows at 60+ FPS via ImGuiListClipper
+// and indexed buffering (filtering and sorting operate on index arrays without copying models)
 //
-// Stateful-объект: хранит данные, колонки, поиск и сортировку между кадрами; создаётся один раз
-// (член класса приложения), в кадре вызывается Render. Идентичность — по адресу объекта или key.
+// Stateful object: retains data, columns, search, and sort across frames; created once
+// (application class member), Render called each frame. Identity is object address or key.
 //
 //     Table<Row> table({.rowHeight = 32});
 //     table.AddColumn({.id = "name", .header = "Name", .width = 200, .renderCell = [](const Row& r, int) { ... }});
@@ -80,7 +80,7 @@ public:
     explicit Table(const TableOptions& options = {})
         : m_options(options) {}
 
-    // Добавление столбцов
+    // Add columns
     void AddColumn(TableColumn<T> col) {
         m_columns.push_back(std::move(col));
     }
@@ -91,7 +91,7 @@ public:
 
     const std::vector<TableColumn<T>>& GetColumns() const { return m_columns; }
 
-    // Привязка данных
+    // Bind data
     void SetItems(std::vector<T> items) {
         m_items = std::move(items);
         RebuildIndices();
@@ -101,7 +101,7 @@ public:
     size_t GetTotalCount() const { return m_items.size(); }
     size_t GetFilteredCount() const { return m_filteredIndices.size(); }
 
-    // Настройка предикатов фильтрации и поиска
+    // Configure filter and search predicates
     using FilterPredicate = std::function<bool(const T& item, const std::string& query)>;
     void SetFilterPredicate(FilterPredicate predicate) {
         m_filterPredicate = std::move(predicate);
@@ -117,7 +117,7 @@ public:
 
     const std::string& GetSearchQuery() const { return m_searchQuery; }
 
-    // Принудительная сортировка программно
+    // Programmatic force sort
     void SortByColumn(int columnIndex, bool ascending) {
         m_sortColumnIndex = columnIndex;
         m_sortAscending = ascending;
@@ -143,7 +143,7 @@ public:
         return index < m_columns.size() ? m_columns[index].visible : false;
     }
 
-    // Основной цикл отрисовки
+    // Main render loop
     void Render(const TableRenderOptions& options = {}) {
         UiTheme& theme = UiTheme::Get();
         const TableStyle& ts = theme.table;
@@ -156,7 +156,7 @@ public:
 
         if (m_options.key) m_options.key.Push(); else ImGui::PushID(this);
 
-        // Пустое состояние
+        // Empty state
         if (m_filteredIndices.empty()) {
             RenderEmptyState(size);
             ImGui::PopID();
@@ -177,7 +177,7 @@ public:
             flags |= ImGuiTableFlags_NoSavedSettings;
         }
 
-        // Применяем стили из TableStyle темы оформления
+        // Apply styles from theme TableStyle
         ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, ts.colHeaderBg);
         ImGui::PushStyleColor(ImGuiCol_TableRowBg, ts.colRowBg);
         ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ts.colRowBgAlt);
@@ -188,13 +188,13 @@ public:
 
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(ts.cellPaddingX * scale, ts.cellPaddingY * scale));
 
-        // Подложка тела — окну прокрутки, которое создаёт BeginTable
+        // Body background on the scroll window created by BeginTable
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ts.colBodyBg);
         const bool tableOpen =
             ImGui::BeginTable("##Table", static_cast<int>(m_columns.size()), flags, size);
         ImGui::PopStyleColor();
         if (tableOpen) {
-            // Настройка столбцов
+            // Column setup
             for (size_t i = 0; i < m_columns.size(); ++i) {
                 const auto& col = m_columns[i];
                 ImGuiTableColumnFlags colFlags = ImGuiTableColumnFlags_None;
@@ -219,12 +219,12 @@ public:
                 ImGui::TableSetupColumn(col.header.c_str(), colFlags, widthOrWeight, static_cast<ImGuiID>(i));
             }
 
-            ImGui::TableSetupScrollFreeze(0, 1); // Закрепляем шапку при вертикальном скролле
+            ImGui::TableSetupScrollFreeze(0, 1); // Freeze header on vertical scroll
             theme.PushFont(theme.fontMedium, ts.headerFontSize);
             ImGui::TableHeadersRow();
             theme.PopFont();
 
-            // Проверка сортировки по клику на заголовки таблицы ImGui
+            // Check sorting on ImGui table header clicks
             ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
             if (sortSpecs && sortSpecs->SpecsDirty) {
                 if (sortSpecs->SpecsCount > 0) {
@@ -236,7 +236,7 @@ public:
                 sortSpecs->SpecsDirty = false;
             }
 
-            // Виртуализация через ImGuiListClipper (рендер только видимых строк!)
+            // Virtualization via ImGuiListClipper (renders visible rows only!)
             ImGuiListClipper clipper;
             clipper.Begin(static_cast<int>(m_filteredIndices.size()), rowHeight);
 
@@ -317,7 +317,7 @@ private:
         float spacingY = std::max(10.0f, (availY - 120.0f * scale) * 0.4f);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + spacingY);
 
-        // Иконка
+        // Icon
         Icon emptyIcon = m_searchQuery.empty() ? Icon::Folder : Icon::Target;
         float iconSize = 42.0f * scale;
         float centerX = ImGui::GetWindowWidth() * 0.5f;
@@ -357,31 +357,31 @@ private:
     bool m_sortAscending = true;
 };
 
-// Параметры табличной сетки (designated initializers):
+// Table grid parameters (designated initializers):
 //
 //     TableGrid grid({TableGrid::Column::Stretch("Name"), TableGrid::Column::Fixed("Size", 80)},
 //                    {.height = 170, .scrollY = false});
 struct TableGridOptions {
-    const char* key = nullptr;     // идентичность; nullptr — выводится из заголовков колонок
-    float height = 0.0f;           // базовые px; <= 0: автоматически на всё доступное пространство
+    const char* key = nullptr;     // identity; nullptr — inferred from column headers
+    float height = 0.0f;           // base px; <= 0: automatically fills available space
     bool scrollY = true;
     bool rowBg = true;
     bool bordersOuter = true;
     bool bordersInnerH = true;
     bool bordersInnerV = true;
-    bool highlightHeaders = false; // подсветка заголовков при наведении мыши
-    float cellPaddingX = -1.0f;    // <= 0: использовать theme.table.cellPaddingX
+    bool highlightHeaders = false; // highlight headers on mouse hover
+    float cellPaddingX = -1.0f;    // <= 0: use theme.table.cellPaddingX
     float cellPaddingY = 6.0f;
 };
 
-// Параметры строки табличной сетки
+// Table grid row parameters
 struct TableRowOptions {
-    const char* key = nullptr;     // идентичность строки (обязательна, если в ячейках одинаковые кнопки)
-    float height = 0.0f;           // базовые px; 0 — стандартная высота
+    const char* key = nullptr;     // row identity (required if cells contain identical buttons)
+    float height = 0.0f;           // base px; 0 — standard height
 };
 
-// Легковесная процедурная таблица для форм, редакторов и модальных окон (RAII-область).
-// Автоматически управляет палитрой темы и строками:
+// Lightweight procedural table for forms, editors, and modals (RAII scope).
+// Automatically manages theme palette and rows:
 //
 //     if (TableGrid grid({Column::Stretch("Name"), Column::Fixed("Size", 80)}); grid) {
 //         grid.Row();
@@ -393,7 +393,7 @@ public:
     struct Column {
         std::string header;
         ColumnWidthMode widthMode = ColumnWidthMode::Stretch;
-        float width = 1.0f; // вес растяжения (Stretch) или базовые px (Fixed)
+        float width = 1.0f; // stretch weight (Stretch) or base px (Fixed)
         bool sortable = false;
 
         static Column Stretch(std::string header, float weight = 1.0f) {
@@ -411,7 +411,7 @@ public:
         const TableStyle& ts = theme.table;
         const float scale = theme.GetScale();
 
-        // Идентичность таблицы: явный key либо склейка заголовков колонок
+        // Table identity: explicit key or concatenated column headers
         std::string tableId = "##grid";
         if (opts.key) {
             tableId += opts.key;
@@ -481,7 +481,7 @@ public:
         }
     }
 
-    // Новая строка; ячейки заполняются по порядку вызовами Cell()
+    // New row; cells are populated sequentially via Cell() calls
     void Row(const TableRowOptions& options = {}) {
         if (m_rowIdPushed) {
             ImGui::PopID();
@@ -498,12 +498,12 @@ public:
         }
     }
 
-    // Переход в следующую ячейку строки
+    // Advance to next row cell
     bool Cell() {
         return ImGui::TableSetColumnIndex(m_nextColumn++);
     }
 
-    // Переход в ячейку по номеру колонки
+    // Advance to cell by column index
     bool Cell(int columnIndex) {
         m_nextColumn = columnIndex + 1;
         return ImGui::TableSetColumnIndex(columnIndex);
@@ -513,7 +513,7 @@ public:
         return ImGui::GetContentRegionAvail().x;
     }
 
-    // Текст ячейки по центру высоты строки (высота — как у последней Row)
+    // Vertically centered cell text (height matches last Row)
     void CellText(const std::string& text, const TextOptions& options = {}) {
         const float offset = (m_rowHeightPx - ImGui::GetTextLineHeight()) * 0.5f - ImGui::GetStyle().CellPadding.y;
         if (offset > 0.0f)

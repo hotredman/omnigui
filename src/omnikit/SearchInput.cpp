@@ -32,7 +32,7 @@ bool SearchInput(std::string& query, const SearchInputOptions& options, std::sou
     float fontSize = theme.Scale(m.fontSize);
     float padY = std::max(2.0f, (m.height - fontSize) * 0.5f);
 
-    // 1. Поле ввода с закруглением и фоном темы
+    // 1. Text input with rounding and theme background
     ImGui::PushItemWidth(inputW);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, m.rounding);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(m.paddingX, padY));

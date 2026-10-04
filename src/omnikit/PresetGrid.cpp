@@ -21,7 +21,7 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
     const char* displayFormat = options.displayFormat;
     const char* btnFormat = options.buttonFormat;
 
-    // Идентичность всей сетки: явный key, иначе loc + unit
+    // Grid identity: explicit key, otherwise loc + unit
     AutoIdScope idScope(options.key, unit, loc);
 
     float w = options.sizePx.x;
@@ -32,7 +32,7 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
 
     bool changed = false;
 
-    // 1. Информационное табло текущего значения
+    // 1. Current value display header
     if (showDisplay) {
         float dispH = (options.sizePx.y > 0.0f) ? options.sizePx.y : metrics.height;
 
@@ -47,7 +47,7 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
         ValueDisplay(static_cast<double>(value),
                      {.unit = unit, .format = displayFormat, .style = &dispStyle, .sizePx = ImVec2(w, dispH)});
 
-        // Интерактивность табло: ввод пользовательского значения по клику
+        // Interactive display: input custom value on click
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Click to enter custom value");
         }
@@ -81,7 +81,7 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
         }
     }
 
-    // 2. Сетка кнопок пресетов
+    // 2. Preset button grid
     if (presets.empty()) {
         ImGui::PopID();
         return changed;
@@ -100,7 +100,7 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(colSpacing, rowSpacing));
 
-    // Оптические метрики цифры '0' для идеального вертикального центрирования
+    // Optical metrics of digit '0' for precise vertical centering
     ImFontBaked* baked = btnFont ? btnFont->GetFontBaked(fontSize) : nullptr;
     const ImFontGlyph* digitGlyph = baked ? baked->FindGlyph('0') : nullptr;
     float glyphMidY = digitGlyph ? (digitGlyph->Y0 + digitGlyph->Y1) * 0.5f : (fontSize * 0.35f);
@@ -113,13 +113,13 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
             ImGui::SameLine();
         }
 
-        // Логика выделения: кнопка активна ТОЛЬКО если значение точно совпадает с пресетом
+        // Selection logic: button is active ONLY if value matches preset exactly
         bool isSelected = (std::abs(static_cast<double>(value) - static_cast<double>(presets[i])) < 1e-4);
 
         char btnLabel[32];
         snprintf(btnLabel, sizeof(btnLabel), btnFormat ? btnFormat : "%.4g", presets[i]);
 
-        // Интерактивный элемент
+        // Interactive element
         ImGui::PushID(static_cast<int>(i));
         if (ImGui::InvisibleButton("##pg_btn", ImVec2(btnW, btnH))) {
             value = presets[i];
@@ -146,17 +146,17 @@ static bool RenderInternal(T& value, const std::vector<T>& presets, const Preset
         ImVec2 pMin = ImGui::GetItemRectMin();
         ImVec2 pMax = ImGui::GetItemRectMax();
 
-        // 1. Отрисовка фона и рамки
+        // 1. Draw background and border
         dl->AddRectFilled(pMin, pMax, ImGui::GetColorU32(bgCol), rounding);
         dl->AddRect(pMin, pMax, ImGui::GetColorU32(borderCol), rounding, 0, 1.0f);
 
-        // 2. Расчет точного оптического центрирования цифр
+        // 2. Calculate precise optical centering for digits
         ImVec2 txtSize = btnFont ? btnFont->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, btnLabel) 
                                  : ImGui::CalcTextSize(btnLabel);
         float textX = pMin.x + (btnW - txtSize.x) * 0.5f;
         float textY = pMin.y + (btnH * 0.5f) - glyphMidY;
 
-        // Тактильный микро-сдвиг при нажатии кнопки
+        // Tactile micro-offset on button press
         if (isActive) {
             textX += 1.0f;
             textY += 1.0f;

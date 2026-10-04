@@ -10,36 +10,36 @@
 
 namespace OmniKit {
 
-// Параметры панели вкладок (designated initializers):
+// Tab bar options (designated initializers):
 //
 //     TabBar(tabs, selected);
 //     TabBar(tabs, selected, {.separator = false, .variants = tabVariants});
 struct TabBarOptions {
-    UiSize             size      = UiSize::Medium;  // высота вкладок по шкале UiSize
-    bool               separator = true;      // линия-разделитель под панелью
-    const UiVariant*   variants  = nullptr;   // по вкладке; nullptr — все обычные
-    UiKey              key       = {};        // идентичность; по умолчанию — подпись первой вкладки
-    const TabBarStyle* style     = nullptr;   // оверрайд стиля; nullptr — из темы
+    UiSize             size      = UiSize::Medium;  // Tab height on the UiSize scale
+    bool               separator = true;      // Separator line below tab bar
+    const UiVariant*   variants  = nullptr;   // Per-tab variant; nullptr means all default
+    UiKey              key       = {};        // Identity; default is label of first tab
+    const TabBarStyle* style     = nullptr;   // Style override; nullptr uses theme
 };
 
-// 1. Панель вкладок из C-массива строк. Возвращает true, если выбрана другая вкладка
+// 1. Tab bar from C-array of strings. Returns true if another tab was selected
 bool TabBar(const char* const items[], int itemsCount, int& selectedIndex,
             const TabBarOptions& options = {},
             std::source_location loc = std::source_location::current());
 
-// 2. То же из массива, размер выводится автоматически
+// 2. Tab bar from fixed-size array, size deduced automatically
 template<std::size_t N>
 bool TabBar(const char* const (&items)[N], int& selectedIndex, const TabBarOptions& options = {},
             std::source_location loc = std::source_location::current()) {
     return TabBar(items, static_cast<int>(N), selectedIndex, options, loc);
 }
 
-// 3. Из вектора строк
+// 3. Tab bar from vector of strings
 bool TabBar(const std::vector<std::string>& items, int& selectedIndex,
             const TabBarOptions& options = {},
             std::source_location loc = std::source_location::current());
 
-// 4. Для любых enum-типов: вкладки — пары (значение, подпись)
+// 4. For any enum type: tabs are (value, label) pairs
 template<typename EnumT>
 bool TabBar(const std::vector<std::pair<EnumT, std::string>>& items, EnumT& currentItem,
             const TabBarOptions& options = {},
@@ -65,21 +65,21 @@ bool TabBar(const std::vector<std::pair<EnumT, std::string>>& items, EnumT& curr
 }
 
 struct TabItemOptions {
-    UiSize             size     = UiSize::Medium;      // высота вкладки по шкале UiSize
-    UiVariant          variant  = UiVariant::Default;  // не Default — цвет и подчёркивание вкладки
-    bool               sameLine = false;               // продолжить строку (с зазором из стиля)
-    UiKey              key      = {};                  // идентичность; по умолчанию — label
-    const TabBarStyle* style    = nullptr;             // оверрайд стиля; nullptr — из темы
+    UiSize             size     = UiSize::Medium;      // Tab height on the UiSize scale
+    UiVariant          variant  = UiVariant::Default;  // Non-Default sets tab color and underline
+    bool               sameLine = false;               // Continue on same line (with style gap)
+    UiKey              key      = {};                  // Identity; default uses label
+    const TabBarStyle* style    = nullptr;             // Style override; nullptr uses theme
 
-    // Внутренний механизм: финальные px; 0 — авто (по тексту / высота стиля)
+    // Internal mechanism: final px; 0 for auto (from text / style height)
     ImVec2             sizePx   = ImVec2(0.0f, 0.0f);
 };
 
-// Одиночный элемент вкладки (для собственных раскладок; обычно хватает TabBar)
+// Single tab item (for custom layouts; TabBar is typically sufficient)
 bool TabItem(const char* label, bool selected, const TabItemOptions& options = {},
              std::source_location loc = std::source_location::current());
 
-// Горизонтальная разделительная линия под панелью вкладок
+// Horizontal separator line below tab bar
 void TabSeparator(const TabBarStyle* style = nullptr);
 
 } // namespace OmniKit

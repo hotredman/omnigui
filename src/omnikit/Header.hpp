@@ -4,18 +4,18 @@
 
 namespace OmniKit {
 
-// Верхняя полоса окна (Header) во всю ширину: зоны Left / Center / Right.
-// RAII-область: конструктор открывает окно, деструктор закрывает.
+// Full-width top window bar (Header): Left / Center / Right zones.
+// RAII scope: constructor opens window, destructor closes it.
 //
 //     if (auto header = Header()) {
 //         if (auto left = header.Left()) { ... }
 //     }
-// Параметры шапки (designated initializers):
+// Header options (designated initializers):
 //
 //     Header({.heightPx = 64});
 struct HeaderOptions {
-    float              heightPx = 0.0f;      // итоговые px; <= 0 — высота из стиля темы
-    const HeaderStyle* style    = nullptr;   // оверрайд стиля; nullptr — из темы
+    float              heightPx = 0.0f;      // resolved px; <= 0 — height from theme style
+    const HeaderStyle* style    = nullptr;   // style override; nullptr — from theme
 };
 
 class Header : public Bar {

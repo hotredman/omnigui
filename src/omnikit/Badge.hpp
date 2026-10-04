@@ -4,29 +4,29 @@
 
 namespace OmniKit {
 
-// Параметры семантического чипа/бейджа (designated initializers):
+// Semantic badge/chip options (designated initializers):
 //
 //     Badge("RUNNING", {.variant = UiVariant::Success});
 //     Badge("beta", {.variant = UiVariant::Warning, .tooltip = "Experimental"});
 struct BadgeOptions {
     UiVariant   variant   = UiVariant::Default;
-    UiSize      size      = UiSize::Medium;  // масштаб чипа по шкале UiSize (Medium — стиль темы)
-    const char* tooltip   = nullptr;     // подсказка при наведении
-    float       topOffset = -1.0f;       // сдвиг вниз от курсора, базовые px; < 0 — без сдвига
-    float       fontSize  = 0.0f;        // кегль, pt; 0 — по стилю темы
+    UiSize      size      = UiSize::Medium;  // badge scale on the UiSize scale (Medium — theme style)
+    const char* tooltip   = nullptr;     // hover tooltip
+    float       topOffset = -1.0f;       // downward cursor offset, base px; < 0 — no offset
+    float       fontSize  = 0.0f;        // font size, pt; 0 — derived from theme style
 };
 
-// Универсальный семантический чип/бейдж для отображения статусов, меток и тегов
+// Universal semantic chip/badge for displaying statuses, labels, and tags
 void Badge(const char* text, const BadgeOptions& options = {});
 
-// Числовой бейдж со значением и опциональной единицей (например: 5 "исп.")
+// Numeric badge with a value and optional unit suffix (e.g., 5 "tests")
 void BadgeNumber(int value, const char* unit = nullptr, const BadgeOptions& options = {});
 
-// Прямая отрисовка бейджа в указанную позицию DrawList (без сдвига ImGui cursor);
-// tooltip и topOffset здесь не используются. Возвращает размер бейджа
+// Direct rendering of a badge to the specified DrawList position (without advancing ImGui cursor);
+// tooltip and topOffset are not used here. Returns the badge size.
 ImVec2 BadgeDraw(ImDrawList* dl, ImVec2 pos, const char* text, const BadgeOptions& options = {});
 
-// Расчет размера бейджа
+// Calculates badge size
 ImVec2 BadgeSize(const char* text, const BadgeOptions& options = {});
 
 } // namespace OmniKit

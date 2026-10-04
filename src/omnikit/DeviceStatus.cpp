@@ -43,7 +43,7 @@ float DeviceStatusWidth(const std::vector<std::string>& titleCandidates,
     ImFont* statusFont = style.statusFont ? style.statusFont : theme.defaultFont;
     float statusSize = theme.Scale(style.statusFontSize);
 
-    // 1. Измеряем максимальную ширину имени устройства среди кандидатов и текущего значения
+    // 1. Measure maximum device name width across candidates and current value
     float maxTitleW = 0.0f;
     auto measureTitle = [&](const std::string& str) {
         if (str.empty()) return;
@@ -58,7 +58,7 @@ float DeviceStatusWidth(const std::vector<std::string>& titleCandidates,
     }
     measureTitle(currentTitle);
 
-    // 2. Измеряем ширину всех возможных состояний устройства
+    // 2. Measure width across all possible device states
     float maxStatusW = 0.0f;
     const DeviceState allStates[] = {
         DeviceState::Disconnected,
@@ -78,14 +78,14 @@ float DeviceStatusWidth(const std::vector<std::string>& titleCandidates,
         maxStatusW = std::max(maxStatusW, w);
     }
 
-    // 3. Выбираем максимальную ширину текстовой зоны
+    // 3. Select maximum text area width
     float maxTextW = std::max(maxTitleW, maxStatusW);
 
-    // 4. Геометрия плашки:
-    // - левый отступ до текста: 28px (включает светодиод 16px c радиусом 5px + зазор)
-    // - зазор после текста до кнопки: 14px
-    // - квадратная кнопка действия: style.actionBtnSize
-    // - отступ справа от кнопки до границы плашки: 8px
+    // 4. Panel geometry:
+    // - left margin to text: 28px (includes LED at 16px with 5px radius + gap)
+    // - gap after text before button: 14px
+    // - square action button: style.actionBtnSize
+    // - right padding from button to panel edge: 8px
     float leftPad  = theme.Scale(28.0f);
     float textGap  = theme.Scale(14.0f);
     float btnW     = theme.Scale(style.actionBtnSize);
@@ -118,19 +118,19 @@ bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusO
     ImVec2 pos = ImGui::GetCursorScreenPos();
     float radius = theme.Scale(style.cornerRadius);
 
-    // 1. Фон и рамка плашки
+    // 1. Panel background and border
     dl->AddRectFilled(pos, ImVec2(pos.x + w, pos.y + h), style.colBg, radius);
     if (style.borderSize > 0.0f) {
         dl->AddRect(pos, ImVec2(pos.x + w, pos.y + h), style.colBorder, radius, 0, style.borderSize);
     }
 
-    // 2. Светодиодный индикатор (LED)
+    // 2. LED indicator
     ImVec2 ledCenter(pos.x + theme.Scale(16.0f), pos.y + h * 0.5f);
     float ledR = theme.Scale(style.ledRadius);
     ImU32 ledColor = DeviceStateColor(state, style);
     dl->AddCircleFilled(ledCenter, ledR, ledColor);
 
-    // 3. Текстовая информация: Имя устройства + Статус
+    // 3. Text information: Device Name + Status
     ImFont* nameFont = style.titleFont ? style.titleFont : theme.defaultFont;
     float nameSize = theme.Scale(style.titleFontSize);
     ImVec2 textPos1(pos.x + theme.Scale(28.0f), pos.y + theme.Scale(7.0f));
@@ -144,7 +144,7 @@ bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusO
     ImVec2 textPos2(pos.x + theme.Scale(28.0f), pos.y + theme.Scale(26.0f));
     dl->AddText(statusFont, statusSize, textPos2, style.colStatusText, displayStatus);
 
-    // 4. Кнопка действия (опционально)
+    // 4. Action button (optional)
     bool actionClicked = false;
     AutoIdScope idScope(options.key, deviceName ? deviceName : "device", loc);
     if (options.showAction && buttonLabel[0] != '\0') {
@@ -173,7 +173,7 @@ bool DeviceStatus(const char* deviceName, DeviceState state, const DeviceStatusO
         }
     }
 
-    // 5. Продвижение позиции курсора в потоке ImGui
+    // 5. Advance cursor position in ImGui layout stream
     ImGui::SetCursorScreenPos(pos);
     ImGui::Dummy(ImVec2(w, h));
 

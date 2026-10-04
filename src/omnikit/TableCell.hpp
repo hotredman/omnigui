@@ -7,19 +7,19 @@
 
 namespace OmniKit {
 
-// Семантические типографические блоки для ячеек таблиц (полная инкапсуляция ImGui)
+// Semantic typographic blocks for table cells (full ImGui encapsulation)
 class TableCell {
 public:
-    // Двухстрочный блок: заголовок + серый подзаголовок (описание/файл)
+    // Two-line block: title + muted subtitle (description/file)
     static void TitleWithSubtitle(const std::string& title, const std::string& subtitle) {
         UiTheme& theme = UiTheme::Get();
 
-        // 1. Основное название (20pt Medium cellFontSize)
+        // 1. Primary title (20pt Medium cellFontSize)
         theme.PushFont(theme.fontMedium, theme.table.cellFontSize);
         ImGui::TextColored(ImColor(theme.palette.textPrimary).Value, "%s", title.c_str());
         theme.PopFont();
 
-        // 2. Подзаголовок (18pt Regular subFontSize)
+        // 2. Subtitle (18pt Regular subFontSize)
         if (!subtitle.empty()) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImColor(theme.palette.textMuted).Value);
             theme.PushFont(theme.fontRegular, theme.table.subFontSize);
@@ -29,7 +29,7 @@ public:
         }
     }
 
-    // Центрированная дата/время вторичного цвета
+    // Centered secondary color date/time
     static void DateTime(const std::string& formattedDate, float topOffset = -1.0f) {
         UiTheme& theme = UiTheme::Get();
         float offset = (topOffset >= 0.0f) ? topOffset : std::max(0.0f, (theme.table.rowHeight - theme.table.cellFontSize) * 0.5f - theme.table.cellPaddingY);
@@ -41,7 +41,7 @@ public:
         theme.PopFont();
     }
 
-    // Текстовая ячейка со стандартным вертикальным отступом
+    // Text cell with standard vertical padding
     static void Text(const std::string& text, float topOffset = -1.0f, ImU32 color = 0) {
         UiTheme& theme = UiTheme::Get();
         float offset = (topOffset >= 0.0f) ? topOffset : std::max(0.0f, (theme.table.rowHeight - theme.table.cellFontSize) * 0.5f - theme.table.cellPaddingY);
@@ -54,7 +54,7 @@ public:
         theme.PopFont();
     }
 
-    // Символ показателя (18pt Bold, цвет Primary / акцент)
+    // Metric symbol (18pt Bold, Primary / accent color)
     static void Symbol(const std::string& symbol, float topOffset = 0.0f) {
         UiTheme& theme = UiTheme::Get();
         if (topOffset > 0.0f) {
@@ -65,7 +65,7 @@ public:
         theme.PopFont();
     }
 
-    // Числовая величина (18pt Medium, textPrimary) или прочерк disabled (если пусто или "—")
+    // Numeric value (18pt Medium, textPrimary) or disabled dash (if empty or "—")
     static void Value(const std::string& displayValue, float topOffset = 0.0f) {
         UiTheme& theme = UiTheme::Get();
         if (topOffset > 0.0f) {
@@ -80,7 +80,7 @@ public:
         theme.PopFont();
     }
 
-    // Единица измерения (16pt Regular, textMuted)
+    // Measurement unit (16pt Regular, textMuted)
     static void Unit(const std::string& unitLabel, float topOffset = 0.0f) {
         UiTheme& theme = UiTheme::Get();
         if (topOffset > 0.0f) {
@@ -91,7 +91,7 @@ public:
         theme.PopFont();
     }
 
-    // Наименование / описание показателя (16pt Regular, textPrimary)
+    // Metric name / description (16pt Regular, textPrimary)
     static void Name(const std::string& name, float topOffset = 0.0f, float fontSize = 16.0f) {
         UiTheme& theme = UiTheme::Get();
         if (topOffset > 0.0f) {
@@ -102,13 +102,13 @@ public:
         theme.PopFont();
     }
 
-    // Семантический чип/бейдж (например: 5 исп.)
+    // Semantic chip/badge (e.g., 5 runs)
     static void Badge(int value, const char* unit = nullptr, UiVariant variant = UiVariant::Default, float topOffset = -1.0f) {
         float offset = (topOffset >= 0.0f) ? topOffset : TableRowOffset();
         OmniKit::BadgeNumber(value, unit, {.variant = variant, .topOffset = offset});
     }
 
-    // Текстовый семантический чип/бейдж (например: «Свой», «Норма»)
+    // Text semantic chip/badge (e.g., "Custom", "Normal")
     static void BadgeText(const char* text, UiVariant variant = UiVariant::Default, float topOffset = -1.0f, const char* tooltip = nullptr) {
         float offset = (topOffset >= 0.0f) ? topOffset : TableRowOffset();
         OmniKit::Badge(text, {.variant = variant, .tooltip = tooltip, .topOffset = offset});

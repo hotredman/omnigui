@@ -9,33 +9,33 @@
 namespace OmniKit {
 
 // ============================================================================
-// Доля строки в 12-колоночной сетке (Bootstrap / Grid style)
+// Row span in a 12-column grid (Bootstrap / Grid style)
 // ============================================================================
 struct Col {
-    int span = 6; // По умолчанию 6 из 12 (двухколоночный режим = 50% ширины)
-    float reservedPx = 0.0f; // Для Col::Fill(): резервируемая ширина справа (например, под кнопки)
+    int span = 6; // Defaults to 6 out of 12 (two-column mode = 50% width)
+    float reservedPx = 0.0f; // For Col::Fill(): reserved width on the right (e.g., for buttons)
 
     constexpr Col() : span(6), reservedPx(0.0f) {}
     constexpr Col(int s) : span(s < -1 ? -1 : (s > 12 ? 12 : s)), reservedPx(0.0f) {}
     constexpr Col(int s, float reserved) : span(s < -1 ? -1 : (s > 12 ? 12 : s)), reservedPx(reserved) {}
 
-    static constexpr Col Auto()                         { return Col{0, 0.0f};  } // Автоматическая контентная ширина (не привязана к сетке)
-    static constexpr Col Fit()                          { return Col{0, 0.0f};  } // Синоним для Auto
-    static constexpr Col Fill(float reservedRight = 0.0f){ return Col{-1, reservedRight}; } // Растягивание до конца строки (с опциональным резервом под кнопки справа)
-    static constexpr Col Full()                         { return Col{12, 0.0f}; } // 100% строки
-    static constexpr Col Half()                         { return Col{6, 0.0f};  } // 50% строки (2 колонки)
-    static constexpr Col Third()                        { return Col{4, 0.0f};  } // 33.3% строки (3 колонки)
-    static constexpr Col TwoThirds()                    { return Col{8, 0.0f};  } // 66.7% строки (2/3)
-    static constexpr Col Quarter()                      { return Col{3, 0.0f};  } // 25% строки (4 колонки)
-    static constexpr Col Sixth()                        { return Col{2, 0.0f};  } // 16.7% строки (6 колонок)
+    static constexpr Col Auto()                         { return Col{0, 0.0f};  } // Automatic content-based width (unconstrained by grid)
+    static constexpr Col Fit()                          { return Col{0, 0.0f};  } // Synonym for Auto
+    static constexpr Col Fill(float reservedRight = 0.0f){ return Col{-1, reservedRight}; } // Fills remaining row width (with optional right margin reserved for buttons)
+    static constexpr Col Full()                         { return Col{12, 0.0f}; } // 100% of row
+    static constexpr Col Half()                         { return Col{6, 0.0f};  } // 50% of row (2 columns)
+    static constexpr Col Third()                        { return Col{4, 0.0f};  } // 33.3% of row (3 columns)
+    static constexpr Col TwoThirds()                    { return Col{8, 0.0f};  } // 66.7% of row (2/3)
+    static constexpr Col Quarter()                      { return Col{3, 0.0f};  } // 25% of row (4 columns)
+    static constexpr Col Sixth()                        { return Col{2, 0.0f};  } // 16.7% of row (6 columns)
     static constexpr Col Custom(int s)                  { return Col{s, 0.0f};  }
 
     bool IsAuto() const { return span == 0; }
     bool IsFill() const { return span < 0; }
 };
 
-// Ширина колонки в span долей из 12 при доступной ширине avail и зазоре gap (все значения в px).
-// Общая формула для ColumnLayout и Card.
+// Column width for span units out of 12 given available width avail and spacing gap (all values in px).
+// Shared formula for ColumnLayout and Card.
 inline float SpanWidth(int span, float avail, float gap) {
     span = std::clamp(span, 1, 12);
     if (span == 12) {
@@ -46,22 +46,22 @@ inline float SpanWidth(int span, float avail, float gap) {
 }
 
 // ============================================================================
-// Адаптивная 12-колоночная раскладка с автопереносом строк (ColumnLayout).
-// RAII-область: колонки открываются через Col(), строки переносятся сами.
+// Responsive 12-column layout with auto-wrapping rows (ColumnLayout).
+// RAII scope: columns are created via Col(), rows wrap automatically.
 //
 //     ColumnLayout row({.columnGap = 12});
 //     if (auto c = row.Col(Col::TwoThirds())) { ... }
-//     if (auto c = row.Col(Col::Third()))     { ... }   // строка заполнена, дальше — новая строка
+//     if (auto c = row.Col(Col::Third()))     { ... }   // row is full; subsequent items start a new row
 // ============================================================================
 struct ColumnLayoutOptions {
-    float widthPx   = 0.0f;    // итоговые px; 0 — вся доступная ширина
-    float columnGap = -1.0f;   // базовые px; < 0 — UiTheme::SpacingLarge()
-    float rowGap    = -1.0f;   // базовые px; < 0 — UiTheme::CardRowSpacing()
+    float widthPx   = 0.0f;    // resolved px; 0 — full available width
+    float columnGap = -1.0f;   // base px; < 0 — UiTheme::SpacingLarge()
+    float rowGap    = -1.0f;   // base px; < 0 — UiTheme::CardRowSpacing()
 };
 
 class ColumnLayout : public Scope {
 public:
-    // RAII-колонка: if (auto c = row.Col(Col::Half())) { ... }
+    // RAII column: if (auto c = row.Col(Col::Half())) { ... }
     class ColumnScope : public Scope {
     public:
         ~ColumnScope();
@@ -86,17 +86,17 @@ public:
 
     ColumnScope Col(OmniKit::Col col = OmniKit::Col::Half());
 
-    // Принудительный переход на новую строку
+    // Explicitly advances to a new row
     void NextRow();
 
-    // Геометрия
+    // Geometry
     float GetAvailableWidth() const { return m_rowAvailWidth; }
     float CalculateSpanWidth(int span) const;
     float GetColumnSpacing() const { return m_columnSpacing; }
     float GetRowSpacing() const { return m_rowSpacing; }
     int GetRemainingSpan() const { return 12 - m_rowSpanUsed; }
 
-    // Активная ширина колонки в текущем потоке (опрашивается компонентами, например Card)
+    // Active column width in current thread (queried by components, e.g. Card)
     static float CurrentColumnWidth();
 
 private:

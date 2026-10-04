@@ -14,7 +14,7 @@ ConfirmModal::ConfirmModal(const ConfirmModalOptions& options)
 bool ConfirmModal::Render() {
     if (!m_open) return false;
 
-    // Ширина 460px, авто-высота, без подложки карточки
+    // Width 460px, auto-height, without card background
     Modal modal(m_open, {.title = m_title.c_str(), .width = 460.0f, .height = 0.0f, .cardBackground = false});
     if (!modal) return false;
 

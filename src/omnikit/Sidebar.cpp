@@ -19,9 +19,9 @@ SidebarWrappedLabel SidebarWrapLabel(const char* text, float maxWidth) {
         out.line1 = full;
         return out;
     }
-    if (cut <= begin)   // окно уже слова: хотя бы один символ в строке
+    if (cut <= begin)   // Window narrower than word: keep at least one character on the line
         cut = begin + 1;
-    while (cut < end && (static_cast<unsigned char>(*cut) & 0xC0) == 0x80)   // не резать UTF-8 посреди символа
+    while (cut < end && (static_cast<unsigned char>(*cut) & 0xC0) == 0x80)   // Do not split UTF-8 character in the middle
         ++cut;
 
     std::string first(begin, cut);
@@ -39,7 +39,7 @@ SidebarWrappedLabel SidebarWrapLabel(const char* text, float maxWidth) {
         return out;
     }
 
-    // Остаток длиннее строки: самый длинный префикс, с которым помещается «…»
+    // Remainder longer than line: longest prefix that fits along with "..."
     const std::string ellipsis = "\xE2\x80\xA6";
     const float room = maxWidth - ImGui::CalcTextSize(ellipsis.c_str()).x;
     size_t keep = 0;
@@ -67,7 +67,7 @@ Sidebar::Sidebar(const SidebarOptions& options) {
 
     const float posYPx = (posY >= 0.0f) ? posY : (theme.HeaderHeight() + theme.TopBarHeight());
     const float width = theme.SidebarWidth();
-    // По умолчанию — до строки состояния внизу окна
+    // Default extends down to the status bar at bottom of window
     const float heightPx = (height >= 0.0f)
         ? height
         : (ImGui::GetIO().DisplaySize.y - posYPx - UiTheme::Get().StatusBarHeight());
@@ -88,7 +88,7 @@ Sidebar::Sidebar(const SidebarOptions& options) {
 
     m_open = ImGui::Begin("##SidebarWindow", nullptr, flags);
     if (m_open) {
-        // Правая вертикальная разделительная линия
+        // Right vertical separator line
         ImDrawList* dl = ImGui::GetWindowDrawList();
         dl->AddLine(
             ImVec2(width - 1.0f, posYPx),
@@ -100,7 +100,7 @@ Sidebar::Sidebar(const SidebarOptions& options) {
 }
 
 Sidebar::~Sidebar() {
-    // ImGui::End() обязателен независимо от результата Begin
+    // ImGui::End() is required regardless of Begin result
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(3);
@@ -119,7 +119,7 @@ bool Sidebar::Item(const SidebarItemOptions& o) {
     float cornerRadius = Scale(style.cornerRadius);
     const bool isSelected = o.selected;
 
-    // 1. Активный фон и правый неоново-голубой индикатор
+    // 1. Active background and right neon-blue indicator bar
     if (isSelected) {
         dl->AddRectFilled(
             cursor,
@@ -138,7 +138,7 @@ bool Sidebar::Item(const SidebarItemOptions& o) {
         );
     }
 
-    // 2. Обработка клика и ховера (идентичность — key либо подпись)
+    // 2. Handle click and hover (identity is key or label)
     ImGui::PushID(o.key ? o.key : o.label.c_str());
     bool pressed = ImGui::InvisibleButton("##menu_item", ImVec2(itemWidth, itemHeight));
     ImGui::PopID();
@@ -153,7 +153,7 @@ bool Sidebar::Item(const SidebarItemOptions& o) {
         );
     }
 
-    // 3. Цвета и шрифты
+    // 3. Colors and fonts
     ImU32 textColor = isSelected ? style.colActiveText
                                  : (isHovered ? style.colHoverText : style.colInactiveText);
 
@@ -162,14 +162,14 @@ bool Sidebar::Item(const SidebarItemOptions& o) {
     float fontSize = Scale(style.fontSize);
     float textY = cursor.y + (itemHeight - fontSize) * 0.5f - 1.0f;
 
-    // 4. Отрисовка векторной иконки
+    // 4. Render vector icon
     float iconSize = Scale(style.iconSize);
     ImVec2 iconCenter(cursor.x + Scale(20.0f), cursor.y + itemHeight * 0.5f);
     if (o.icon != Icon::None) {
         o.icon.Draw(dl, iconCenter, iconSize, textColor);
     }
 
-    // 5. Отрисовка подписи с клиппированием
+    // 5. Render label with clipping
     float textX = cursor.x + Scale(38.0f);
     float maxTextW = itemWidth - Scale(44.0f) - (isSelected ? Scale(style.activeBarWidth + 4.0f) : 0.0f);
     if (maxTextW < 10.0f) maxTextW = 10.0f;
@@ -228,7 +228,7 @@ SidebarList Sidebar::ScrollList() {
 }
 
 // ----------------------------------------------------------------------------
-// SidebarList: прокручиваемая область под список записей
+// SidebarList: scrollable area for entry list
 // ----------------------------------------------------------------------------
 SidebarList::SidebarList() {
     const UiTheme& theme = UiTheme::Get();
@@ -239,13 +239,13 @@ SidebarList::SidebarList() {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, theme.Scale(style.itemSpacing)));
 
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, style.colScrollRegionBg);  // подложка — только окну блока
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, style.colScrollRegionBg);  // Background only for child window
     m_open = ImGui::BeginChild("##SidebarScrollList", ImVec2(0.0f, availH), false, ImGuiWindowFlags_NoSavedSettings);
     ImGui::PopStyleColor();
 }
 
 SidebarList::~SidebarList() {
-    // EndChild обязателен, даже если BeginChild вернул false
+    // EndChild is required even if BeginChild returned false
     ImGui::EndChild();
     ImGui::PopStyleVar(2);
 }
@@ -264,7 +264,7 @@ bool SidebarList::Entry(const SidebarEntryOptions& o) {
     float itemWidth = ImGui::GetContentRegionAvail().x;
     float cornerRadius = theme.Scale(style.cornerRadius);
 
-    // 1. Активный фон и правый индикатор
+    // 1. Active background and right indicator bar
     if (isSelected) {
         dl->AddRectFilled(
             cursor,
@@ -283,7 +283,7 @@ bool SidebarList::Entry(const SidebarEntryOptions& o) {
         );
     }
 
-    // 2. Обработка клика и ховера (идентичность — key либо название)
+    // 2. Handle click and hover (identity is key or label)
     ImGui::PushID(o.key ? o.key : o.label.c_str());
     bool pressed = ImGui::InvisibleButton("##menu_item_ex", ImVec2(itemWidth, itemHeight));
     ImGui::PopID();
@@ -298,7 +298,7 @@ bool SidebarList::Entry(const SidebarEntryOptions& o) {
         );
     }
 
-    // 3. Опциональный статусный светодиод (LED dot)
+    // 3. Optional status LED dot
     const float indent = theme.Scale(kSidebarTreeIndent) * static_cast<float>(o.level);
     const ImU32 statusColor = o.statusColor;
     if (statusColor != 0) {
@@ -316,7 +316,7 @@ bool SidebarList::Entry(const SidebarEntryOptions& o) {
                          : theme.Scale(listStyle.itemFontSize);
     float line1Y = cursor.y + (itemHeight - textH) * 0.5f;
 
-    // 4. Первая строка: название команды
+    // 4. First line: item title
     ImFont* font = listStyle.itemFont ? listStyle.itemFont : theme.fontMedium;
     theme.PushFont(font, listStyle.itemFontSize);
     ImU32 textCol = isSelected ? style.colActiveText : (isHovered ? style.colHoverText : style.colInactiveText);
@@ -326,7 +326,7 @@ bool SidebarList::Entry(const SidebarEntryOptions& o) {
     dl->PopClipRect();
     theme.PopFont();
 
-    // 5. Вторая строка: дата и время
+    // 5. Second line: date and time / subtitle
     if (hasSub) {
         ImFont* subFont = listStyle.subFont ? listStyle.subFont : theme.fontRegular;
         theme.PushFont(subFont, listStyle.subFontSize);
@@ -354,9 +354,9 @@ SidebarTreeClick SidebarList::TreeNode(const SidebarTreeNodeOptions& o) {
     const float itemWidth = ImGui::GetContentRegionAvail().x;
     const float cornerRadius = theme.Scale(style.cornerRadius);
     const float indent = theme.Scale(kSidebarTreeIndent) * static_cast<float>(o.level);
-    const float arrowZoneRight = cursor.x + indent + theme.Scale(28.0f);   // стрелка раскрытия: клик = Toggle
+    const float arrowZoneRight = cursor.x + indent + theme.Scale(28.0f);   // Expander arrow zone: click = Toggle
 
-    // Справа: счётчик и индикатор статуса — их ширина нужна до названия
+    // On the right: counter badge and status indicator — their width is needed before title
     float countW = 0.0f;
     ImFont* subFont = listStyle.subFont ? listStyle.subFont : theme.fontRegular;
     if (!o.count.empty()) {
@@ -371,7 +371,7 @@ SidebarTreeClick SidebarList::TreeNode(const SidebarTreeNodeOptions& o) {
     if (o.statusColor != 0)
         rightEdge -= theme.Scale(14.0f);
 
-    // Название переносится на вторую строку, вторая при нехватке места оканчивается многоточием
+    // Title wraps to a second line; the second line ends with ellipsis if space is insufficient
     const float textX = cursor.x + indent + theme.Scale(28.0f);
     const float maxTextW = std::max(10.0f, rightEdge - textX);
     ImFont* font = listStyle.itemFont ? listStyle.itemFont : theme.fontMedium;
@@ -395,7 +395,7 @@ SidebarTreeClick SidebarList::TreeNode(const SidebarTreeNodeOptions& o) {
 
     const ImU32 textCol = o.selected ? style.colActiveText : (isHovered ? style.colHoverText : style.colInactiveText);
 
-    // Стрелка раскрытия: вправо — свёрнут, вниз — раскрыт; по первой строке названия
+    // Expander arrow: right when collapsed, down when expanded; aligned with first line of title
     {
         const float cx = cursor.x + indent + theme.Scale(14.0f);
         const float r = theme.Scale(4.0f);
@@ -415,7 +415,7 @@ SidebarTreeClick SidebarList::TreeNode(const SidebarTreeNodeOptions& o) {
     dl->PopClipRect();
     theme.PopFont();
 
-    // Счётчик и индикатор — на уровне первой строки
+    // Counter and status indicator aligned with first line
     if (countW > 0.0f) {
         theme.PushFont(subFont, listStyle.subFontSize);
         dl->AddText(ImVec2(countRight - countW, firstLineMidY - ImGui::GetTextLineHeight() * 0.5f),

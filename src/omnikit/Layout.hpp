@@ -6,19 +6,19 @@
 namespace OmniKit {
 
 // ============================================================================
-// Примитивы раскладки. Все размеры — в базовых px (масштаб темы применяется
-// внутри), поэтому прикладному коду не нужен ни ImGui::, ни theme.Scale().
+// Layout primitives. All sizes are in base px (theme scaling is applied
+// internally), so application code needs neither ImGui:: nor theme.Scale().
 //
 //     Text("Run #01");
 //     SameLine();
 //     Badge("COMPLETED", {.variant = UiVariant::Success});
-//     Spacer();                  // стандартный вертикальный интервал
-//     Spacer(12);                // 12 базовых px
-//     AlignRight(240);           // следующий элемент — в правом краю, 240 px под группу
+//     Spacer();                  // standard vertical spacing
+//     Spacer(12);                // 12 base px
+//     AlignRight(240);           // next element at the right edge, 240 px for the group
 //     Button({.label = "Reset"});
 // ============================================================================
 
-// Вертикальный интервал. basePx <= 0 — стандартный интервал между элементами
+// Vertical spacing. basePx <= 0 — standard item spacing
 inline void Spacer(float basePx = 0.0f) {
     if (basePx <= 0.0f) {
         ImGui::Spacing();
@@ -27,7 +27,7 @@ inline void Spacer(float basePx = 0.0f) {
     }
 }
 
-// Следующий элемент — в той же строке. gapBasePx < 0 — стандартный зазор
+// Next element on the same line. gapBasePx < 0 — standard gap
 inline void SameLine(float gapBasePx = -1.0f) {
     if (gapBasePx < 0.0f) {
         ImGui::SameLine();
@@ -36,8 +36,8 @@ inline void SameLine(float gapBasePx = -1.0f) {
     }
 }
 
-// Следующий элемент — в той же строке, прижатым к правому краю области:
-// widthBasePx — суммарная ширина группы элементов, которая окажется справа
+// Next element on the same line, aligned to the right edge of the region:
+// widthBasePx is the total width of the element group aligned to the right
 inline void AlignRight(float widthBasePx) {
     ImGui::SameLine(ImGui::GetContentRegionMax().x - UiTheme::Get().Scale(widthBasePx));
 }

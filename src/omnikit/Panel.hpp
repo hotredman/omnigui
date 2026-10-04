@@ -8,33 +8,33 @@
 namespace OmniKit {
 
 enum class PanelScroll {
-    Auto,    // полоса прокрутки появляется при переполнении
-    Always   // вертикальная полоса видна всегда
+    Auto,    // Scrollbar appears on overflow
+    Always   // Vertical scrollbar is always visible
 };
 
-// Параметры панели (designated initializers):
+// Panel options (designated initializers):
 //
 //     if (Panel panel({.cardBackground = true}); panel) { ... }
 //     if (Panel log({.key = "log", .scroll = PanelScroll::Always, .stickToEnd = autoScroll}); log) { ... }
 struct PanelOptions {
-    const char*           key            = nullptr;               // идентичность; nullptr — "##panel" (нужен, если в одной области несколько панелей)
+    const char*           key            = nullptr;               // Identity; nullptr uses "##panel" (needed if multiple panels share a region)
     bool                  border         = true;
-    bool                  cardBackground = false;                 // фон карточки вместо фона окна
+    bool                  cardBackground = false;                 // Card background instead of window background
     PanelScroll           scroll         = PanelScroll::Auto;
-    bool                  stickToEnd     = false;                 // держать прокрутку внизу, пока пользователь не отлистал вверх (журналы)
-    std::optional<ImVec2> sizePx;                                 // итоговый размер, px; по умолчанию — всё оставшееся место
+    bool                  stickToEnd     = false;                 // Keep scroll at bottom unless user scrolled up (logs)
+    std::optional<ImVec2> sizePx;                                 // Final size, px; default fills all remaining space
 };
 
 // ============================================================================
-// Панель — прокручиваемая область с рамкой и (опционально) фоном карточки.
-// Обёртка над дочерним окном ImGui.
+// Panel — a scrollable region with a frame and (optional) card background.
+// Wrapper over an ImGui child window.
 // ============================================================================
 class Panel : public Scope {
 public:
     explicit Panel(const PanelOptions& options = {});
     ~Panel();
 
-    // Оставшееся место внутри панели, px (для вложенных элементов, которым нужен явный размер)
+    // Remaining space inside panel, px (for nested elements requiring explicit size)
     ImVec2 Available() const { return ImGui::GetContentRegionAvail(); }
 
 private:

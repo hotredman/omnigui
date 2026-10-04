@@ -23,12 +23,12 @@ void SidePanel::Init(const SidePanelOptions& options, float width, float* widthR
     m_maxWidth = resizable ? options.maxWidth : width;
     m_style = options.style ? *options.style : theme.sidePanel;
 
-    // 1. Для правой панели со сплиттером сначала отрисовываем сплиттер слева от панели
+    // 1. For a right panel with a splitter, first render splitter to the left of the panel
     if (m_resizable && m_side == Side::Right) {
         RenderSplitter();
     }
 
-    // 2. Открытие дочернего региона панели
+    // 2. Open child region of the panel
     float panelW = theme.Scale(m_width);
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoSavedSettings;
 
@@ -48,7 +48,7 @@ void SidePanel::Init(const SidePanelOptions& options, float width, float* widthR
 
     m_open = ImGui::BeginChild(m_id.c_str(), ImVec2(panelW, 0.0f), m_style.borderSize > 0.0f, flags);
     m_childStarted = true;
-    // Подложка, рамка и отступы применены к окну панели; содержимое их не наследует
+    // Background, border, and padding applied to panel window; content does not inherit them
     if (m_styleColorPushes > 0) ImGui::PopStyleColor(m_styleColorPushes);
     if (m_styleVarPushes > 0) ImGui::PopStyleVar(m_styleVarPushes);
     m_styleColorPushes = 0;
@@ -63,11 +63,11 @@ void SidePanel::End() {
     if (!m_childStarted) return;
     m_childStarted = false;
 
-    // В Dear ImGui для каждого BeginChild() ОБЯЗАТЕЛЕН вызов EndChild(),
-    // независимо от возвращенного значения (true/false)
+    // In Dear ImGui, an EndChild() call is MANDATORY for each BeginChild(),
+    // regardless of the returned value (true/false)
     ImGui::EndChild();
 
-    // Для левой панели со сплиттером сплиттер отрисовывается справа от панели
+    // For a left panel with a splitter, splitter is rendered to the right of the panel
     if (m_resizable && m_side == Side::Left) {
         ImGui::SameLine(0.0f, 0.0f);
         RenderSplitter();

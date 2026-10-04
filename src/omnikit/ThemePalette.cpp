@@ -4,8 +4,8 @@ namespace OmniKit {
 
 using namespace Tone;
 
-// Тёмная тема: каркас темнее холста, карточки светлее холста; акценты и
-// статусы — яркие 400/500-е оттенки
+// Dark theme: frame darker than canvas, cards lighter than canvas; accents and
+// statuses are vibrant 400/500 shades
 ThemePalette ThemePalette::Dark() {
     ThemePalette p{};
     p.bgApp           = Slate900;
@@ -59,9 +59,9 @@ ThemePalette ThemePalette::Dark() {
     return p;
 }
 
-// Светлая тема: не инверсия, а дизайн-проход — белые карточки на светло-
-// сером холсте, акценты и статусы на тон темнее (600/700), тексты тёмных
-// оттенков для контраста
+// Light theme: designed intentionally rather than inverted — white cards on a light
+// gray canvas, accents and statuses one shade darker (600/700), dark text
+// shades for high contrast
 ThemePalette ThemePalette::Light() {
     ThemePalette p{};
     p.bgApp           = Slate100;

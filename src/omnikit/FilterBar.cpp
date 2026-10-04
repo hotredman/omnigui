@@ -25,9 +25,9 @@ FilterBar::FilterBar(const FilterBarOptions& options)
 
 FilterBar::~FilterBar() {
     const UiTheme& theme = UiTheme::Get();
-    // Переводим курсор вниз на высоту панели + стандартный зазор до таблицы
+    // Move cursor down by bar height + standard gap to table
     ImGui::SetCursorPos(ImVec2(m_startPos.x, m_startPos.y + m_actualHeight + theme.SpacingSmall()));
-    // ImGui требует submit-элемента после SetCursorPos, иначе границы окна не растут
+    // ImGui requires an item submission after SetCursorPos; otherwise window bounds do not expand
     ImGui::Dummy(ImVec2(0.0f, 0.0f));
 }
 float FilterBar::GetStretchWidth(float minWidth) const {
@@ -81,12 +81,12 @@ void FilterBar::Label(const char* text, const FilterBarLabelOptions& options) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->AddText(ImVec2(textX, textY), color, text);
 
-    // Dummy резервирует место под текст с высотой m.height для идеального ряда
+    // Dummy reserves space for text with m.height for seamless alignment in a row
     ImGui::Dummy(ImVec2(textSize.x, m.height));
 
     theme.PopFont();
 
-    // Автоматический переход к связанному контролу с зазором labelSpacing
+    // Automatic advance to the associated control with labelSpacing gap
     ImGui::SameLine(0.0f, theme.Scale(theme.filterBar.labelSpacing));
 }
 

@@ -10,38 +10,38 @@
 
 namespace OmniKit {
 
-// Параметры поля ввода (designated initializers):
+// Input field parameters (designated initializers):
 //
 //     InputField(rate, {.label = "Rate", .unit = "MB/s"});
 //     InputField(name, {.label = "Name", .hint = "Enter a name"});
 //
-// Идентичность выводится из key, иначе из места вызова (loc) и подписи.
+// Identity is derived from key, otherwise from call site (loc) and label.
 struct InputFieldOptions {
-    const char* label   = nullptr;              // подпись над полем
-    const char* unit    = nullptr;              // единица измерения внутри поля справа
-    const char* format  = "%.2f";               // printf-формат для float/double
-    const char* hint    = " — ";                // подсказка пустого поля (текст, optional)
-    UiVariant   variant = UiVariant::Default;   // цвет рамки (например, Warning для изменённого значения)
-    UiSize      size    = UiSize::Medium;       // высота поля
-    float       width   = 0.0f;                 // базовые px (до масштаба); 0 — ширина по умолчанию; Fill — на всю ширину
-    UiKey       key     = {};                   // явная идентичность
-    ImVec2      sizePx  = {};                   // для контейнеров с посчитанной геометрией: итоговые px, перекрывают width и size
-    const TextSuggest* suggest = nullptr;       // подсказки под полем (только для std::string); список строит вызывающий
+    const char* label   = nullptr;              // label above the field
+    const char* unit    = nullptr;              // measurement unit inside the field on the right
+    const char* format  = "%.2f";               // printf format for float/double
+    const char* hint    = " — ";                // placeholder text for empty field (optional)
+    UiVariant   variant = UiVariant::Default;   // border color (e.g. Warning for modified value)
+    UiSize      size    = UiSize::Medium;       // field height
+    float       width   = 0.0f;                 // base px (pre-scale); 0 — default width; Fill — full width
+    UiKey       key     = {};                   // explicit identity
+    ImVec2      sizePx  = {};                   // for containers with computed geometry: final px, overrides width and size
+    const TextSuggest* suggest = nullptr;       // suggestions below the field (std::string only); list is built by caller
 };
 
-// Все перегрузки возвращают true в кадре изменения значения.
-// Число с плавающей точкой и встроенной единицей измерения
+// All overloads return true in the frame when the value changes.
+// Floating-point number with embedded measurement unit
 bool InputField(float& value, const InputFieldOptions& options = {},
                 std::source_location loc = std::source_location::current());
 bool InputField(double& value, const InputFieldOptions& options = {},
                 std::source_location loc = std::source_location::current());
-// Целое число
+// Integer number
 bool InputField(int& value, const InputFieldOptions& options = {},
                 std::source_location loc = std::source_location::current());
-// Текстовое поле с placeholder (options.hint)
+// Text field with placeholder (options.hint)
 bool InputField(std::string& value, const InputFieldOptions& options = {},
                 std::source_location loc = std::source_location::current());
-// Опциональные числа (nullopt показывается как options.hint)
+// Optional numbers (nullopt is displayed as options.hint)
 bool InputField(std::optional<float>& value, const InputFieldOptions& options = {},
                 std::source_location loc = std::source_location::current());
 bool InputField(std::optional<double>& value, const InputFieldOptions& options = {},

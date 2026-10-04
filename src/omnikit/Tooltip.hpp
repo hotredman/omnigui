@@ -6,8 +6,8 @@
 namespace OmniKit {
 
 // ============================================================================
-// Подсказка у последнего нарисованного элемента. Показывается и у выключенного (кнопка
-// с причиной недоступности). nullptr и пустой текст — подсказки нет.
+// Tooltip for the last rendered item. Displayed also for disabled items (button
+// showing reason for unavailability). nullptr and empty text — no tooltip.
 // ============================================================================
 namespace Tooltip {
 
@@ -18,8 +18,8 @@ inline void OnLastItem(const char* text) {
 
 }  // namespace Tooltip
 
-// Развёрнутая подсказка для последнего элемента (RAII-область): содержимое —
-// любые компоненты. Для простого текста используйте Tooltip::OnLastItem.
+// Detailed tooltip for the last item (RAII scope): contents can be
+// any components. For plain text use Tooltip::OnLastItem.
 //
 //     Button({.label = "Run"});
 //     if (ItemTooltip tip; tip) {

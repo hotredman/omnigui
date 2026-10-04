@@ -6,19 +6,19 @@
 
 namespace OmniKit {
 
-// Параметры карусели (designated initializers):
+// Carousel options (designated initializers):
 //
 //     if (Carousel carousel({.widthPx = zone.Width(), .heightPx = zone.Height()}); carousel) { ... }
 struct CarouselOptions {
-    float widthPx  = 0.0f;                  // итоговая ширина, px; 0 — всё свободное место
-    float heightPx = 0.0f;                  // итоговая высота, px; 0 — высота индикатора темы
-    const char* key = nullptr;              // идентичность (нужна, если каруселей несколько в одной области); nullptr — "##carousel"
-    const CarouselStyle* style = nullptr;   // оверрайд стиля; nullptr — из темы
+    float widthPx  = 0.0f;                  // resolved width, px; 0 — fill available space
+    float heightPx = 0.0f;                  // resolved height, px; 0 — indicator height from theme
+    const char* key = nullptr;              // identity (needed if multiple carousels share an area); nullptr — "##carousel"
+    const CarouselStyle* style = nullptr;   // style override; nullptr — from theme
 };
 
 // ============================================================================
-// Горизонтальная лента с прокруткой и стрелками (RAII-область): конструктор
-// открывает ленту, деструктор закрывает и дорисовывает правую стрелку.
+// Horizontal scroll ribbon with navigation arrows (RAII scope): constructor
+// opens the ribbon, destructor closes it and renders the right arrow.
 // ============================================================================
 class Carousel : public Scope {
 public:

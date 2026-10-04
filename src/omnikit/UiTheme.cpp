@@ -12,7 +12,7 @@ UiTheme& UiTheme::Get() {
 }
 
 UiTheme::UiTheme() {
-    scale = 1.0f;   // масштаб задаёт приложение (SetScale), библиотека ОС не опрашивает
+    scale = 1.0f;   // scale is set by the application (SetScale); the library does not query the OS
     ApplyPalette();
 }
 
@@ -26,11 +26,11 @@ void UiTheme::SetMode(ThemeMode m) {
 }
 
 // ============================================================================
-// Стили компонентов из семантики палитры
+// Component styles derived from palette semantics
 // ============================================================================
 void UiTheme::ApplyPalette() {
     const ThemePalette& p = palette;
-    constexpr ImU32 kNone = 0;  // Прозрачный: элемент без подложки / рамки
+    constexpr ImU32 kNone = 0;  // Transparent: element without background / border
 
     tab.colActiveBg     = p.accentBg;
     tab.colActiveText   = p.accent;
@@ -224,7 +224,7 @@ void UiTheme::ApplyPalette() {
     itemRow.colTextDescription = p.textSecondary;
     itemRow.colTextFormula     = p.accent;
 
-    // Бейдж: тинт-подложка, рамка и текст варианта
+    // Badge: tint background, border, and variant text
     auto badgeOf = [](const ThemePalette::Status& s) { return BadgeVariantColors{s.bg, s.border, s.text}; };
     badge.colors[static_cast<int>(UiVariant::Default)]   = {p.bgControl, p.borderSubtle, p.textPrimary};
     badge.colors[static_cast<int>(UiVariant::Primary)]   = badgeOf(p.primary);
@@ -234,8 +234,8 @@ void UiTheme::ApplyPalette() {
     badge.colors[static_cast<int>(UiVariant::Danger)]    = badgeOf(p.danger);
     badge.colors[static_cast<int>(UiVariant::Info)]      = badgeOf(p.info);
 
-    // Семантические варианты: текст варианта на поверхности, текст на
-    // заливке, рамка валидации, заливка кнопки (покой / наведение / нажатие)
+    // Semantic variants: variant text on surface, text on
+    // solid fill, validation border, button fill (rest / hover / active)
     auto neutral = [&p](ImU32 text) {
         return SemanticStyle{text, p.textPrimary, p.border, ImColor(p.bgControl).Value,
                              ImColor(p.bgControlHover).Value, ImColor(p.bgControlActive).Value};
@@ -259,8 +259,8 @@ void UiTheme::LoadFonts() {
     auto loadTypeface = [&](const std::string& assetRelPath) -> ImFont* {
         std::string fullPath = Assets::Resolve(assetRelPath);
         ImFont* font = nullptr;
-        // В Dear ImGui 1.92+ номинальный размер 16px задает font->LegacySize.
-        // Глифы динамически растрируются FreeType по требованию под любой размер из PushFont(font, size).
+        // In Dear ImGui 1.92+, the nominal 16px size defines font->LegacySize.
+        // Glyphs are dynamically rasterized by FreeType on demand for any size via PushFont(font, size).
         if (!fullPath.empty()) {
             font = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), 16.0f);
         }
@@ -275,14 +275,14 @@ void UiTheme::LoadFonts() {
     if (!fontMedium)  fontMedium  = fontRegular;
     if (!fontBold)    fontBold    = fontMedium;
 
-    // Алиасы для обратной совместимости
+    // Aliases for backward compatibility
     defaultFont      = fontRegular;
     smallFont        = fontRegular;
     buttonFont       = fontMedium;
     projectTitleFont = fontBold;
     displayBigFont   = fontBold;
 
-    // Привязываем шрифты к дескрипторам компонентов
+    // Bind fonts to component descriptors
     tab.font            = fontMedium;
     sidebar.font        = fontMedium;
     sidebar.activeFont  = fontMedium;
@@ -317,7 +317,7 @@ void UiTheme::LoadFonts() {
     itemRow.formulaFont     = fontMedium;
     tag.font                = fontMedium;
 
-    // Устанавливаем базовый шрифт по умолчанию для всего ImGui
+    // Set the default base font for all of ImGui
     io.FontDefault = fontRegular;
 }
 
@@ -334,7 +334,7 @@ void UiTheme::ApplyToImGui() {
     style.FontScaleMain = 1.0f;
     style.FontScaleDpi  = 1.0f;
 
-    // Скругления
+    // Corner rounding
     style.WindowRounding    = 0.0f;
     style.ChildRounding     = Scale(card.cornerRadius);
     style.FrameRounding     = Scale(input.frameRounding);
@@ -343,18 +343,18 @@ void UiTheme::ApplyToImGui() {
     style.GrabRounding      = Scale(scrollbar.cornerRadius);
     style.TabRounding       = CornerRadius();
 
-    // Размеры скроллбара
+    // Scrollbar dimensions
     style.ScrollbarSize     = Scale(scrollbar.size);
     style.GrabMinSize       = Scale(scrollbar.minGrabSize);
 
-    // Толщина рамок
+    // Border thickness
     style.WindowBorderSize  = 0.0f;
     style.ChildBorderSize   = 0.0f;
     style.FrameBorderSize   = input.borderSize;
     style.PopupBorderSize   = 1.0f;
     style.TabBorderSize     = 0.0f;
 
-    // Внутренние и внешние отступы
+    // Internal and external padding / spacing
     style.WindowPadding     = ImVec2(SpacingMedium(), SpacingMedium());
     style.ItemSpacing       = ImVec2(SpacingMedium(), SpacingMedium());
     style.ItemInnerSpacing  = ImVec2(SpacingSmall(), SpacingSmall());
@@ -366,63 +366,63 @@ void UiTheme::ApplyToImGui() {
     auto set = [&style](ImGuiCol idx, ImU32 color) { style.Colors[idx] = ImColor(color).Value; };
 
     set(ImGuiCol_WindowBg, p.bgApp);
-    // Дочернее окно — область, а не поверхность: фон рисует только тот
-    // компонент, которому он нужен (Card, List, SidePanel...), явно
+    // Child window is an area, not a surface: background is drawn explicitly
+    // only by components that need it (Card, List, SidePanel...)
     set(ImGuiCol_ChildBg, 0);
     set(ImGuiCol_PopupBg, p.bgPopup);
     set(ImGuiCol_Border, p.border);
     set(ImGuiCol_BorderShadow, 0);
 
-    // Модальные окна и затемнение под ними
+    // Modal windows and dimming backdrop
     set(ImGuiCol_ModalWindowDimBg, p.overlay);
     set(ImGuiCol_TitleBg, p.bgChrome);
     set(ImGuiCol_TitleBgActive, p.bgChrome);
     set(ImGuiCol_TitleBgCollapsed, p.bgChrome);
 
-    // Скроллбар
+    // Scrollbar
     set(ImGuiCol_ScrollbarBg, scrollbar.colBg);
     set(ImGuiCol_ScrollbarGrab, scrollbar.colGrab);
     set(ImGuiCol_ScrollbarGrabHovered, scrollbar.colGrabHovered);
     set(ImGuiCol_ScrollbarGrabActive, scrollbar.colGrabActive);
 
-    // Поля ввода (Frames)
+    // Input fields (Frames)
     set(ImGuiCol_FrameBg, p.bgInset);
     set(ImGuiCol_FrameBgHovered, p.bgInset);
     set(ImGuiCol_FrameBgActive, p.bgInset);
     set(ImGuiCol_TextSelectedBg, p.accentBorder);
 
-    // Чекбоксы, слайдеры
+    // Checkboxes, sliders
     set(ImGuiCol_CheckMark, p.accent);
     set(ImGuiCol_SliderGrab, p.primary.solid);
     set(ImGuiCol_SliderGrabActive, p.primary.solidHover);
 
-    // Кнопки ImGui по умолчанию — нейтральный контрол
+    // Default ImGui buttons — neutral control
     set(ImGuiCol_Button, p.bgControl);
     set(ImGuiCol_ButtonHovered, p.bgControlHover);
     set(ImGuiCol_ButtonActive, p.bgControlActive);
 
-    // Списки, меню, выделение строк
+    // Lists, menus, row selection
     set(ImGuiCol_Header, p.accentBg);
     set(ImGuiCol_HeaderHovered, p.fillHover);
     set(ImGuiCol_HeaderActive, p.accentBg);
 
-    // Текст
+    // Text
     set(ImGuiCol_Text, p.textPrimary);
     set(ImGuiCol_TextDisabled, p.textMuted);
 
-    // Разделители
+    // Separators
     set(ImGuiCol_Separator, p.divider);
     set(ImGuiCol_SeparatorHovered, p.borderStrong);
     set(ImGuiCol_SeparatorActive, p.accent);
 
-    // Таблицы
+    // Tables
     set(ImGuiCol_TableHeaderBg, table.colHeaderBg);
     set(ImGuiCol_TableRowBg, table.colRowBg);
     set(ImGuiCol_TableRowBgAlt, table.colRowBgAlt);
     set(ImGuiCol_TableBorderStrong, table.colBorderOuter);
     set(ImGuiCol_TableBorderLight, table.colBorderInner);
 
-    // Вкладки (Tabs)
+    // Tabs
     set(ImGuiCol_Tab, p.bgControl);
     set(ImGuiCol_TabHovered, p.fillHover);
     set(ImGuiCol_TabSelected, p.accentBg);
@@ -431,7 +431,7 @@ void UiTheme::ApplyToImGui() {
     set(ImGuiCol_TabDimmedSelected, p.accentBg);
     set(ImGuiCol_TabDimmedSelectedOverline, p.accent);
 
-    // Навигация и ресайз (контур фокуса скрыт — без паразитного двойного контура)
+    // Navigation and resize (focus outline hidden — avoids extraneous double outlines)
     set(ImGuiCol_NavCursor, 0);
     set(ImGuiCol_ResizeGrip, 0);
     set(ImGuiCol_ResizeGripHovered, p.borderStrong);

@@ -5,15 +5,15 @@
 
 namespace OmniKit {
 
-// Область идентичности виджетов (обёртка над стеком ImGui ID). Нужна, когда
-// одинаковые виджеты повторяются — в цикле, в строках таблицы, в списке:
+// Widget identity scope (wrapper around the ImGui ID stack). Needed when
+// identical widgets repeat — in a loop, in table rows, in a list:
 //
 //     for (auto& run : runs) {
 //         if (IdScope id(run.id.c_str())) { Button("Delete"); }
 //     }
 //
-// Конструктор кладёт идентификатор в стек, деструктор снимает. Область всегда
-// «открыта» (operator bool == true), чтобы её можно было писать в if-инициализаторе.
+// The constructor pushes an identifier onto the stack, the destructor pops it. The scope is always
+// "open" (operator bool == true) so that it can be used in an if-initializer.
 class IdScope : public Scope {
 public:
     explicit IdScope(const char* key) { ImGui::PushID(key); m_open = true; }

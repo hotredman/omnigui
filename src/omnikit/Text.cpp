@@ -41,7 +41,7 @@ void Text(const char* text, const TextOptions& o) {
     const UiTheme& theme = UiTheme::Get();
     const SemanticStyle& style = theme.GetVariantStyle(o.variant);
 
-    // Многострочный текст: фиксированный кегль 16pt, переносится по границе контейнера
+    // Multiline text: fixed 16pt font size, wrapped at container boundary
     if (o.wrap) {
         theme.PushFont(theme.fontRegular, 16.0f);
         ImGui::PushStyleColor(ImGuiCol_Text, style.colText);

@@ -23,7 +23,7 @@ List::List(const ListOptions& options) {
 }
 
 List::~List() {
-    // EndChild обязателен независимо от результата BeginChild
+    // EndChild is required regardless of BeginChild result
     ImGui::EndChild();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
@@ -47,12 +47,12 @@ bool List::Header(const char* title, const ListHeaderOptions& options) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     float padX = theme.Scale(st.paddingX);
 
-    // Рисуем заголовок
+    // Draw header
     dl->AddText(ImVec2(pos.x + padX, pos.y + theme.Scale(4.0f)), st.colHeader, title);
 
     float rightPos = pos.x + availW - padX;
 
-    // Опциональная кнопка действия справа (например, "+")
+    // Optional action button on the right (e.g. "+")
     if (actionIcon && actionIcon[0] != '\0') {
         float btnSize = theme.Scale(22.0f);
         rightPos -= btnSize;
@@ -64,7 +64,7 @@ bool List::Header(const char* title, const ListHeaderOptions& options) {
         ImGui::PopID();
     }
 
-    // Опциональный бейдж с количеством (например, "3")
+    // Optional badge with count (e.g. "3")
     if (badgeText && badgeText[0] != '\0') {
         ImVec2 badgeSz = ImGui::CalcTextSize(badgeText);
         float badgeW = badgeSz.x + theme.Scale(10.0f);
@@ -147,7 +147,7 @@ bool List::Item(const ListItemOptions& options)
                          : theme.Scale(st.itemFontSize);
     float line1Y = pos.y + (itemH - textH) * 0.5f;
 
-    // Заголовок строки
+    // Row label
     ImFont* font = st.itemFont ? st.itemFont : theme.fontMedium;
     theme.PushFont(font, st.itemFontSize);
     ImU32 textCol = isSelected ? st.colTextSelected : (isHovered ? st.colText : st.colText);
@@ -157,7 +157,7 @@ bool List::Item(const ListItemOptions& options)
     dl->PopClipRect();
     theme.PopFont();
 
-    // Подзаголовок строки
+    // Row sublabel
     if (hasSub) {
         ImFont* subFont = st.subFont ? st.subFont : theme.fontRegular;
         theme.PushFont(subFont, st.subFontSize);
@@ -169,7 +169,7 @@ bool List::Item(const ListItemOptions& options)
         theme.PopFont();
     }
 
-    // Текст справа
+    // Right-aligned text
     if (rightText && rightText[0] != '\0') {
         ImFont* subFont = st.subFont ? st.subFont : theme.fontRegular;
         theme.PushFont(subFont, st.subFontSize);

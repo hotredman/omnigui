@@ -23,17 +23,17 @@ void RenderFieldLabel(const char* label, float width, const InputFieldStyle& sty
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
-    // Клипируем строго по ширине width, чтобы длинный лейбл никогда не вылезал на соседнее поле
+    // Clip strictly to width so that a long label never overlaps an adjacent field
     dl->PushClipRect(pos, ImVec2(pos.x + width, pos.y + lineHeight + 2.0f), true);
     dl->AddText(pos, ImGui::GetColorU32(style.colLabel), label);
     dl->PopClipRect();
 
-    // Гарантируем, что габарит лейбла в лейауте занимает строго ширину width
+    // Guarantee that the label layout footprint occupies exactly width
     ImGui::Dummy(ImVec2(width, lineHeight));
 
     theme.PopFont();
 
-    // Точная установка позиции курсора: поле ввода начнется ровно через labelSpacing пикселей
+    // Exact cursor position: input field starts exactly labelSpacing pixels below
     float spacing = theme.Scale(style.labelSpacing);
     ImGui::SetCursorScreenPos(ImVec2(pos.x, pos.y + lineHeight + spacing));
 }
@@ -59,15 +59,15 @@ void RenderUnitSuffix(const char* unit, const ImVec2& itemMin, const ImVec2& ite
     float bgMaxY = itemMax.y - style.borderSize;
     float rounding = std::max(0.0f, theme.Scale(style.frameRounding) - style.borderSize);
 
-    // Подложка под единицу измерения предотвращает наложение длинных чисел при горизонтальной прокрутке
+    // Background behind unit prevents overlapping long numbers during horizontal scrolling
     dl->AddRectFilled(ImVec2(bgMinX, bgMinY), ImVec2(bgMaxX, bgMaxY), ImGui::GetColorU32(style.colBg), rounding, ImDrawFlags_RoundCornersRight);
     dl->AddText(unitPos, ImGui::GetColorU32(style.colUnit), unit);
 
     theme.PopFont();
 }
 
-// Общий каркас поля: подпись, стили рамки/шрифта, единица измерения.
-// draw рисует сам ImGui-виджет с идентификатором "##v" и возвращает true при изменении.
+// Common field framework: label, frame/font styles, measurement unit.
+// draw renders the ImGui widget itself with identifier "##v" and returns true on change.
 template <typename DrawFn>
 bool RunField(const InputFieldOptions& o, float defaultWidthBase, DrawFn&& draw, std::source_location loc)
 {
@@ -80,7 +80,7 @@ bool RunField(const InputFieldOptions& o, float defaultWidthBase, DrawFn&& draw,
     else if (o.width > 0.0f)                 w = theme.Scale(o.width);
     else                                     w = theme.Scale(defaultWidthBase);
 
-    // Идентичность: явный key, иначе loc + label
+    // Identity: explicit key, otherwise loc + label
     AutoIdScope idScope(o.key, o.label, loc);
     ImGui::BeginGroup();
 
@@ -116,7 +116,7 @@ bool RunField(const InputFieldOptions& o, float defaultWidthBase, DrawFn&& draw,
     return changed;
 }
 
-// Опциональное число: пустая строка -> nullopt, иначе разбор strtof/strtod
+// Optional number: empty string -> nullopt, otherwise parse with strtof/strtod
 template <typename T, typename ParseFn>
 bool OptionalNumber(std::optional<T>& value, const InputFieldOptions& o, ParseFn parse, std::source_location loc)
 {
@@ -167,7 +167,7 @@ bool InputField(std::string& value, const InputFieldOptions& o, std::source_loca
     return RunField(o, 200.0f, [&] {
         bool changed = ImGui::InputTextWithHint("##v", o.hint ? o.hint : "", &value);
         if (o.suggest) {
-            // Состояние снимается сразу после поля, до любого другого элемента
+            // State is sampled immediately after the field, before any other element
             const TextSuggestFieldState state{ImGui::IsItemActive(), ImGui::IsItemActivated(),
                                               ImGui::IsItemDeactivated(), changed};
             if (DrawTextSuggest(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), o.size, state, *o.suggest, value))

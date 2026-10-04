@@ -8,17 +8,17 @@
 namespace OmniKit {
 
 enum class LineStyle {
-    Solid,  // Сплошная линия
-    Dashed, // Штриховая линия
-    Dotted  // Пунктирная линия
+    Solid,  // Solid line
+    Dashed, // Dashed line
+    Dotted  // Dotted line
 };
 
 enum class MarkerShape {
-    Diamond,  // ◆ Ромб
-    Circle,   // ● Круг
-    Square,   // ■ Квадрат
-    Triangle, // ▲ Треугольник
-    Cross     // ✖ Крестик
+    Diamond,  // ◆ Diamond
+    Circle,   // ● Circle
+    Square,   // ■ Square
+    Triangle, // ▲ Triangle
+    Cross     // ✖ Cross
 };
 
 struct ChartPoint {
@@ -48,16 +48,16 @@ struct ChartPad {
 };
 
 struct ChartOptions {
-    bool majorGrid   = true; // Основная сетка по крупным делениям осей
-    bool minorGrid   = true; // Вспомогательная подсетка (x5)
-    bool crosshair   = true; // Перекрестие зонда при наведении курсора
-    bool stickyZero  = true; // Умный зум с фиксацией X=0 в упругой зоне
-    bool panEnabled  = true; // Разрешено ли панорамирование зажатием ЛКМ
-    bool zoomEnabled = true; // Разрешен ли зум колесом мыши
+    bool majorGrid   = true; // Major grid along major axis divisions
+    bool minorGrid   = true; // Minor sub-grid (5x)
+    bool crosshair   = true; // Probe crosshair on cursor hover
+    bool stickyZero  = true; // Smart zoom snapping X=0 in elastic region
+    bool panEnabled  = true; // Whether panning via LMB drag is enabled
+    bool zoomEnabled = true; // Whether mouse wheel zooming is enabled
 };
 
 // ============================================================================
-// Серия данных (кривая)
+// Data series (curve)
 // ============================================================================
 struct ChartSeries {
     std::string id;
@@ -65,13 +65,13 @@ struct ChartSeries {
     std::string sublabel;
     std::vector<ChartPoint> points;
 
-    ImU32 color = 0;  // 0 — кривая темы (ChartStyle::colLine)
+    ImU32 color = 0;  // 0 — theme curve (ChartStyle::colLine)
     float thickness = 2.0f;
     LineStyle style = LineStyle::Solid;
 };
 
 // ============================================================================
-// Вспомогательная линия (хорда упругости, параллель, порог)
+// Auxiliary line (elastic chord, parallel, threshold)
 // ============================================================================
 struct ChartLine {
     std::string id;
@@ -82,15 +82,15 @@ struct ChartLine {
     double x2 = 0.0;
     double y2 = 0.0;
 
-    ImU32 color = 0;  // 0 — кривая темы (ChartStyle::colLine)
+    ImU32 color = 0;  // 0 — theme curve (ChartStyle::colLine)
     float thickness = 1.5f;
     LineStyle style = LineStyle::Dashed;
     bool infinite = false;
-    float labelPosition = 0.5f; // 0.0 .. 1.0 вдоль отрезка
+    float labelPosition = 0.5f; // 0.0 .. 1.0 along line segment
 };
 
 // ============================================================================
-// Маркер характерной точки (пик, предел текучести, точка разрыва)
+// Key point marker (peak, yield point, rupture point)
 // ============================================================================
 struct ChartMarker {
     std::string id;
@@ -99,15 +99,15 @@ struct ChartMarker {
     double x = 0.0;
     double y = 0.0;
 
-    ImU32 color = 0;  // 0 — кривая темы (ChartStyle::colLine)
+    ImU32 color = 0;  // 0 — theme curve (ChartStyle::colLine)
     float size = 6.0f;
     MarkerShape shape = MarkerShape::Diamond;
-    bool projectX = true; // Пунктирная проекция на ось X (вниз)
-    bool projectY = true; // Пунктирная проекция на ось Y (влево)
+    bool projectX = true; // Dashed projection to X axis (downwards)
+    bool projectY = true; // Dashed projection to Y axis (leftwards)
 };
 
 // ============================================================================
-// Событие наведения курсора (зонд)
+// Cursor hover event (probe)
 // ============================================================================
 struct ChartHoverInfo {
     bool hasHover = false;
