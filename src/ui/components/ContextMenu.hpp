@@ -6,24 +6,23 @@
 #include <string>
 #include <imgui.h>
 
-// Параметры контекстного меню (designated initializers):
+// Context menu options (designated initializers):
 //
 //     if (ContextMenu menu(open, {.pos = ImVec2(x, y)}); menu) { ... }
 struct ContextMenuOptions {
-    std::optional<ImVec2> pos;                  // экранная позиция; по умолчанию — у курсора мыши
-    const ContextMenuStyle* style = nullptr;    // оверрайд стиля; nullptr — из темы
+    std::optional<ImVec2> pos;                  // Screen position; defaults to mouse cursor
+    const ContextMenuStyle* style = nullptr;    // Style override; nullptr = from active UiTheme
 };
 
-// Параметры пункта меню
+// Context menu item options
 struct MenuItemOptions {
-    bool selected = false;    // отмечен галочкой
+    bool selected = false;    // Marked with checkmark
     bool disabled = false;
 };
 
 // ============================================================================
-// Контекстное меню (RAII-область). Состояние «открыто» хранит приложение (bool):
-// выставьте его в true, чтобы показать меню; меню само сбросит флаг при выборе
-// пункта и при закрытии кликом снаружи. Идентичность меню — адрес этого флага.
+// ContextMenu (RAII Scope).
+// Mode 1: Controlled by a boolean flag (e.g. triggered by a tool button):
 //
 //     static bool s_menuOpen = false;
 //     if (ToolButton({.icon = Icon::List})) s_menuOpen = true;
@@ -32,11 +31,18 @@ struct MenuItemOptions {
 //         if (menu.Item("100%", {.selected = true})) { ... }
 //     }
 //
-// Второй режим — контекстное меню последнего элемента (правый клик), флаг не нужен:
+// Mode 2: Triggered by right-clicking the previous ImGui item:
 //
 //     s_sidebarMenu.Item(...);
 //     if (ContextMenu menu(ContextMenu::OnLastItem); menu) {
 //         if (menu.Item("Delete")) { ... }
+//     }
+//
+// Mode 3: Attached to an ImGui popup ID (e.g. opened via ImGui::OpenPopup):
+//
+//     if (ContextMenu menu("##my_ctx_popup"); menu) {
+//         menu.Header("ACTIONS");
+//         if (menu.Item("Reset")) { ... }
 //     }
 // ============================================================================
 class ContextMenu : public Scope {
@@ -46,18 +52,21 @@ public:
 
     explicit ContextMenu(bool& isOpen, const ContextMenuOptions& options = {});
     explicit ContextMenu(LastItemTag, const ContextMenuOptions& options = {});
+    explicit ContextMenu(const char* popupId, const ContextMenuOptions& options = {});
     ~ContextMenu();
 
-    // Компоненты меню
-    void Header(const std::string& text);
-    bool Item(const std::string& label, const MenuItemOptions& options = {});
+    // Menu components
+    void Header(const char* text);
+    void Header(const std::string& text) { Header(text.c_str()); }
+    bool Item(const char* label, const MenuItemOptions& options = {});
+    bool Item(const std::string& label, const MenuItemOptions& options = {}) { return Item(label.c_str(), options); }
     void Separator();
 
 private:
     void PushStyle();
     void PopStyle();
 
-    bool* m_openRef = nullptr;    // nullptr в режиме OnLastItem
+    bool* m_openRef = nullptr;    // nullptr in OnLastItem and popupId modes
     bool m_idPushed = false;
     ContextMenuStyle m_style;
     int m_itemCounter = 0;

@@ -529,6 +529,37 @@ static void DrawBuiltinVector(Icon::Id id, ImDrawList* dl, ImVec2 center, float 
             break;
         }
 
+        case Icon::Minus: {
+            // Minus: centered horizontal stroke with rounded caps
+            float arm = 4.6f * s;
+            float lineStroke = stroke * 1.35f;
+            ImVec2 l(cx - arm, cy), r(cx + arm, cy);
+            dl->AddLine(l, r, color, lineStroke);
+            float capR = lineStroke * 0.5f;
+            dl->AddCircleFilled(l, capR, color);
+            dl->AddCircleFilled(r, capR, color);
+            break;
+        }
+
+        case Icon::Image: {
+            // Image / photo frame: outer rounded rectangle with inner mountains and sun
+            ImVec2 pMin(cx - 5.5f * s, cy - 4.5f * s);
+            ImVec2 pMax(cx + 5.5f * s, cy + 4.5f * s);
+            dl->AddRect(pMin, pMax, color, 1.2f * s, 0, stroke);
+            // Sun (small filled circle)
+            dl->AddCircleFilled(ImVec2(cx + 2.2f * s, cy - 1.8f * s), 1.1f * s, color);
+            // Mountains (polyline)
+            ImVec2 pts[5] = {
+                ImVec2(cx - 4.0f * s, cy + 3.2f * s),
+                ImVec2(cx - 1.2f * s, cy - 0.2f * s),
+                ImVec2(cx + 0.8f * s, cy + 1.8f * s),
+                ImVec2(cx + 2.6f * s, cy + 0.4f * s),
+                ImVec2(cx + 4.0f * s, cy + 2.2f * s)
+            };
+            dl->AddPolyline(pts, 5, color, 0, stroke);
+            break;
+        }
+
         case Icon::Close: {
             // Крестик закрытия / очистки / сброса: центрированное диагональное перекрестие (X)
             float arm = 3.8f * s;

@@ -278,23 +278,28 @@ int main() {
             viewer.SetFlipHorizontal(false);
 
             Frame([&] {
+                OmniKit::ImageViewerToolbar(viewer);
                 viewer.Render(600.0f, 400.0f);
-                if (Card card({.title = "HistCard"}); card) {
-                    OmniKit::WindowLevelParams outP;
-                    if (auto col = card.Col(Col::Full())) {
-                        viewer.GetHistogram().Render(viewer.GetParams(), outP, col.Width(), 70.0f);
-                    }
-                    float histBottom = ImGui::GetItemRectMax().y;
-                    card.Button({.label = "Auto Win", .col = Col::Full()});
-                    float btnTop = ImGui::GetItemRectMin().y;
-                    CHECK(btnTop >= histBottom);
-                }
+                OmniKit::ImageViewerContextMenu(viewer);
+                OmniKit::ImageViewerHistogramCard(viewer);
+            });
+
+            // Verify ContextMenu via bool flag & extraItems
+            bool menuOpen = true;
+            Frame([&] {
+                OmniKit::ImageViewerContextMenu(viewer, menuOpen, [&](OmniKit::ContextMenu& m) {
+                    m.Header("CUSTOM");
+                    m.Item("Extra Action");
+                });
             });
 
             // Verify clean render in Light mode as well
             UiTheme::Get().SetMode(ThemeMode::Light);
             Frame([&] {
+                OmniKit::ImageViewerToolbar(viewer);
                 viewer.Render(600.0f, 400.0f);
+                OmniKit::ImageViewerContextMenu(viewer);
+                OmniKit::ImageViewerHistogramCard(viewer);
             });
             UiTheme::Get().SetMode(ThemeMode::Dark);
         }

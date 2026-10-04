@@ -85,3 +85,4 @@
 #include "ui/components/image/ImageHistogram.hpp"
 #include "ui/components/image/ImageTestPattern.hpp"
 #include "ui/components/image/ImageViewer.hpp"
+#include "ui/components/ImageViewerControls.hpp"

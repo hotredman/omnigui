@@ -427,20 +427,6 @@ void ImageViewer::Render(float width, float height, const ImageViewerStyle* styl
     if (hovered && !m_profileTool && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
         ImGui::OpenPopup("##image_viewer_ctx");
     }
-    if (ImGui::BeginPopup("##image_viewer_ctx")) {
-        if (ImGui::MenuItem("Fit to View"))     FitToView();
-        if (ImGui::MenuItem("Reset Zoom 100%")) ResetZoom();
-        ImGui::Separator();
-        if (ImGui::MenuItem("Zoom 50%"))  SetZoom(0.5f);
-        if (ImGui::MenuItem("Zoom 200%")) SetZoom(2.0f);
-        if (ImGui::MenuItem("Zoom 400%")) SetZoom(4.0f);
-        ImGui::Separator();
-        if (ImGui::MenuItem("Rotate CW 90\xC2\xB0"))  RotateCW();
-        if (ImGui::MenuItem("Rotate CCW 90\xC2\xB0")) RotateCCW();
-        if (ImGui::MenuItem("Flip Horizontal"))      ToggleFlipHorizontal();
-        if (ImGui::MenuItem("Flip Vertical"))        ToggleFlipVertical();
-        ImGui::EndPopup();
-    }
 
     ImGui::EndChild();
 }

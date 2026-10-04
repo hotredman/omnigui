@@ -1,7 +1,7 @@
 #include "ui/components/ContextMenu.hpp"
 #include <algorithm>
 
-// Идентичность меню — адрес флага «открыто» (кладётся в стек ID на время жизни объекта)
+// Default popup identifier
 static constexpr const char* kPopupName = "##ctx_menu";
 
 ContextMenu::ContextMenu(bool& isOpen, const ContextMenuOptions& options)
@@ -11,7 +11,7 @@ ContextMenu::ContextMenu(bool& isOpen, const ContextMenuOptions& options)
     ImGui::PushID(&isOpen);
     m_idPushed = true;
 
-    // Флаг «попап уже запрашивался» отличает «только что открыли» от «закрыт кликом снаружи»
+    // Flag tracking whether popup has been requested distinguishes "just opened" from "closed by outside click"
     bool* requested = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("##ctx_requested"), false);
     if (!isOpen) {
         *requested = false;
@@ -19,7 +19,7 @@ ContextMenu::ContextMenu(bool& isOpen, const ContextMenuOptions& options)
     }
     if (!ImGui::IsPopupOpen(kPopupName)) {
         if (*requested) {
-            // ImGui закрыл попап сам (клик вне меню, Esc): сбрасываем флаг приложения
+            // ImGui closed the popup automatically (click outside, Esc): reset application flag
             isOpen = false;
             *requested = false;
             return;
@@ -42,9 +42,23 @@ ContextMenu::ContextMenu(bool& isOpen, const ContextMenuOptions& options)
 ContextMenu::ContextMenu(LastItemTag, const ContextMenuOptions& options)
     : m_style(options.style ? *options.style : UiTheme::Get().contextMenu)
 {
-    // Идентичность — последний элемент (правый клик по нему открывает меню)
+    // Identity is the last item (right-click on it opens the menu)
     PushStyle();
     m_open = ImGui::BeginPopupContextItem();
+    if (!m_open) {
+        PopStyle();
+    }
+}
+
+ContextMenu::ContextMenu(const char* popupId, const ContextMenuOptions& options)
+    : m_style(options.style ? *options.style : UiTheme::Get().contextMenu)
+{
+    if (options.pos) {
+        ImGui::SetNextWindowPos(*options.pos, ImGuiCond_Appearing);
+    }
+
+    PushStyle();
+    m_open = ImGui::BeginPopup(popupId ? popupId : kPopupName);
     if (!m_open) {
         PopStyle();
     }
@@ -76,8 +90,8 @@ void ContextMenu::PopStyle() {
     ImGui::PopStyleVar(4);
 }
 
-void ContextMenu::Header(const std::string& text) {
-    if (!m_open) return;
+void ContextMenu::Header(const char* text) {
+    if (!m_open || !text || text[0] == '\0') return;
 
     const UiTheme& theme = UiTheme::Get();
     ImFont* headerFont = m_style.headerFont ? m_style.headerFont : theme.smallFont;
@@ -85,16 +99,16 @@ void ContextMenu::Header(const std::string& text) {
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    dl->AddText(headerFont, fontSz, pos, m_style.colHeader, text.c_str());
+    dl->AddText(headerFont, fontSz, pos, m_style.colHeader, text);
 
     ImVec2 txtSz = headerFont ?
-        headerFont->CalcTextSizeA(fontSz, FLT_MAX, 0.0f, text.c_str()) :
-        ImGui::CalcTextSize(text.c_str());
+        headerFont->CalcTextSizeA(fontSz, FLT_MAX, 0.0f, text) :
+        ImGui::CalcTextSize(text);
     ImGui::Dummy(ImVec2(txtSz.x, txtSz.y + theme.Scale(6.0f)));
 }
 
-bool ContextMenu::Item(const std::string& label, const MenuItemOptions& options) {
-    if (!m_open) return false;
+bool ContextMenu::Item(const char* label, const MenuItemOptions& options) {
+    if (!m_open || !label) return false;
     const bool selected = options.selected;
     const bool enabled = !options.disabled;
 
@@ -106,12 +120,12 @@ bool ContextMenu::Item(const std::string& label, const MenuItemOptions& options)
     float checkW = theme.Scale(m_style.checkColWidth);
     float itemRounding = theme.Scale(m_style.itemRounding);
 
-    // Расчет размера текста под увеличенный шрифт пунктов
+    // Calculate text size for styled item font
     ImFont* itemFont = m_style.itemFont ? m_style.itemFont : theme.defaultFont;
     float fontSz = theme.Scale(m_style.itemFontSize);
     ImVec2 txtSz = itemFont ?
-        itemFont->CalcTextSizeA(fontSz, FLT_MAX, 0.0f, label.c_str()) :
-        ImGui::CalcTextSize(label.c_str());
+        itemFont->CalcTextSizeA(fontSz, FLT_MAX, 0.0f, label) :
+        ImGui::CalcTextSize(label);
 
     float minW = theme.Scale(m_style.minWidth);
     float totalW = std::max(minW, checkW + txtSz.x + theme.Scale(16.0f));
@@ -134,13 +148,13 @@ bool ContextMenu::Item(const std::string& label, const MenuItemOptions& options)
     bool active  = ImGui::IsItemActive();
     ImGui::PopID();
 
-    // 1. Мягкая скругленная подсветка пункта при наведении/нажатии
+    // 1. Smooth rounded item highlight on hover/active
     if (enabled && (hovered || active)) {
         ImU32 bgCol = active ? m_style.colActiveBg : m_style.colHoverBg;
         dl->AddRectFilled(itemPos, ImVec2(itemPos.x + itemSize.x, itemPos.y + itemSize.y), bgCol, itemRounding);
     }
 
-    // 2. Векторная галочка активного пункта
+    // 2. Vector checkmark for selected item
     if (selected) {
         ImVec2 checkCenter(itemPos.x + theme.Scale(12.0f), itemPos.y + itemHeight * 0.5f);
         float ckSize = theme.Scale(12.0f);
@@ -152,11 +166,11 @@ bool ContextMenu::Item(const std::string& label, const MenuItemOptions& options)
         dl->AddLine(p2, p3, ckCol, 2.2f);
     }
 
-    // 3. Текст пункта
+    // 3. Item text
     ImU32 textCol = !enabled ? theme.palette.textMuted :
                     selected ? m_style.colTextActive : m_style.colText;
     ImVec2 textPos(itemPos.x + checkW, itemPos.y + (itemHeight - fontSz) * 0.5f);
-    dl->AddText(itemFont, fontSz, textPos, textCol, label.c_str());
+    dl->AddText(itemFont, fontSz, textPos, textCol, label);
 
     return clicked;
 }

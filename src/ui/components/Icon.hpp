@@ -51,10 +51,12 @@ public:
         Moon,            // Серп луны (Тёмная тема)
         Zero,            // Мишень обнуления с точкой в центре (Тарирование)
         Check,           // Галочка выбора
-        Pencil,          // Карандаш / редактирование по месту
-        Plus,            // Плюс / Создать / Добавить
-        Close,           // Крестик закрытия / очистки / сброса (X)
-        Aa,              // Две буквы Aa (Масштаб интерфейса / Шрифты)
+        Pencil,          // Pencil / Edit in place
+        Plus,            // Plus / Create / Add / Zoom in
+        Minus,           // Minus / Remove / Zoom out
+        Close,           // Cross / Clear / Reset (X)
+        Aa,              // Dual letters Aa (Interface scale / Fonts)
+        Image,           // Image frame with landscape picture
 
         // Действия с данными и ПЛК (Machine Actions)
         Upload,          // Стрелка вверх («Записать» в ПЛК / Выгрузка)

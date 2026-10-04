@@ -248,7 +248,7 @@ void RenderSidebar() {
     if (auto sidebar = Sidebar({.posYPx = topPx})) {
         sidebar.Item({.label = "Test Run", .icon = Icon::Gamepad}, NavScreen::TestRun, s_screen);
         sidebar.Item({.label = "Calc Area", .icon = Icon::Clipboard}, NavScreen::CalcArea, s_screen);
-        sidebar.Item({.label = "Image", .icon = Icon::LineChart}, NavScreen::Image, s_screen);
+        sidebar.Item({.label = "Image", .icon = Icon::Image}, NavScreen::Image, s_screen);
 
         sidebar.Spacer();
         sidebar.Separator();

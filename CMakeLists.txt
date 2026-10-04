@@ -109,6 +109,7 @@ set(OMNIKIT_SOURCES
     src/ui/components/ToolButton.cpp
     src/ui/components/UiTheme.cpp
     src/ui/components/ValueDisplay.cpp
+    src/ui/components/ImageViewerControls.cpp
     src/ui/components/charts/AnalysisChart.cpp
     src/ui/components/charts/ChartCore.cpp
     src/ui/components/charts/Decimate.cpp

@@ -29,73 +29,26 @@ void RenderImageViewerPage() {
     SplitView split({.sideWidth = 340.0f, .key = "ImageViewerSplit"});
 
     if (auto main = split.Main({.cardBackground = true})) {
-        if (ToolButton({.icon = Icon::Target, .tooltip = "Fit to View", .key = "fit_btn"})) {
-            s_imageViewer.FitToView();
-        }
-        SameLine();
-        if (ToolButton({.icon = Icon::Maximize, .tooltip = "100% Zoom", .key = "zoom100_btn"})) {
-            s_imageViewer.ResetZoom();
-        }
-        SameLine();
-        if (ToolButton({.icon = Icon::Plus, .tooltip = "Zoom In (+)", .key = "zoomin_btn"})) {
-            s_imageViewer.SetZoom(s_imageViewer.GetZoom() * 1.25f);
-        }
-        SameLine();
-        if (ToolButton({.glyph = "-", .tooltip = "Zoom Out (-)", .key = "zoomout_btn"})) {
-            s_imageViewer.SetZoom(s_imageViewer.GetZoom() / 1.25f);
-        }
-        SameLine();
-        if (ToolButton({.icon = Icon::RefreshCw, .tooltip = "Rotate CW 90°", .key = "rotcw_btn"})) {
-            s_imageViewer.RotateCW();
-        }
-        SameLine();
-        if (ToolButton({.icon = Icon::ArrowLeft, .tooltip = "Flip Horizontal",
-                        .selected = s_imageViewer.GetFlipHorizontal(), .key = "fliph_btn"})) {
-            s_imageViewer.ToggleFlipHorizontal();
-        }
-        SameLine();
-        if (ToolButton({.icon = Icon::ArrowDown, .tooltip = "Flip Vertical",
-                        .selected = s_imageViewer.GetFlipVertical(), .key = "flipv_btn"})) {
-            s_imageViewer.ToggleFlipVertical();
-        }
-        SameLine();
-        if (ToolButton({.icon = Icon::LineChart, .tooltip = "Profile Slice Tool (Hold RMB on image)",
-                        .selected = s_imageViewer.IsProfileToolEnabled(), .key = "profile_btn"})) {
-            s_imageViewer.SetProfileTool(!s_imageViewer.IsProfileToolEnabled());
-        }
-        SameLine();
-        if (ToolButton({.icon = Icon::Refresh, .tooltip = "Reset to Default Test Pattern", .key = "reset_btn"})) {
-            auto img = OmniKit::GenerateTestPattern(1024, 768);
-            s_imageViewer.LoadImage16(img.data(), 1024, 768);
-        }
-
+        OmniKit::ImageViewerToolbar(s_imageViewer, {
+            .onReset = [&] {
+                auto img = OmniKit::GenerateTestPattern(1024, 768);
+                s_imageViewer.LoadImage16(img.data(), 1024, 768);
+            }
+        });
         s_imageViewer.Render();
+        OmniKit::ImageViewerContextMenu(s_imageViewer, "##image_viewer_ctx", [&](OmniKit::ContextMenu& menu) {
+            menu.Header("CONTRAST");
+            if (menu.Item("Auto Fit Contrast")) {
+                s_imageViewer.AutoFitWindow();
+            }
+        });
     }
 
     if (auto side = split.Side()) {
         auto& params = s_imageViewer.GetParamsMutable();
 
         // 1. Histogram & Auto-Fit Contrast Card
-        if (Card card(CardOptions{.title = "Histogram & Contrast", .key = "CardHist"}); card) {
-            OmniKit::WindowLevelParams newParams = params;
-            if (auto col = card.Col(Col::Full())) {
-                if (s_imageViewer.GetHistogram().Render(params, newParams, col.Width(), 85.0f)) {
-                    s_imageViewer.SetParams(newParams);
-                }
-            }
-
-            if (card.Button({.label = "Auto Window (Fit Contrast)", .variant = UiVariant::Primary, .col = Col::Full(), .key = "autowin_btn"})) {
-                s_imageViewer.AutoFitWindow();
-            }
-
-            if (card.Button({.label = "Reset Window (Full Range)", .variant = UiVariant::Default, .col = Col::Full(), .key = "resetwin_btn"})) {
-                float minV = s_imageViewer.GetHistogram().GetMinValue();
-                float maxV = s_imageViewer.GetHistogram().GetMaxValue();
-                params.window = (maxV > minV) ? (maxV - minV) : 65535.0f;
-                params.level = (minV + maxV) * 0.5f;
-                s_imageViewer.SetParams(params);
-            }
-        }
+        OmniKit::ImageViewerHistogramCard(s_imageViewer);
 
         // 2. Window / Level Controls Card
         if (Card card(CardOptions{.title = "Window & Level Controls", .key = "CardWL"}); card) {
@@ -147,8 +100,9 @@ void RenderImageViewerPage() {
                 card.Value("Hover over image", {.label = "Cursor", .col = Col::Full()});
             }
 
-            std::string dimStr = std::to_string(s_imageViewer.GetWidth()) + " × " + std::to_string(s_imageViewer.GetHeight()) + " px";
-            card.Value(dimStr.c_str(), {.label = "Image Dimensions", .unit = "16-bit HDR", .col = Col::Full()});
+            char dimBuf[64];
+            std::snprintf(dimBuf, sizeof(dimBuf), "%d \xC3\x97 %d px", s_imageViewer.GetWidth(), s_imageViewer.GetHeight());
+            card.Value(dimBuf, {.label = "Image Dimensions", .unit = "16-bit HDR", .col = Col::Full()});
 
             card.Value(static_cast<double>(s_imageViewer.GetZoom() * 100.0f), {.label = "Zoom Level", .unit = "%", .format = "%.0f", .col = Col::Half()});
 
