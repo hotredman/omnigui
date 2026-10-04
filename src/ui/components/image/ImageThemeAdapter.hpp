@@ -6,9 +6,9 @@
 namespace OmniKit {
 
 // ============================================================================
-// Адаптер дизайн-системы для подсистемы Image
-// Чистое связывание (Adapter Pattern): ни UiTheme, ни ImageViewer не знают
-// друг о друге, конвертация токенов происходит здесь.
+// Design system adapter for Image subsystem
+// Pure decoupling (Adapter Pattern): neither UiTheme nor ImageViewer know
+// about each other; token mapping occurs exclusively here.
 // ============================================================================
 inline ImageViewerStyle MakeImageViewerStyle(const UiTheme& theme) {
     const auto& p = theme.palette;

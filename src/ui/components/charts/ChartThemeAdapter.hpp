@@ -6,9 +6,9 @@
 namespace OmniKit {
 
 // ============================================================================
-// Адаптер дизайн-системы для подсистемы Charts
-// Чистое связывание (Adapter Pattern): ни UiTheme, ни графики не знают
-// друг о друге, конвертация токенов происходит здесь.
+// Design system adapter for Charts subsystem
+// Pure decoupling (Adapter Pattern): neither UiTheme nor Charts know
+// about each other; token mapping occurs exclusively here.
 // ============================================================================
 inline ChartStyle MakeChartStyle(const UiTheme& theme) {
     const auto& p = theme.palette;

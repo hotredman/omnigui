@@ -5,21 +5,21 @@
 namespace OmniKit {
 
 // ============================================================================
-// Дескриптор стиля 16-битного просмотрщика изображений (ImageViewerStyle)
-// Полностью автономен от UiTheme, зависит только от Dear ImGui и C++20.
+// Style descriptor for 16-bit Image Viewer (ImageViewerStyle)
+// Fully autonomous from UiTheme, depends only on Dear ImGui and C++20.
 // ============================================================================
 struct ImageViewerStyle {
-    ImU32 colBg                 = IM_COL32(15, 23, 42, 255);   // Фон холста (Slate900 / Slate100)
-    ImU32 colBorder             = IM_COL32(51, 65, 85, 255);   // Рамка холста
-    ImU32 colImageBorder        = IM_COL32(100, 116, 139, 76); // Тонкий контур вокруг кадра
-    ImU32 colSliceLine          = IM_COL32(239, 68, 68, 240);  // Линия инструмента среза (Red500)
-    ImU32 colSliceHandle        = IM_COL32(239, 68, 68, 255);  // Точки захвата среза
-    ImU32 colOverlayBg          = IM_COL32(30, 41, 59, 216);   // Полупрозрачный фон оверлеев
-    ImU32 colOverlayBorder      = IM_COL32(100, 116, 139, 76); // Рамка плашек оверлея
-    ImU32 colOverlayText        = IM_COL32(241, 245, 249, 255); // Основной текст оверлея (Slate100)
-    ImU32 colOverlaySecondary   = IM_COL32(148, 163, 184, 255); // Вторичный текст оверлея (Slate400)
-    ImU32 colProfileLine        = IM_COL32(56, 189, 248, 255);  // Линия графика среза (Sky400)
-    ImU32 colDivider            = IM_COL32(51, 65, 85, 255);   // Разделитель в оверлее графика
+    ImU32 colBg                 = IM_COL32(15, 23, 42, 255);   // Canvas background (Slate900 / Slate100)
+    ImU32 colBorder             = IM_COL32(51, 65, 85, 255);   // Canvas border
+    ImU32 colImageBorder        = IM_COL32(100, 116, 139, 76); // Subtle frame outline
+    ImU32 colSliceLine          = IM_COL32(239, 68, 68, 240);  // Slice tool line (Red500)
+    ImU32 colSliceHandle        = IM_COL32(239, 68, 68, 255);  // Slice handle points
+    ImU32 colOverlayBg          = IM_COL32(30, 41, 59, 216);   // Semi-transparent overlay background
+    ImU32 colOverlayBorder      = IM_COL32(100, 116, 139, 76); // Overlay border
+    ImU32 colOverlayText        = IM_COL32(241, 245, 249, 255); // Primary overlay text (Slate100)
+    ImU32 colOverlaySecondary   = IM_COL32(148, 163, 184, 255); // Secondary overlay text (Slate400)
+    ImU32 colProfileLine        = IM_COL32(56, 189, 248, 255);  // Slice profile line (Sky400)
+    ImU32 colDivider            = IM_COL32(51, 65, 85, 255);   // Profile overlay divider
     float cornerRadius          = 8.0f;
     float scale                 = 1.0f;
 
@@ -47,7 +47,7 @@ struct ImageViewerStyle {
 };
 
 // ============================================================================
-// Дескриптор стиля интерактивной гистограммы (ImageHistogramStyle)
+// Style descriptor for interactive histogram (ImageHistogramStyle)
 // ============================================================================
 struct ImageHistogramStyle {
     ImU32 colBg                 = IM_COL32(15, 23, 42, 255);   // Slate900

@@ -4,48 +4,48 @@
 #include <algorithm>
 
 // ============================================================================
-// Дескриптор стиля графиков (ChartStyle)
-// Полностью автономен от UiTheme, зависит только от Dear ImGui и C++20.
+// Style descriptor for charts (ChartStyle)
+// Fully autonomous from UiTheme, depends only on Dear ImGui and C++20.
 // ============================================================================
 struct ChartStyle {
-    // Цвета холста и рамки
+    // Canvas background and border colors
     ImU32 colBg             = IM_COL32(15, 23, 42, 255);   // Slate900
     ImU32 colBorder         = IM_COL32(51, 65, 85, 255);   // Slate700
     float cornerRadius      = 6.0f;
     float borderSize        = 1.0f;
 
-    // Кривая по умолчанию (серия / линия / маркер без своего цвета)
+    // Default curve (series / line / marker without custom color)
     ImU32 colLine           = IM_COL32(56, 189, 248, 255);  // Sky400
 
-    // Сетка
+    // Grid
     ImU32 colMajorGrid      = IM_COL32(51, 65, 85, 128);   // Slate700 subtle
     ImU32 colMinorGrid      = IM_COL32(30, 41, 59, 100);   // Slate800 subtle
     float majorGridWidth    = 1.0f;
     float minorGridWidth    = 1.0f;
 
-    // Оси и числовые метки
+    // Axes and tick labels
     ImU32 colAxis           = IM_COL32(71, 85, 105, 255);  // Slate600
     ImU32 colTickText       = IM_COL32(148, 163, 184, 255); // Slate400
     ImU32 colAxisTitle      = IM_COL32(203, 213, 225, 255); // Slate300
     float tickFontSize      = 18.0f;
     float axisTitleFontSize = 20.0f;
 
-    // Зонд / перекрестие
+    // Probe / Crosshair
     ImU32 colCrosshair      = IM_COL32(248, 250, 252, 180); // White alpha
     float crosshairWidth    = 1.0f;
 
-    // Проекции маркеров
+    // Marker projections
     ImU32 colProjection     = IM_COL32(148, 163, 184, 150);
 
-    // Всплывающая подсказка (Tooltip)
+    // Tooltip
     ImU32 colTooltipBg      = IM_COL32(15, 23, 42, 240);
     ImU32 colTooltipBorder  = IM_COL32(56, 189, 248, 255);
     ImU32 colTooltipText    = IM_COL32(248, 250, 252, 255);
 
-    // Акцент и текст на акценте
+    // Accent and text on accent
     ImU32 colTextOnAccent   = IM_COL32(255, 255, 255, 255);
 
-    // Масштабирование и типографика
+    // Scale and typography
     float scale             = 1.0f;
     ImFont* fontRegular     = nullptr;
     ImFont* fontMedium      = nullptr;
