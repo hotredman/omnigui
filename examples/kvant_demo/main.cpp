@@ -106,22 +106,18 @@ int main(int argc, char* argv[]) {
 
                 // Navigation Tabs
                 if (auto navRow = ui.Row({.gap = 8.0f})) {
-                    if (auto tab1 = ui.Box({.fixedWidth = 120.0f})) {
-                        if (ui.Button("Overview", {
-                            .icon = kvant::Icon::Eye(),
-                            .variant = (activeTabIndex == 0) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
-                        })) {
-                            activeTabIndex = 0;
-                        }
+                    if (ui.Button("Overview", {
+                        .icon = kvant::Icon::Eye(),
+                        .variant = (activeTabIndex == 0) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
+                    })) {
+                        activeTabIndex = 0;
                     }
 
-                    if (auto tab2 = ui.Box({.fixedWidth = 150.0f})) {
-                        if (ui.Button("Flexbox Demo", {
-                            .icon = kvant::Icon::Settings(),
-                            .variant = (activeTabIndex == 1) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
-                        })) {
-                            activeTabIndex = 1;
-                        }
+                    if (ui.Button("Flexbox Demo", {
+                        .icon = kvant::Icon::Settings(),
+                        .variant = (activeTabIndex == 1) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
+                    })) {
+                        activeTabIndex = 1;
                     }
                 }
 
@@ -139,7 +135,7 @@ int main(int argc, char* argv[]) {
                         // Overview Tab: Interactive Counter
                         ui.Text("Interactive Reactive State", {.color = kvant::Color::Hex(0xF8FAFCFF), .fontSize = 18.0f});
                         ui.Text("Pure immediate mode with zero external widget IDs and instant response.",
-                                {.color = kvant::Color::Hex(0x94A3B8FF), .fontSize = 13.0f});
+                                {.color = kvant::Color::Hex(0xCBD5E1FF), .fontSize = 13.0f});
 
                         if (auto actionRow = ui.Wrap({.gap = 12.0f, .runGap = 10.0f, .alignCross = kvant::Align::Center})) {
                             if (ui.Button("Increment (+1)", {.icon = kvant::Icon::Plus(), .variant = kvant::UiVariant::Success})) {
@@ -152,8 +148,7 @@ int main(int argc, char* argv[]) {
                                 counter = 0;
                             }
 
-                            std::string counterStr = "Value: " + std::to_string(counter);
-                            ui.Text(counterStr, {.color = kvant::Color::Hex(0x38BDF8FF), .fontSize = 20.0f});
+                            ui.Text(ui.Format("Value: {}", counter), {.color = kvant::Color::Hex(0x38BDF8FF), .fontSize = 20.0f});
                         }
                     } else {
                         // Flexbox Demo Tab: Equal Stretch & Alignment

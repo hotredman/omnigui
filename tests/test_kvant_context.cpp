@@ -484,6 +484,133 @@ void TestBoxSlotWithUiSizeToken() {
     CHECK_NEAR(btnSquareIcon.rect.h, 32.0f, 0.001f);
 }
 
+void TestButtonWidgetRunAndResponseChaining() {
+    using namespace kvant;
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 400;
+    const uint32_t height = 200;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    ButtonResponse btn1;
+    ButtonResponse btn2;
+
+    auto renderUI = [&]() {
+        if (auto row = ui.Row({.gap = 8.0f})) {
+            // Autonomous Button::Run via ui.Button
+            btn1 = ui.Button({
+                .label = "Next",
+                .icon = Icon::ChevronRight(),
+                .variant = UiVariant::Primary,
+                .iconPlacement = IconPlacement::Trailing
+            });
+
+            // Direct call to Button::Run
+            btn2 = Button::Run(ui, {
+                .label = "Prev",
+                .icon = Icon::ChevronLeft(),
+                .variant = UiVariant::Secondary,
+                .iconPlacement = IconPlacement::Leading
+            });
+        }
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Verify IDs and geometry
+    CHECK(btn1.id.IsValid());
+    CHECK(btn2.id.IsValid());
+    CHECK(btn1.id != btn2.id);
+    CHECK(btn1.rect.w > 0.0f);
+    CHECK(btn2.rect.w > 0.0f);
+
+    // Test Response imperative actions
+    btn1.Focus();
+
+    // Verify Response conversion to bool
+    CHECK(!btn1);
+}
+
+void TestUiStringAndContextFormatting() {
+    using namespace kvant;
+
+    // Test static literal assignment (0 copy)
+    UiString s1 = "Static literal";
+    CHECK(s1 == "Static literal");
+    CHECK(s1.size() == 14);
+    CHECK(!s1.empty());
+
+    // Test inline buffer formatting
+    UiString s2;
+    s2.Format("Count: {}", 42);
+    CHECK(s2 == "Count: 42");
+    CHECK(s2.size() == 9);
+
+    // Test factory formatting
+    UiString s3 = UiString::FormatNew("Speed: {:.1f}", 12.5f);
+    CHECK(s3 == "Speed: 12.5");
+
+    // Test Context arena formatting and interning in UI frame
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 400;
+    const uint32_t height = 200;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    if (auto col = ui.Column({.gap = 8.0f})) {
+        ui.Text(ui.Format("Value: {}", 99));
+        ui.Button(ui.String("Action"));
+    }
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    if (auto col = ui.Column({.gap = 8.0f})) {
+        ui.Text(ui.Format("Value: {}", 100));
+        ui.Button(ui.String("Action"));
+    }
+    ui.EndFrame(canvas);
+}
+
+void TestBoxContainerGapSpacing() {
+    using namespace kvant;
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 400;
+    const uint32_t height = 300;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    WidgetResponse b1;
+    WidgetResponse b2;
+
+    auto renderUI = [&]() {
+        if (auto card = ui.Box({.gap = 16.0f, .padding = Padding::All(10.0f)})) {
+            b1 = ui.Button("First Item");
+            b2 = ui.Button("Second Item");
+        }
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Verify Box applies 16px gap between children
+    CHECK_NEAR(b2.rect.y, b1.rect.Bottom() + 16.0f, 0.01f);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -496,6 +623,9 @@ int main() {
     TestUiTokensAndIconFactories();
     TestTwoLevelDisabledWorkflow();
     TestBoxSlotWithUiSizeToken();
+    TestButtonWidgetRunAndResponseChaining();
+    TestUiStringAndContextFormatting();
+    TestBoxContainerGapSpacing();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

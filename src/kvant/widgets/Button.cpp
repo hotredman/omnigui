@@ -1,8 +1,40 @@
 #include "kvant/widgets/Button.hpp"
 #include <algorithm>
+#include "kvant/Context.hpp"
 #include "kvant/backend/ICanvas.hpp"
+#include "kvant/layout/Node.hpp"
 
 namespace kvant {
+
+Response Button::Run(Context& ctx, const ButtonOptions& opts, std::source_location loc) {
+    const Id id = ctx.MakeChildId(loc);
+    const bool effectiveDisabled = opts.disabled || ctx.IsDisabled();
+    const UiSize activeSize = ctx.GetCurrentSize();
+
+    Response res = ctx.Interact(id);
+    if (effectiveDisabled) {
+        res.clicked = false;
+        res.hovered = false;
+        res.pressed = false;
+        res.rightClicked = false;
+        res.doubleClicked = false;
+    }
+
+    Node* node = ctx.CreateNode(NodeType::Button, id);
+    node->text = ctx.InternString(opts.label);
+    node->buttonOpts = opts;
+    node->buttonOpts.label = node->text;
+    node->uiSize = activeSize;
+    node->disabled = effectiveDisabled;
+    node->hovered = res.hovered;
+    node->pressed = res.pressed;
+    node->widthMode = SizeMode::Fit;
+    node->heightMode = SizeMode::Fit;
+
+    ctx.AdaptChildToContainer(node);
+
+    return res;
+}
 
 Vec2 Button::Measure(const ButtonOptions& opts, UiSize size, ICanvas* canvas) {
     const ComponentMetrics m = GetComponentMetrics(size);
@@ -87,7 +119,9 @@ void Button::Render(
         float textW = 0.0f;
         textW = canvas.MeasureText(opts.label, m.fontSize).x;
         const float totalContentW = m.iconSize + gap + textW;
-        const float startX = bounds.x + (bounds.w - totalContentW) * 0.5f;
+        const float centeredStartX = bounds.x + (bounds.w - totalContentW) * 0.5f;
+        const float minStartX = bounds.x + m.paddingX;
+        const float startX = (bounds.w >= totalContentW + m.paddingX * 2.0f) ? centeredStartX : minStartX;
         const float iconY = bounds.y + (bounds.h - m.iconSize) * 0.5f;
 
         if (opts.iconPlacement == IconPlacement::Leading) {

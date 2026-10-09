@@ -10,6 +10,7 @@
 #include "kvant/core/Response.hpp"
 #include "kvant/core/Tokens.hpp"
 #include "kvant/core/Types.hpp"
+#include "kvant/core/UiString.hpp"
 #include "kvant/graphics/Icon.hpp"
 #include "kvant/layout/LayoutSolver.hpp"
 #include "kvant/layout/Node.hpp"
@@ -85,12 +86,12 @@ public:
     }
 
     // --- Widgets ---
-    WidgetResponse Button(
+    Response Button(
         ButtonOptions opts,
         std::source_location loc = std::source_location::current()
     );
 
-    WidgetResponse Button(
+    Response Button(
         std::string_view label,
         ButtonOptions opts = {},
         std::source_location loc = std::source_location::current()
@@ -102,15 +103,40 @@ public:
         std::source_location loc = std::source_location::current()
     );
 
+    template <typename... Args>
+    void TextFormat(
+        std::format_string<Args...> fmt,
+        Args&&... args
+    ) {
+        Text(Format(fmt, std::forward<Args>(args)...));
+    }
+
+    // --- String & Formatting Services ---
+    [[nodiscard]] UiString String(std::string_view text);
+    [[nodiscard]] std::string_view InternString(std::string_view text);
+
+    template <typename... Args>
+    [[nodiscard]] UiString Format(std::format_string<Args...> fmt, Args&&... args) {
+        BasicUiString<128> temp;
+        temp.Format(fmt, std::forward<Args>(args)...);
+        return UiString(InternString(temp.View()));
+    }
+
+    // --- Core Engine Services for Widgets ---
+    Id MakeChildId(std::source_location loc);
+    Response Interact(Id id);
+    Node* CreateNode(NodeType type, Id id);
+    void AdaptChildToContainer(Node* node);
+    [[nodiscard]] Rect GetPrevFrameBounds(Id id) const;
+
     // --- Internal Hierarchy & Scope Management ---
     void PushContainer(Node* node);
     void PopContainer(Node* node);
 
-    // Imperative actions requested from WidgetResponse
+    // Imperative actions requested from Response
     void RequestFocus(Id id);
 
 private:
-    Node* CreateNode(NodeType type, Id id);
     void RenderNodeRecursive(Node* node, ICanvas& canvas);
 
     BumpAllocator m_arena;
@@ -137,14 +163,14 @@ private:
     std::unordered_map<Id, Rect> m_currFrameBounds;
 };
 
-// Inline implementations of WidgetResponse imperative actions
-inline void WidgetResponse::Focus() {
+// Inline implementations of Response imperative actions
+inline void Response::Focus() {
     if (ctx && id.IsValid()) {
         ctx->RequestFocus(id);
     }
 }
 
-inline void WidgetResponse::ScrollTo() {
+inline void Response::ScrollTo() {
     // Forward to scroll controller when ScrollArea is implemented
 }
 

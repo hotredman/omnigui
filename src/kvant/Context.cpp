@@ -48,6 +48,59 @@ Node* Context::CreateNode(NodeType type, Id id) {
     return node;
 }
 
+Id Context::MakeChildId(std::source_location loc) {
+    const Id parentId = m_containerStack.empty() ? Id::Null() : m_containerStack.back()->id;
+    const uint32_t childIndex = m_containerStack.empty() ? 0 : m_containerStack.back()->childCount;
+    return MakeId(childIndex, loc, parentId);
+}
+
+Response Context::Interact(Id id) {
+    Response res;
+    res.id = id;
+    res.ctx = this;
+
+    auto it = m_prevFrameBounds.find(id);
+    if (it != m_prevFrameBounds.end()) {
+        res.rect = it->second;
+        res.hovered = res.rect.Contains(m_mousePos);
+    }
+
+    if (res.hovered) {
+        m_hoveredId = id;
+        if (m_mouseClicked) {
+            m_activeId = id;
+        }
+    }
+
+    res.pressed = (m_activeId == id && m_mouseDown);
+    res.clicked = (m_activeId == id && m_mouseReleased && res.hovered);
+
+    if (m_mouseReleased && m_activeId == id) {
+        m_activeId = Id::Null();
+    }
+
+    return res;
+}
+
+void Context::AdaptChildToContainer(Node* node) {
+    if (!node || m_containerStack.empty()) return;
+    Node* parent = m_containerStack.back();
+    if (parent->direction == FlexDirection::Column) {
+        node->widthMode = SizeMode::Stretch;
+        if (parent->heightMode == SizeMode::Fixed) {
+            node->heightMode = SizeMode::Stretch;
+        }
+    }
+}
+
+Rect Context::GetPrevFrameBounds(Id id) const {
+    auto it = m_prevFrameBounds.find(id);
+    if (it != m_prevFrameBounds.end()) {
+        return it->second;
+    }
+    return Rect{};
+}
+
 void Context::PushContainer(Node* node) {
     m_containerStack.push_back(node);
 }
@@ -90,10 +143,7 @@ bool Context::IsDisabled() const {
 }
 
 RowScope Context::Row(RowOptions opts, std::source_location loc) {
-    const Id parentId = m_containerStack.empty() ? Id::Null() : m_containerStack.back()->id;
-    const uint32_t childIndex = m_containerStack.empty() ? 0 : m_containerStack.back()->childCount;
-    const Id id = MakeId(childIndex, loc, parentId);
-
+    const Id id = MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
     const bool activeDisabled = opts.disabled || IsDisabled();
 
@@ -115,10 +165,7 @@ RowScope Context::Row(RowOptions opts, std::source_location loc) {
 }
 
 ColumnScope Context::Column(ColumnOptions opts, std::source_location loc) {
-    const Id parentId = m_containerStack.empty() ? Id::Null() : m_containerStack.back()->id;
-    const uint32_t childIndex = m_containerStack.empty() ? 0 : m_containerStack.back()->childCount;
-    const Id id = MakeId(childIndex, loc, parentId);
-
+    const Id id = MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
     const bool activeDisabled = opts.disabled || IsDisabled();
 
@@ -140,15 +187,13 @@ ColumnScope Context::Column(ColumnOptions opts, std::source_location loc) {
 }
 
 BoxScope Context::Box(BoxOptions opts, std::source_location loc) {
-    const Id parentId = m_containerStack.empty() ? Id::Null() : m_containerStack.back()->id;
-    const uint32_t childIndex = m_containerStack.empty() ? 0 : m_containerStack.back()->childCount;
-    const Id id = MakeId(childIndex, loc, parentId);
-
+    const Id id = MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
     const bool activeDisabled = opts.disabled || IsDisabled();
 
     Node* node = CreateNode(NodeType::Container, id);
     node->direction = FlexDirection::Column;
+    node->gap = opts.gap;
     node->widthMode = opts.widthMode;
     node->heightMode = opts.heightMode;
 
@@ -183,10 +228,7 @@ BoxScope Context::Box(BoxOptions opts, std::source_location loc) {
 }
 
 WrapScope Context::Wrap(WrapOptions opts, std::source_location loc) {
-    const Id parentId = m_containerStack.empty() ? Id::Null() : m_containerStack.back()->id;
-    const uint32_t childIndex = m_containerStack.empty() ? 0 : m_containerStack.back()->childCount;
-    const Id id = MakeId(childIndex, loc, parentId);
-
+    const Id id = MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
     const bool activeDisabled = opts.disabled || IsDisabled();
 
@@ -209,91 +251,39 @@ WrapScope Context::Wrap(WrapOptions opts, std::source_location loc) {
 }
 
 void Context::Spacer(float flex, std::source_location loc) {
-    const Id parentId = m_containerStack.empty() ? Id::Null() : m_containerStack.back()->id;
-    const uint32_t childIndex = m_containerStack.empty() ? 0 : m_containerStack.back()->childCount;
-    const Id id = MakeId(childIndex, loc, parentId);
-
+    const Id id = MakeChildId(loc);
     Node* node = CreateNode(NodeType::Spacer, id);
     node->isSpacer = true;
     node->widthMode = SizeMode::Stretch;
     node->heightMode = SizeMode::Stretch;
     node->flexGrow = std::max(0.01f, flex);
 }
-WidgetResponse Context::Button(ButtonOptions opts, std::source_location loc) {
-    const Id parentId = m_containerStack.empty() ? Id::Null() : m_containerStack.back()->id;
-    const uint32_t childIndex = m_containerStack.empty() ? 0 : m_containerStack.back()->childCount;
-    const Id id = MakeId(childIndex, loc, parentId);
 
-    const bool effectiveDisabled = opts.disabled || IsDisabled();
-    const UiSize activeSize = GetCurrentSize();
-
-    // Instantaneous hit testing using prior frame's resolved rectangle
-    bool hovered = false;
-    Rect cachedRect{};
-    auto it = m_prevFrameBounds.find(id);
-    if (it != m_prevFrameBounds.end()) {
-        cachedRect = it->second;
-        if (!effectiveDisabled) {
-            hovered = cachedRect.Contains(m_mousePos);
-        }
-    }
-
-    if (hovered && !effectiveDisabled) {
-        m_hoveredId = id;
-        if (m_mouseClicked) {
-            m_activeId = id;
-        }
-    }
-
-    const bool pressed = (!effectiveDisabled && m_activeId == id && m_mouseDown);
-    const bool clicked = (!effectiveDisabled && m_activeId == id && m_mouseReleased && hovered);
-
-    if (m_mouseReleased && m_activeId == id) {
-        m_activeId = Id::Null();
-    }
-
-    Node* node = CreateNode(NodeType::Button, id);
-    node->text = opts.label;
-    node->buttonOpts = opts;
-    node->uiSize = activeSize;
-    node->disabled = effectiveDisabled;
-    node->hovered = hovered;
-    node->pressed = pressed;
-    node->widthMode = SizeMode::Fit;
-    node->heightMode = SizeMode::Fit;
-
-    if (!m_containerStack.empty()) {
-        Node* parent = m_containerStack.back();
-        if (parent->direction == FlexDirection::Column) {
-            node->widthMode = SizeMode::Stretch;
-            if (parent->heightMode == SizeMode::Fixed) {
-                node->heightMode = SizeMode::Stretch;
-            }
-        }
-    }
-
-    WidgetResponse res;
-    res.id = id;
-    res.rect = cachedRect;
-    res.clicked = clicked;
-    res.hovered = hovered;
-    res.pressed = pressed;
-    res.ctx = this;
-    return res;
+Response Context::Button(ButtonOptions opts, std::source_location loc) {
+    return Button::Run(*this, opts, loc);
 }
 
-WidgetResponse Context::Button(std::string_view label, ButtonOptions opts, std::source_location loc) {
+Response Context::Button(std::string_view label, ButtonOptions opts, std::source_location loc) {
     opts.label = label;
-    return Button(opts, loc);
+    return Button::Run(*this, opts, loc);
+}
+
+std::string_view Context::InternString(std::string_view text) {
+    if (text.empty()) return {};
+    char* buf = static_cast<char*>(m_arena.AllocateRaw(text.size() + 1, alignof(char)));
+    std::memcpy(buf, text.data(), text.size());
+    buf[text.size()] = '\0';
+    return std::string_view(buf, text.size());
+}
+
+UiString Context::String(std::string_view text) {
+    return UiString(InternString(text));
 }
 
 void Context::Text(std::string_view label, TextOptions opts, std::source_location loc) {
-    const Id parentId = m_containerStack.empty() ? Id::Null() : m_containerStack.back()->id;
-    const uint32_t childIndex = m_containerStack.empty() ? 0 : m_containerStack.back()->childCount;
-    const Id id = MakeId(childIndex, loc, parentId);
-
+    const Id id = MakeChildId(loc);
     Node* node = CreateNode(NodeType::Text, id);
-    node->text = label;
+    node->text = InternString(label);
     node->textColor = opts.color;
     node->fontSize = opts.fontSize;
     node->widthMode = SizeMode::Fit;

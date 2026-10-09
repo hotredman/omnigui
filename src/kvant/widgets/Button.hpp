@@ -1,19 +1,16 @@
 #pragma once
 
+#include <source_location>
 #include <string_view>
+#include "kvant/core/Response.hpp"
 #include "kvant/core/Tokens.hpp"
 #include "kvant/core/Types.hpp"
 #include "kvant/graphics/Icon.hpp"
 
 namespace kvant {
 
+class Context;
 class ICanvas;
-
-/// Placement of icon relative to text inside button.
-enum class IconPlacement : uint8_t {
-    Leading,  ///< Icon placed to the left of the label
-    Trailing  ///< Icon placed to the right of the label
-};
 
 /// Clean configuration options for a Button widget.
 struct ButtonOptions {
@@ -24,9 +21,19 @@ struct ButtonOptions {
     bool disabled{false};
 };
 
-/// Autonomous Button widget logic (measuring and rendering).
+/// Type alias for button response.
+using ButtonResponse = Response;
+
+/// Autonomous Button widget logic (execution, measuring, and rendering).
 class Button {
 public:
+    /// Primary immediate mode entry point for Button widget.
+    static Response Run(
+        Context& ctx,
+        const ButtonOptions& opts,
+        std::source_location loc = std::source_location::current()
+    );
+
     /// Measures intrinsic dimensions based on content (icon + label + padding for current UiSize).
     static Vec2 Measure(const ButtonOptions& opts, UiSize size, ICanvas* canvas = nullptr);
 

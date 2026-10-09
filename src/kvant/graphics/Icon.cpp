@@ -1,5 +1,6 @@
 #include "kvant/graphics/Icon.hpp"
 #include <algorithm>
+#include <cmath>
 #include "kvant/backend/ICanvas.hpp"
 
 namespace kvant {
@@ -128,10 +129,29 @@ void Icon::Draw(ICanvas& canvas, Rect bounds, Color tint) const {
             }
 
             case IconId::Settings: {
-                const float rOuter = s * 0.32f;
-                const float rInner = s * 0.14f;
-                canvas.DrawRoundRect(Rect(cx - rOuter, cy - rOuter, rOuter * 2.0f, rOuter * 2.0f), rOuter, Color(0, 0, 0, 0), tint, stroke);
-                canvas.DrawRoundRect(Rect(cx - rInner, cy - rInner, rInner * 2.0f, rInner * 2.0f), rInner, tint);
+                const float rHub = s * 0.22f;
+                const float rTeeth = s * 0.38f;
+                const float toothStroke = std::max(2.0f, stroke * 1.3f);
+
+                // 6 radial gear teeth spaced at 60 degree intervals
+                for (int i = 0; i < 6; ++i) {
+                    const float angle = static_cast<float>(i) * 1.04719755f; // pi / 3
+                    const float ca = std::cos(angle);
+                    const float sa = std::sin(angle);
+                    canvas.DrawLine(
+                        Vec2(cx + rHub * 0.8f * ca, cy + rHub * 0.8f * sa),
+                        Vec2(cx + rTeeth * ca, cy + rTeeth * sa),
+                        tint,
+                        toothStroke
+                    );
+                }
+
+                // Gear hub ring
+                canvas.DrawRoundRect(Rect(cx - rHub, cy - rHub, rHub * 2.0f, rHub * 2.0f), rHub, Color(0, 0, 0, 0), tint, stroke);
+
+                // Central axle hole
+                const float rHole = s * 0.10f;
+                canvas.DrawRoundRect(Rect(cx - rHole, cy - rHole, rHole * 2.0f, rHole * 2.0f), rHole, tint);
                 break;
             }
 
