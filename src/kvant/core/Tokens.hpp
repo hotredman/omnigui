@@ -28,6 +28,15 @@ enum class UiVariant : uint8_t {
     Muted       ///< Subdued / secondary styling (slate-400)
 };
 
+/// Universal relative placement for companion elements (icons, labels, badges, adornments).
+enum class Placement : uint8_t {
+    Leading,    ///< Placed before primary element (left / start)
+    Trailing,   ///< Placed after primary element (right / end)
+    Top,        ///< Placed above primary element
+    Bottom,     ///< Placed below primary element
+    Stacked     ///< Form standard layout: Label on top, primary control in middle, Description on bottom
+};
+
 /// 6x3 Typographic Role Matrix (Material 3 scale extended for desktop/engineering).
 enum class TextRole : uint8_t {
     // Display (hero metrics, large gauges, KPI counters)

@@ -40,6 +40,14 @@ private:
                     node->intrinsicSize = Button::Measure(node->buttonOpts, node->uiSize, canvas);
                     break;
                 }
+                case NodeType::Switch: {
+                    node->intrinsicSize = Switch::Measure(node->text, node->switchOpts, node->uiSize, canvas);
+                    break;
+                }
+                case NodeType::Checkbox: {
+                    node->intrinsicSize = Checkbox::Measure(node->text, node->checkboxOpts, node->uiSize, canvas);
+                    break;
+                }
                 case NodeType::Spacer: {
                     node->intrinsicSize = {0.0f, 0.0f};
                     break;

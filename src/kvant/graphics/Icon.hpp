@@ -44,12 +44,6 @@ enum class IconId : uint16_t {
     EyeOff
 };
 
-/// Placement of an icon relative to accompanying text or content.
-enum class IconPlacement : uint8_t {
-    Leading,  ///< Icon placed to the left / start of content
-    Trailing  ///< Icon placed to the right / end of content
-};
-
 /// First-class Value Object representing an icon (procedural vector, asset file, or texture).
 class Icon {
 public:

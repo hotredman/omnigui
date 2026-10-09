@@ -17,7 +17,7 @@ struct ButtonOptions {
     std::string_view label{};
     Icon icon{};
     UiVariant variant{UiVariant::Secondary};
-    IconPlacement iconPlacement{IconPlacement::Leading};
+    Placement iconPlacement{Placement::Leading};
     bool disabled{false};
 };
 

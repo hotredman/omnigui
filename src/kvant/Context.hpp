@@ -16,6 +16,8 @@
 #include "kvant/layout/Node.hpp"
 #include "kvant/layout/Scope.hpp"
 #include "kvant/widgets/Button.hpp"
+#include "kvant/widgets/Checkbox.hpp"
+#include "kvant/widgets/Switch.hpp"
 #include "kvant/widgets/Text.hpp"
 
 namespace kvant {
@@ -114,6 +116,95 @@ public:
     Response Body(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
     Response Caption(std::string_view label, UiVariant variant = UiVariant::Muted, std::source_location loc = std::source_location::current());
     Response Code(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
+
+    // --- Switch Widget ---
+    Response Switch(
+        std::string_view label,
+        bool* value,
+        SwitchOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Switch(
+        bool* value,
+        SwitchOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Switch(
+        std::string_view label,
+        bool checked,
+        SwitchOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Switch(
+        bool checked,
+        SwitchOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    // --- Checkbox Widget ---
+    Response Checkbox(
+        std::string_view label,
+        bool* value,
+        CheckboxOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Checkbox(
+        bool* value,
+        CheckboxOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Checkbox(
+        std::string_view label,
+        bool checked,
+        CheckboxOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Checkbox(
+        bool checked,
+        CheckboxOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    /// Convenience aliases for developers familiar with Toggle terminology.
+    Response Toggle(
+        std::string_view label,
+        bool* value,
+        SwitchOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Switch(label, value, opts, loc);
+    }
+
+    Response Toggle(
+        bool* value,
+        SwitchOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Switch(value, opts, loc);
+    }
+
+    Response Toggle(
+        std::string_view label,
+        bool checked,
+        SwitchOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Switch(label, checked, opts, loc);
+    }
+
+    Response Toggle(
+        bool checked,
+        SwitchOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Switch(checked, opts, loc);
+    }
 
     // --- String & Formatting Services ---
     [[nodiscard]] UiString String(std::string_view text);

@@ -49,6 +49,10 @@ int main(int argc, char* argv[]) {
     int counter = 0;
     int activeTabIndex = 0;
     bool running = true;
+    bool vsyncEnabled = true;
+    bool darkMode = true;
+    bool showTelemetry = false;
+    bool formMode = true;
 
     while (running) {
         SDL_Event event;
@@ -149,6 +153,20 @@ int main(int argc, char* argv[]) {
                             }
 
                             ui.Text(ui.Format("Value: {}", counter), {.role = kvant::TextRole::HeadlineMedium, .variant = kvant::UiVariant::Info});
+                        }
+
+                        if (auto togglesRow = ui.Wrap({.gap = 20.0f, .runGap = 16.0f, .alignCross = kvant::Align::Center})) {
+                            ui.Switch("Dark Theme", &darkMode);
+                            ui.Switch("VSync (60 FPS)", &vsyncEnabled, {
+                                .description = "Locks rendering rate to display refresh to eliminate tearing",
+                                .variant = kvant::UiVariant::Success
+                            });
+                            ui.Checkbox("Show Telemetry", &showTelemetry, {.variant = kvant::UiVariant::Info});
+                            ui.Switch("Form Mode", &formMode, {
+                                .description = "Stacked label & description layout",
+                                .labelPlacement = kvant::Placement::Stacked
+                            });
+                            ui.Checkbox("Auto-Scale", true, {.disabled = true});
                         }
                     } else {
                         // Flexbox Demo Tab: Equal Stretch & Alignment

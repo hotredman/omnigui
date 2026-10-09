@@ -503,7 +503,7 @@ void TestButtonWidgetRunAndResponseChaining() {
                 .label = "Next",
                 .icon = Icon::ChevronRight(),
                 .variant = UiVariant::Primary,
-                .iconPlacement = IconPlacement::Trailing
+                .iconPlacement = Placement::Trailing
             });
 
             // Direct call to Button::Run
@@ -511,7 +511,7 @@ void TestButtonWidgetRunAndResponseChaining() {
                 .label = "Prev",
                 .icon = Icon::ChevronLeft(),
                 .variant = UiVariant::Secondary,
-                .iconPlacement = IconPlacement::Leading
+                .iconPlacement = Placement::Leading
             });
         }
     };
@@ -704,6 +704,168 @@ void TestAutonomousTextWidgetAndTypographyRoles() {
     CHECK(static_cast<bool>(rDisp) == true);
 }
 
+void TestSwitchAndCheckboxWidgets() {
+    using namespace kvant;
+
+    static_assert(sizeof(SwitchOptions) <= 24);
+    static_assert(sizeof(CheckboxOptions) <= 24);
+
+    // 1. Test measurement
+    const SwitchMetrics sm = GetSwitchMetrics(UiSize::Md);
+    Vec2 sMeasNoLabel = Switch::Measure("", {}, UiSize::Md);
+    CHECK(sMeasNoLabel.x == sm.trackSize.x);
+    CHECK(sMeasNoLabel.y == sm.trackSize.y);
+
+    Vec2 sMeasWithLabel = Switch::Measure("Enable", {}, UiSize::Md);
+    CHECK(sMeasWithLabel.x > sm.trackSize.x);
+
+    Vec2 sMeasWithDesc = Switch::Measure("Enable", {.description = "Details"}, UiSize::Md);
+    CHECK(sMeasWithDesc.y > sMeasWithLabel.y);
+
+    const CheckboxMetrics cm = GetCheckboxMetrics(UiSize::Md);
+    Vec2 cMeasNoLabel = Checkbox::Measure("", {}, UiSize::Md);
+    CHECK(cMeasNoLabel.x == cm.boxSize);
+    CHECK(cMeasNoLabel.y == cm.boxSize);
+
+    Vec2 cMeasWithLabel = Checkbox::Measure("Enable", {}, UiSize::Md);
+    CHECK(cMeasWithLabel.x > cm.boxSize);
+
+    Vec2 cMeasWithDesc = Checkbox::Measure("Enable", {.description = "Details"}, UiSize::Md);
+    CHECK(cMeasWithDesc.y > cMeasWithLabel.y);
+
+    // 2. Interactive mutation test
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 500;
+    const uint32_t height = 400;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    bool switchState = false;
+    bool checkState = false;
+    bool toggleState = false;
+    bool descState = false;
+    bool stackedState = false;
+
+    Response rSwitch;
+    Response rCheck;
+    Response rToggle;
+    Response rIndeterminate;
+    Response rDesc;
+    Response rStacked;
+
+    auto renderUI = [&]() {
+        if (auto col = ui.Column({.gap = 12.0f, .padding = Padding::All(16.0f)})) {
+            rSwitch = ui.Switch("Dark Mode", &switchState);
+            rCheck = ui.Checkbox("VSync", &checkState);
+            rToggle = ui.Toggle("Turbo Mode", &toggleState, {.labelPlacement = Placement::Leading});
+            rIndeterminate = ui.Checkbox("Select All", false, {.indeterminate = true});
+            rDesc = ui.Switch("Auto Breakdown", &descState, {
+                .description = "Automatic stop of testing on load drop"
+            });
+            rStacked = ui.Switch("Stacked Mode", &stackedState, {
+                .description = "Description below switch control",
+                .labelPlacement = Placement::Stacked
+            });
+        }
+    };
+
+    // Frame 1: Measure and layout
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Frame 2: Bounds populated
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rSwitch.rect.w > 0.0f);
+    CHECK(rCheck.rect.w > 0.0f);
+    CHECK(rToggle.rect.w > 0.0f);
+    CHECK(rIndeterminate.rect.w > 0.0f);
+    CHECK(rDesc.rect.w > 0.0f);
+    CHECK(rDesc.rect.h > rSwitch.rect.h);
+    CHECK(rStacked.rect.w > 0.0f);
+    CHECK(rStacked.rect.h > rSwitch.rect.h);
+    CHECK(!switchState);
+    CHECK(!checkState);
+    CHECK(!descState);
+    CHECK(!stackedState);
+
+    // 3. Click Switch to toggle value
+    ui.OnMouseMove({rSwitch.rect.x + 5.0f, rSwitch.rect.y + 5.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(rSwitch.pressed);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rSwitch.clicked);
+    CHECK(rSwitch.changed);
+    CHECK(static_cast<bool>(rSwitch) == true);
+    CHECK(switchState == true);
+
+    // 4. Click Checkbox to toggle value
+    ui.OnMouseMove({rCheck.rect.x + 5.0f, rCheck.rect.y + 5.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(rCheck.pressed);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rCheck.clicked);
+    CHECK(rCheck.changed);
+    CHECK(static_cast<bool>(rCheck) == true);
+    CHECK(checkState == true);
+
+    // 5. Click Switch with description to toggle value
+    ui.OnMouseMove({rDesc.rect.x + 10.0f, rDesc.rect.y + 10.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(rDesc.pressed);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rDesc.clicked);
+    CHECK(rDesc.changed);
+    CHECK(static_cast<bool>(rDesc) == true);
+    CHECK(descState == true);
+
+    // 6. Click Stacked Switch to toggle value
+    ui.OnMouseMove({rStacked.rect.x + 10.0f, rStacked.rect.y + 10.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(rStacked.pressed);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rStacked.clicked);
+    CHECK(rStacked.changed);
+    CHECK(static_cast<bool>(rStacked) == true);
+    CHECK(stackedState == true);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -720,6 +882,7 @@ int main() {
     TestUiStringAndContextFormatting();
     TestBoxContainerGapSpacing();
     TestAutonomousTextWidgetAndTypographyRoles();
+    TestSwitchAndCheckboxWidgets();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

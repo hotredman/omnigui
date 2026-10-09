@@ -312,6 +312,38 @@ Response Context::Code(std::string_view label, UiVariant variant, std::source_lo
     return Text(label, {.role = TextRole::CodeMedium, .variant = variant}, loc);
 }
 
+Response Context::Switch(std::string_view label, bool* value, SwitchOptions opts, std::source_location loc) {
+    return Switch::Run(*this, label, value, value ? *value : false, opts, loc);
+}
+
+Response Context::Switch(bool* value, SwitchOptions opts, std::source_location loc) {
+    return Switch::Run(*this, {}, value, value ? *value : false, opts, loc);
+}
+
+Response Context::Switch(std::string_view label, bool checked, SwitchOptions opts, std::source_location loc) {
+    return Switch::Run(*this, label, nullptr, checked, opts, loc);
+}
+
+Response Context::Switch(bool checked, SwitchOptions opts, std::source_location loc) {
+    return Switch::Run(*this, {}, nullptr, checked, opts, loc);
+}
+
+Response Context::Checkbox(std::string_view label, bool* value, CheckboxOptions opts, std::source_location loc) {
+    return Checkbox::Run(*this, label, value, value ? *value : false, opts, loc);
+}
+
+Response Context::Checkbox(bool* value, CheckboxOptions opts, std::source_location loc) {
+    return Checkbox::Run(*this, {}, value, value ? *value : false, opts, loc);
+}
+
+Response Context::Checkbox(std::string_view label, bool checked, CheckboxOptions opts, std::source_location loc) {
+    return Checkbox::Run(*this, label, nullptr, checked, opts, loc);
+}
+
+Response Context::Checkbox(bool checked, CheckboxOptions opts, std::source_location loc) {
+    return Checkbox::Run(*this, {}, nullptr, checked, opts, loc);
+}
+
 void Context::RequestFocus(Id id) {
     m_focusedId = id;
 }
@@ -378,8 +410,9 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
         canvas.PushClip(node->computedRect);
     }
 
-    // Render background / border if present (skip for Button and Text as their renders handle their styling)
-    if (node->type != NodeType::Button && node->type != NodeType::Text) {
+    // Render background / border if present (skip for self-rendering widgets)
+    if (node->type != NodeType::Button && node->type != NodeType::Text &&
+        node->type != NodeType::Switch && node->type != NodeType::Checkbox) {
         if (node->backgroundColor.a > 0 || (node->borderColor.a > 0 && node->borderWidth > 0.0f)) {
             if (node->cornerRadius > 0.0f) {
                 canvas.DrawRoundRect(
@@ -410,6 +443,30 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
             canvas,
             node->computedRect,
             node->buttonOpts,
+            node->uiSize,
+            node->hovered,
+            node->pressed,
+            node->disabled
+        );
+    } else if (node->type == NodeType::Switch) {
+        Switch::Render(
+            canvas,
+            node->computedRect,
+            node->text,
+            node->checked,
+            node->switchOpts,
+            node->uiSize,
+            node->hovered,
+            node->pressed,
+            node->disabled
+        );
+    } else if (node->type == NodeType::Checkbox) {
+        Checkbox::Render(
+            canvas,
+            node->computedRect,
+            node->text,
+            node->checked,
+            node->checkboxOpts,
             node->uiSize,
             node->hovered,
             node->pressed,

@@ -7,6 +7,8 @@
 #include "kvant/core/Types.hpp"
 #include "kvant/layout/LayoutTypes.hpp"
 #include "kvant/widgets/Button.hpp"
+#include "kvant/widgets/Checkbox.hpp"
+#include "kvant/widgets/Switch.hpp"
 #include "kvant/widgets/Text.hpp"
 
 namespace kvant {
@@ -16,6 +18,8 @@ enum class NodeType : uint8_t {
     Container,  ///< General flex layout container (Row, Column, Box)
     Text,       ///< Text label
     Button,     ///< Clickable button widget
+    Switch,     ///< Sliding pill toggle switch
+    Checkbox,   ///< Box toggle with checkmark
     Spacer,     ///< Elastic spacer expanding to fill remaining room
     Custom      ///< User or custom renderer node
 };
@@ -71,6 +75,9 @@ struct Node {
     bool pressed{false};
     ButtonOptions buttonOpts{};
     TextOptions textOpts{};
+    SwitchOptions switchOpts{};
+    CheckboxOptions checkboxOpts{};
+    bool checked{false};
 
     /// Appends a child node to this container in O(1).
     void AddChild(Node* child) noexcept {
