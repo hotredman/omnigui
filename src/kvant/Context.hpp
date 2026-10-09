@@ -8,27 +8,15 @@
 #include "kvant/core/BumpAllocator.hpp"
 #include "kvant/core/Id.hpp"
 #include "kvant/core/Response.hpp"
+#include "kvant/core/Tokens.hpp"
 #include "kvant/core/Types.hpp"
+#include "kvant/graphics/Icon.hpp"
 #include "kvant/layout/LayoutSolver.hpp"
 #include "kvant/layout/Node.hpp"
 #include "kvant/layout/Scope.hpp"
+#include "kvant/widgets/Button.hpp"
 
 namespace kvant {
-
-/// Options for button widget.
-struct ButtonOptions {
-    std::string_view label{};
-    Color backgroundColor{Color::Hex(0x3B82F6FF)}; // Tailwind Blue-500
-    Color hoverColor{Color::Hex(0x60A5FAFF)};      // Tailwind Blue-400
-    Color activeColor{Color::Hex(0x2563EBFF)};     // Tailwind Blue-600
-    Color textColor{Color::Hex(0xFFFFFFFF)};
-    float cornerRadius{6.0f};
-    float fontSize{14.0f};
-    SizeMode widthMode{SizeMode::Fit};
-    SizeMode heightMode{SizeMode::Fit};
-    float fixedWidth{0.0f};
-    float fixedHeight{0.0f};
-};
 
 /// Options for text widget.
 struct TextOptions {
@@ -80,9 +68,31 @@ public:
         std::source_location loc = std::source_location::current()
     );
 
+    // --- Scale & State Scopes ---
+    void PushSize(UiSize size);
+    void PopSize();
+    [[nodiscard]] UiSize GetCurrentSize() const;
+
+    void PushDisabled(bool disabled = true);
+    void PopDisabled();
+    [[nodiscard]] bool IsDisabled() const;
+
+    template<typename Fn>
+    void Disabled(bool disabled, Fn&& fn) {
+        PushDisabled(disabled);
+        fn();
+        PopDisabled();
+    }
+
     // --- Widgets ---
     WidgetResponse Button(
         ButtonOptions opts,
+        std::source_location loc = std::source_location::current()
+    );
+
+    WidgetResponse Button(
+        std::string_view label,
+        ButtonOptions opts = {},
         std::source_location loc = std::source_location::current()
     );
 
@@ -105,6 +115,8 @@ private:
 
     BumpAllocator m_arena;
     std::vector<Node*> m_containerStack;
+    std::vector<UiSize> m_sizeStack;
+    std::vector<bool> m_disabledStack;
     Node* m_root{nullptr};
 
     Vec2 m_viewportSize{800.0f, 600.0f};

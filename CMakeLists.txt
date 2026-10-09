@@ -152,6 +152,8 @@ endif()
 set(KVANT_SOURCES
     src/kvant/Context.cpp
     src/kvant/backend/ThorCanvas.cpp
+    src/kvant/graphics/Icon.cpp
+    src/kvant/widgets/Button.cpp
 )
 add_library(kvant STATIC ${KVANT_SOURCES})
 target_compile_features(kvant PUBLIC cxx_std_20)
@@ -226,12 +228,12 @@ if (NOT EMSCRIPTEN)
     add_executable(test_kvant_core
         tests/test_kvant_core.cpp
     )
-    target_link_libraries(test_kvant_core PRIVATE imthorgui)
+    target_link_libraries(test_kvant_core PRIVATE kvant imthorgui)
 
     add_executable(test_kvant_layout
         tests/test_kvant_layout.cpp
     )
-    target_link_libraries(test_kvant_layout PRIVATE imthorgui)
+    target_link_libraries(test_kvant_layout PRIVATE kvant imthorgui)
 
     add_executable(test_kvant_context
         tests/test_kvant_context.cpp

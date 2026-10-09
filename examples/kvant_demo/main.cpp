@@ -106,19 +106,23 @@ int main(int argc, char* argv[]) {
 
                 // Navigation Tabs
                 if (auto navRow = ui.Row({.gap = 8.0f})) {
-                    auto btnOverview = ui.Button({
-                        .label = "Overview",
-                        .backgroundColor = (activeTabIndex == 0) ? kvant::Color::Hex(0x2563EBFF) : kvant::Color::Hex(0x1E293BFF),
-                        .fixedWidth = 120.0f
-                    });
-                    if (btnOverview) activeTabIndex = 0;
+                    if (auto tab1 = ui.Box({.fixedWidth = 120.0f})) {
+                        if (ui.Button("Overview", {
+                            .icon = kvant::Icon::Eye(),
+                            .variant = (activeTabIndex == 0) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
+                        })) {
+                            activeTabIndex = 0;
+                        }
+                    }
 
-                    auto btnFlex = ui.Button({
-                        .label = "Flexbox Demo",
-                        .backgroundColor = (activeTabIndex == 1) ? kvant::Color::Hex(0x2563EBFF) : kvant::Color::Hex(0x1E293BFF),
-                        .fixedWidth = 150.0f
-                    });
-                    if (btnFlex) activeTabIndex = 1;
+                    if (auto tab2 = ui.Box({.fixedWidth = 150.0f})) {
+                        if (ui.Button("Flexbox Demo", {
+                            .icon = kvant::Icon::Settings(),
+                            .variant = (activeTabIndex == 1) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
+                        })) {
+                            activeTabIndex = 1;
+                        }
+                    }
                 }
 
                 // Content Panel Card
@@ -138,13 +142,13 @@ int main(int argc, char* argv[]) {
                                 {.color = kvant::Color::Hex(0x94A3B8FF), .fontSize = 13.0f});
 
                         if (auto actionRow = ui.Wrap({.gap = 12.0f, .runGap = 10.0f, .alignCross = kvant::Align::Center})) {
-                            if (ui.Button({.label = "Increment (+1)", .backgroundColor = kvant::Color::Hex(0x10B981FF)})) {
+                            if (ui.Button("Increment (+1)", {.icon = kvant::Icon::Plus(), .variant = kvant::UiVariant::Success})) {
                                 ++counter;
                             }
-                            if (ui.Button({.label = "Decrement (-1)", .backgroundColor = kvant::Color::Hex(0xF59E0BFF)})) {
+                            if (ui.Button("Decrement (-1)", {.icon = kvant::Icon::Minus(), .variant = kvant::UiVariant::Warning})) {
                                 --counter;
                             }
-                            if (ui.Button({.label = "Reset", .backgroundColor = kvant::Color::Hex(0xEF4444FF)})) {
+                            if (ui.Button("Reset", {.icon = kvant::Icon::Refresh(), .variant = kvant::UiVariant::Danger})) {
                                 counter = 0;
                             }
 
@@ -158,9 +162,15 @@ int main(int argc, char* argv[]) {
                                 {.color = kvant::Color::Hex(0x94A3B8FF), .fontSize = 13.0f});
 
                         if (auto stretchRow = ui.Row({.gap = 12.0f})) {
-                            ui.Button({.label = "Col 1 (Stretch)", .widthMode = kvant::SizeMode::Stretch});
-                            ui.Button({.label = "Col 2 (Stretch)", .widthMode = kvant::SizeMode::Stretch});
-                            ui.Button({.label = "Col 3 (Stretch)", .widthMode = kvant::SizeMode::Stretch});
+                            if (auto col1 = ui.Box({.widthMode = kvant::SizeMode::Stretch})) {
+                                ui.Button("Col 1 (Stretch)");
+                            }
+                            if (auto col2 = ui.Box({.widthMode = kvant::SizeMode::Stretch})) {
+                                ui.Button("Col 2 (Stretch)");
+                            }
+                            if (auto col3 = ui.Box({.widthMode = kvant::SizeMode::Stretch})) {
+                                ui.Button("Col 3 (Stretch)");
+                            }
                         }
                     }
                 }
@@ -173,8 +183,10 @@ int main(int argc, char* argv[]) {
                     ui.Text("Zero heap allocations per frame | 0% idle CPU",
                             {.color = kvant::Color::Hex(0x64748BFF), .fontSize = 12.0f});
                     ui.Spacer();
-                    if (ui.Button({.label = "Exit", .backgroundColor = kvant::Color::Hex(0x475569FF), .fixedWidth = 80.0f})) {
-                        running = false;
+                    if (auto exitBox = ui.Box({.fixedWidth = 90.0f})) {
+                        if (ui.Button("Exit", {.icon = kvant::Icon::Close(), .variant = kvant::UiVariant::Ghost})) {
+                            running = false;
+                        }
                     }
                 }
             }

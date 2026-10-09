@@ -154,8 +154,12 @@ void TestHeaderRowTextMetricsAndNoOverlap() {
 
     auto renderRow = [&]() {
         if (auto row = ui.Row({.gap = 8.0f})) {
-            bOverview = ui.Button({.label = "Overview", .fixedWidth = 120.0f});
-            bFlex = ui.Button({.label = "Flexbox Demo", .fixedWidth = 150.0f});
+            if (auto b1 = ui.Box({.fixedWidth = 120.0f})) {
+                bOverview = ui.Button("Overview");
+            }
+            if (auto b2 = ui.Box({.fixedWidth = 150.0f})) {
+                bFlex = ui.Button("Flexbox Demo");
+            }
         }
     };
 
@@ -202,7 +206,9 @@ void TestFooterExitButtonStaysVisibleInNarrowWindow() {
             if (auto footer = ui.Row({.gap = 12.0f})) {
                 ui.Text("Zero heap allocations per frame | 0% idle CPU", {.fontSize = 12.0f});
                 ui.Spacer();
-                exitBtn = ui.Button({.label = "Exit", .fixedWidth = 80.0f});
+                if (auto b = ui.Box({.fixedWidth = 80.0f})) {
+                    exitBtn = ui.Button("Exit");
+                }
             }
         }
     };
@@ -245,9 +251,15 @@ void TestWrapContainerInContextApi() {
             // b1 (120) + gap (10) + b2 (120) = 250 <= 260 (Line 1)
             // b3 wraps to Line 2! (y = 20 + 36 + 10 = 66)
             if (auto wrap = ui.Wrap({.gap = 10.0f, .runGap = 10.0f})) {
-                b1 = ui.Button({.label = "Button 1", .fixedWidth = 120.0f, .fixedHeight = 36.0f});
-                b2 = ui.Button({.label = "Button 2", .fixedWidth = 120.0f, .fixedHeight = 36.0f});
-                b3 = ui.Button({.label = "Button 3", .fixedWidth = 120.0f, .fixedHeight = 36.0f});
+                if (auto box1 = ui.Box({.fixedWidth = 120.0f, .fixedHeight = 36.0f})) {
+                    b1 = ui.Button("Button 1");
+                }
+                if (auto box2 = ui.Box({.fixedWidth = 120.0f, .fixedHeight = 36.0f})) {
+                    b2 = ui.Button("Button 2");
+                }
+                if (auto box3 = ui.Box({.fixedWidth = 120.0f, .fixedHeight = 36.0f})) {
+                    b3 = ui.Button("Button 3");
+                }
             }
         }
     };
@@ -290,20 +302,24 @@ void TestFooterExitButtonPushedToBottomWithCardAndWrap() {
                 ui.Spacer();
             }
             if (auto navRow = ui.Row({.gap = 8.0f})) {
-                ui.Button({.label = "Overview", .fixedWidth = 120.0f});
+                if (auto box = ui.Box({.fixedWidth = 120.0f})) {
+                    ui.Button("Overview");
+                }
             }
             if (auto card = ui.Box({.gap = 16.0f, .padding = Padding::All(20.0f)})) {
                 ui.Text("Card title");
                 if (auto wrap = ui.Wrap({.gap = 12.0f, .runGap = 10.0f})) {
-                    ui.Button({.label = "Btn 1"});
-                    ui.Button({.label = "Btn 2"});
+                    ui.Button("Btn 1");
+                    ui.Button("Btn 2");
                 }
             }
             ui.Spacer();
             if (auto footer = ui.Row({.gap = 12.0f})) {
                 ui.Text("Footer text");
                 ui.Spacer();
-                exitBtn = ui.Button({.label = "Exit", .fixedWidth = 80.0f});
+                if (auto box = ui.Box({.fixedWidth = 80.0f})) {
+                    exitBtn = ui.Button("Exit");
+                }
             }
         }
     };
@@ -319,6 +335,155 @@ void TestFooterExitButtonPushedToBottomWithCardAndWrap() {
     CHECK_NEAR(exitBtn.rect.Bottom(), 600.0f - 24.0f, 1.0f);
 }
 
+void TestUiTokensAndIconFactories() {
+    using namespace kvant;
+
+    // Verify 5-level scale metrics
+    const auto mXs = GetComponentMetrics(UiSize::Xs);
+    const auto mSm = GetComponentMetrics(UiSize::Sm);
+    const auto mMd = GetComponentMetrics(UiSize::Md);
+    const auto mLg = GetComponentMetrics(UiSize::Lg);
+    const auto mXl = GetComponentMetrics(UiSize::Xl);
+
+    CHECK(mXs.defaultHeight < mSm.defaultHeight);
+    CHECK(mSm.defaultHeight < mMd.defaultHeight);
+    CHECK(mMd.defaultHeight < mLg.defaultHeight);
+    CHECK(mLg.defaultHeight < mXl.defaultHeight);
+
+    CHECK_NEAR(mMd.defaultHeight, 40.0f, 0.001f);
+    CHECK_NEAR(mLg.defaultHeight, 48.0f, 0.001f);
+
+    // Verify Icon value object
+    const Icon icPlay = Icon::Play();
+    const Icon icClose = Icon::Close();
+    CHECK(icPlay.IsValid());
+    CHECK(icPlay.GetId() == IconId::Play);
+    CHECK(icPlay != icClose);
+
+    const Icon emptyIcon;
+    CHECK(emptyIcon.IsEmpty());
+    CHECK(!emptyIcon);
+
+    // Verify Icon drawing does not crash
+    ThorCanvas canvas;
+    const uint32_t width = 100;
+    const uint32_t height = 100;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+    canvas.Begin(width, height);
+    icPlay.Draw(canvas, Rect(10.0f, 10.0f, 24.0f, 24.0f), Color::Hex(0xFFFFFFFF));
+    icClose.Draw(canvas, Rect(40.0f, 10.0f, 24.0f, 24.0f), Color::Hex(0xFFFFFFFF));
+    canvas.End();
+}
+
+void TestTwoLevelDisabledWorkflow() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 400;
+    const uint32_t height = 200;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    WidgetResponse btnEnabled;
+    WidgetResponse btnDirectDisabled;
+    WidgetResponse btnScopedDisabled;
+
+    auto renderUI = [&]() {
+        if (auto row = ui.Row({.gap = 10.0f})) {
+            btnEnabled = ui.Button("Active");
+            btnDirectDisabled = ui.Button("Local Disabled", {.disabled = true});
+
+            ui.Disabled(true, [&] {
+                btnScopedDisabled = ui.Button("Scope Disabled");
+            });
+        }
+    };
+
+    // Frame 1: Layout establishment
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Frame 2: Mouse click over the disabled button
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    ui.OnMouseMove(btnDirectDisabled.rect.Center());
+    ui.OnMouseDown(1);
+    ui.OnMouseUp(1);
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(!btnDirectDisabled.clicked);
+    CHECK(!btnDirectDisabled.hovered);
+
+    // Click over scoped disabled button
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    ui.OnMouseMove(btnScopedDisabled.rect.Center());
+    ui.OnMouseDown(1);
+    ui.OnMouseUp(1);
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(!btnScopedDisabled.clicked);
+    CHECK(!btnScopedDisabled.hovered);
+
+    // Click over active button
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    ui.OnMouseMove(btnEnabled.rect.Center());
+    ui.OnMouseDown(1);
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    ui.OnMouseUp(1);
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(btnEnabled.clicked);
+}
+
+void TestBoxSlotWithUiSizeToken() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 400;
+    const uint32_t height = 200;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    WidgetResponse btnLarge;
+    WidgetResponse btnSquareIcon;
+
+    auto renderUI = [&]() {
+        if (auto col = ui.Column({.gap = 12.0f})) {
+            if (auto slotLg = ui.Box({.size = UiSize::Lg})) {
+                btnLarge = ui.Button("Large Action", {.variant = UiVariant::Primary});
+            }
+            if (auto slotSquare = ui.Box({.fixedWidth = 32.0f, .size = UiSize::Sm})) {
+                btnSquareIcon = ui.Button({.icon = Icon::Close()});
+            }
+        }
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Large button must fill the 48px slot allocated by UiSize::Lg
+    CHECK_NEAR(btnLarge.rect.h, 48.0f, 0.001f);
+    CHECK_NEAR(btnLarge.rect.w, 400.0f, 0.001f); // Stretches across column
+
+    // Square icon button in 32x32 slot
+    CHECK_NEAR(btnSquareIcon.rect.w, 32.0f, 0.001f);
+    CHECK_NEAR(btnSquareIcon.rect.h, 32.0f, 0.001f);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -328,6 +493,9 @@ int main() {
     TestFooterExitButtonStaysVisibleInNarrowWindow();
     TestWrapContainerInContextApi();
     TestFooterExitButtonPushedToBottomWithCardAndWrap();
+    TestUiTokensAndIconFactories();
+    TestTwoLevelDisabledWorkflow();
+    TestBoxSlotWithUiSizeToken();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

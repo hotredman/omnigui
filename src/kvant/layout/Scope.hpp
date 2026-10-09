@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+#include "kvant/core/Tokens.hpp"
 #include "kvant/core/Types.hpp"
 #include "kvant/layout/LayoutTypes.hpp"
 #include "kvant/layout/Node.hpp"
@@ -15,6 +17,8 @@ struct RowOptions {
     Align alignCross{Align::Stretch};
     Justify justifyMain{Justify::Start};
     SizeMode heightMode{SizeMode::Fit};
+    std::optional<UiSize> size{std::nullopt};
+    bool disabled{false};
 };
 
 /// Options for configuring a vertical Column container.
@@ -25,6 +29,8 @@ struct ColumnOptions {
     Justify justifyMain{Justify::Start};
     SizeMode widthMode{SizeMode::Stretch};
     SizeMode heightMode{SizeMode::Stretch};
+    std::optional<UiSize> size{std::nullopt};
+    bool disabled{false};
 };
 
 /// Options for configuring a visual Box container.
@@ -40,6 +46,8 @@ struct BoxOptions {
     float borderWidth{0.0f};
     float cornerRadius{0.0f};
     bool clipChildren{false};
+    std::optional<UiSize> size{std::nullopt};
+    bool disabled{false};
 };
 
 /// Options for configuring an auto-wrapping flow container.
@@ -51,6 +59,8 @@ struct WrapOptions {
     Justify justifyMain{Justify::Start};
     SizeMode widthMode{SizeMode::Stretch};
     SizeMode heightMode{SizeMode::Fit};
+    std::optional<UiSize> size{std::nullopt};
+    bool disabled{false};
 };
 
 /// RAII Scope guard for hierarchical layout containers.

@@ -44,20 +44,7 @@ private:
                     break;
                 }
                 case NodeType::Button: {
-                    float textW = 0.0f;
-                    float textH = node->fontSize * 1.4f;
-                    if (canvas) {
-                        Vec2 m = canvas->MeasureText(node->text, node->fontSize);
-                        textW = m.x;
-                        textH = m.y;
-                    } else {
-                        textW = static_cast<float>(node->text.length()) * (node->fontSize * 0.62f);
-                    }
-                    // Button has horizontal padding (28dp) and minimum height (36dp)
-                    node->intrinsicSize = {
-                        std::max(64.0f, textW + 28.0f),
-                        std::max(36.0f, textH + 14.0f)
-                    };
+                    node->intrinsicSize = Button::Measure(node->buttonOpts, node->uiSize, canvas);
                     break;
                 }
                 case NodeType::Spacer: {
@@ -198,16 +185,15 @@ private:
     static void ArrangeNode(Node* node, Rect availableRect) {
         // Resolve this node's own width and height
         float w = availableRect.w;
-        if (!node->isSpacer) {
+        float h = availableRect.h;
+
+        if (node->parent == nullptr && !node->isSpacer) {
             if (node->widthMode == SizeMode::Fit) {
                 w = node->intrinsicSize.x;
             } else if (node->widthMode == SizeMode::Fixed) {
                 w = node->fixedWidth;
             }
-        }
 
-        float h = availableRect.h;
-        if (!node->isSpacer) {
             if (node->heightMode == SizeMode::Fit) {
                 h = (node->childCount == 0) ? node->intrinsicSize.y : ResolveNodeHeight(node, w);
             } else if (node->heightMode == SizeMode::Fixed) {
@@ -437,10 +423,14 @@ private:
                     ? (freeSpace * (std::max(0.01f, child->flexGrow) / totalFlexGrow))
                     : 0.0f;
             } else if (child->heightMode == SizeMode::Stretch) {
-                const float flexH = (totalFlexGrow > 0.0f)
-                    ? (freeSpace * (std::max(0.01f, child->flexGrow) / totalFlexGrow))
-                    : 0.0f;
-                childH = child->intrinsicSize.y + flexH;
+                if (node->childCount == 1 && (node->fixedHeight > 0.0f || node->heightMode == SizeMode::Fixed)) {
+                    childH = contentRect.h;
+                } else {
+                    const float flexH = (totalFlexGrow > 0.0f)
+                        ? (freeSpace * (std::max(0.01f, child->flexGrow) / totalFlexGrow))
+                        : 0.0f;
+                    childH = child->intrinsicSize.y + flexH;
+                }
             } else if (child->heightMode == SizeMode::Fixed) {
                 childH = child->fixedHeight;
             } else { // SizeMode::Fit

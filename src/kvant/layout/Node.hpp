@@ -3,8 +3,10 @@
 #include <cstdint>
 #include <string_view>
 #include "kvant/core/Id.hpp"
+#include "kvant/core/Tokens.hpp"
 #include "kvant/core/Types.hpp"
 #include "kvant/layout/LayoutTypes.hpp"
+#include "kvant/widgets/Button.hpp"
 
 namespace kvant {
 
@@ -60,6 +62,13 @@ struct Node {
     std::string_view text{};
     Color textColor{255, 255, 255, 255};
     float fontSize{14.0f};
+
+    // Ambient state and widget configuration
+    UiSize uiSize{UiSize::Md};
+    bool disabled{false};
+    bool hovered{false};
+    bool pressed{false};
+    ButtonOptions buttonOpts{};
 
     /// Appends a child node to this container in O(1).
     void AddChild(Node* child) noexcept {
