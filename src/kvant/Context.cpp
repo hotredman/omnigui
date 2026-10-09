@@ -15,6 +15,22 @@ void Context::BeginFrame(Vec2 viewportSize, float dpiScale) {
     m_viewportSize = viewportSize;
     m_dpiScale = dpiScale;
 
+    if (!m_manualTime) {
+        const auto now = std::chrono::steady_clock::now();
+        m_currentTimeSec = std::chrono::duration<double>(now - m_startTime).count();
+    }
+
+    if (m_mouseClicked && m_focusedId.IsValid()) {
+        auto it = m_prevFrameBounds.find(m_focusedId);
+        if (it != m_prevFrameBounds.end()) {
+            if (!it->second.Contains(m_mousePos)) {
+                m_focusedId = Id::Null();
+            }
+        } else {
+            m_focusedId = Id::Null();
+        }
+    }
+
     m_arena.Reset();
     m_containerStack.clear();
     m_sizeStack.clear();
@@ -344,8 +360,45 @@ Response Context::Checkbox(bool checked, CheckboxOptions opts, std::source_locat
     return Checkbox::Run(*this, {}, nullptr, checked, opts, loc);
 }
 
+Response Context::InputField(std::string_view label, std::string& value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, label, &value, nullptr, nullptr, nullptr, {}, opts, loc);
+}
+
+Response Context::InputField(std::string& value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, {}, &value, nullptr, nullptr, nullptr, {}, opts, loc);
+}
+
+Response Context::InputField(std::string_view label, float& value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, label, nullptr, &value, nullptr, nullptr, {}, opts, loc);
+}
+
+Response Context::InputField(float& value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, {}, nullptr, &value, nullptr, nullptr, {}, opts, loc);
+}
+
+Response Context::InputField(std::string_view label, double& value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, label, nullptr, nullptr, &value, nullptr, {}, opts, loc);
+}
+
+Response Context::InputField(double& value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, {}, nullptr, nullptr, &value, nullptr, {}, opts, loc);
+}
+
+Response Context::InputField(std::string_view label, int& value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, label, nullptr, nullptr, nullptr, &value, {}, opts, loc);
+}
+
+Response Context::InputField(int& value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, {}, nullptr, nullptr, nullptr, &value, {}, opts, loc);
+}
+
+Response Context::InputField(std::string_view label, std::string_view value, InputFieldOptions opts, std::source_location loc) {
+    return InputField::Run(*this, label, nullptr, nullptr, nullptr, nullptr, value, opts, loc);
+}
+
 void Context::RequestFocus(Id id) {
     m_focusedId = id;
+    ResetCursorBlink();
 }
 
 void Context::OnMouseMove(Vec2 pos) {
@@ -356,6 +409,7 @@ void Context::OnMouseDown(int button) {
     if (button == 1) { // Left mouse button
         m_mouseDown = true;
         m_mouseClicked = true;
+        ResetCursorBlink();
     }
 }
 
@@ -364,6 +418,184 @@ void Context::OnMouseUp(int button) {
         m_mouseDown = false;
         m_mouseReleased = true;
     }
+}
+
+void Context::OnTextInput(std::string_view utf8Text) {
+    ResetCursorBlink();
+    if (m_focusedId.IsValid() && m_editState.id == m_focusedId) {
+        if (m_editState.cursor <= m_editState.text.size()) {
+            m_editState.text.insert(m_editState.cursor, utf8Text);
+            m_editState.cursor += utf8Text.size();
+            m_editState.changed = true;
+        }
+    } else {
+        m_pendingTextInput.emplace_back(utf8Text);
+    }
+}
+
+void Context::OnKeyDown(Key key, KeyModifiers mods) {
+    ResetCursorBlink();
+    if (m_focusedId.IsValid() && m_editState.id == m_focusedId) {
+        switch (key) {
+            case Key::Backspace:
+                if (m_editState.cursor > 0 && !m_editState.text.empty()) {
+                    m_editState.text.erase(m_editState.cursor - 1, 1);
+                    m_editState.cursor--;
+                    m_editState.changed = true;
+                }
+                break;
+            case Key::Delete:
+                if (m_editState.cursor < m_editState.text.size()) {
+                    m_editState.text.erase(m_editState.cursor, 1);
+                    m_editState.changed = true;
+                }
+                break;
+            case Key::Left:
+                if (m_editState.cursor > 0) {
+                    m_editState.cursor--;
+                }
+                break;
+            case Key::Right:
+                if (m_editState.cursor < m_editState.text.size()) {
+                    m_editState.cursor++;
+                }
+                break;
+            case Key::Home:
+                m_editState.cursor = 0;
+                break;
+            case Key::End:
+                m_editState.cursor = m_editState.text.size();
+                break;
+            case Key::Enter:
+                m_editState.submitted = true;
+                m_focusedId = Id::Null();
+                break;
+            case Key::Escape:
+                m_focusedId = Id::Null();
+                m_editState.id = Id::Null();
+                break;
+            default:
+                break;
+        }
+    } else {
+        m_pendingKeyEvents.push_back({key, mods});
+    }
+}
+
+std::string_view Context::GetOrStartTextEdit(
+    Id id,
+    std::string_view initialText,
+    size_t& outCursor,
+    bool& outChanged,
+    bool& outSubmitted
+) {
+    if (m_editState.id != id) {
+        m_editState.id = id;
+        m_editState.text = initialText;
+        m_editState.cursor = m_editState.text.size();
+        m_editState.changed = false;
+        m_editState.submitted = false;
+    }
+
+    for (const auto& txt : m_pendingTextInput) {
+        if (m_editState.cursor <= m_editState.text.size()) {
+            m_editState.text.insert(m_editState.cursor, txt);
+            m_editState.cursor += txt.size();
+            m_editState.changed = true;
+        }
+    }
+    m_pendingTextInput.clear();
+
+    for (const auto& ev : m_pendingKeyEvents) {
+        switch (ev.key) {
+            case Key::Backspace:
+                if (m_editState.cursor > 0 && !m_editState.text.empty()) {
+                    m_editState.text.erase(m_editState.cursor - 1, 1);
+                    m_editState.cursor--;
+                    m_editState.changed = true;
+                }
+                break;
+            case Key::Delete:
+                if (m_editState.cursor < m_editState.text.size()) {
+                    m_editState.text.erase(m_editState.cursor, 1);
+                    m_editState.changed = true;
+                }
+                break;
+            case Key::Left:
+                if (m_editState.cursor > 0) m_editState.cursor--;
+                break;
+            case Key::Right:
+                if (m_editState.cursor < m_editState.text.size()) m_editState.cursor++;
+                break;
+            case Key::Home:
+                m_editState.cursor = 0;
+                break;
+            case Key::End:
+                m_editState.cursor = m_editState.text.size();
+                break;
+            case Key::Enter:
+                m_editState.submitted = true;
+                m_focusedId = Id::Null();
+                break;
+            case Key::Escape:
+                m_focusedId = Id::Null();
+                m_editState.id = Id::Null();
+                break;
+            default:
+                break;
+        }
+    }
+    m_pendingKeyEvents.clear();
+
+    outCursor = m_editState.cursor;
+    outChanged = m_editState.changed;
+    outSubmitted = m_editState.submitted;
+
+    m_editState.changed = false;
+    m_editState.submitted = false;
+    if (outSubmitted) {
+        m_editState.id = Id::Null();
+    }
+
+    return m_editState.text;
+}
+
+void Context::ResetCursorBlink() noexcept {
+    m_lastInputTimeSec = m_currentTimeSec;
+}
+
+void Context::SetCurrentTime(double timeSeconds) noexcept {
+    m_manualTime = true;
+    m_currentTimeSec = timeSeconds;
+}
+
+void Context::AdvanceTime(double deltaSeconds) noexcept {
+    m_manualTime = true;
+    m_currentTimeSec += deltaSeconds;
+}
+
+bool Context::IsCursorVisible(std::optional<CursorBlinkMode> modeOverride) const noexcept {
+    const CursorBlinkMode mode = modeOverride.value_or(m_cursorConfig.mode);
+    switch (mode) {
+        case CursorBlinkMode::Hidden:
+            return false;
+        case CursorBlinkMode::Solid:
+            return true;
+        case CursorBlinkMode::Blinking: {
+            const double elapsedSinceInput = m_currentTimeSec - m_lastInputTimeSec;
+            // Typing reset phase: cursor remains solid/visible for 0.5s after user interaction
+            if (elapsedSinceInput >= 0.0 && elapsedSinceInput < 0.5) {
+                return true;
+            }
+            if (m_cursorConfig.blinkPeriod <= 0.0f) {
+                return true;
+            }
+            const double cycleTime = elapsedSinceInput - 0.5;
+            const double phase = std::fmod(cycleTime, static_cast<double>(m_cursorConfig.blinkPeriod));
+            return phase < (static_cast<double>(m_cursorConfig.blinkPeriod) * 0.5);
+        }
+    }
+    return true;
 }
 
 static void CollectBoundsRecursive(Node* node, std::unordered_map<Id, Rect>& outBounds) {
@@ -412,7 +644,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
 
     // Render background / border if present (skip for self-rendering widgets)
     if (node->type != NodeType::Button && node->type != NodeType::Text &&
-        node->type != NodeType::Switch && node->type != NodeType::Checkbox) {
+        node->type != NodeType::Switch && node->type != NodeType::Checkbox &&
+        node->type != NodeType::InputField) {
         if (node->backgroundColor.a > 0 || (node->borderColor.a > 0 && node->borderWidth > 0.0f)) {
             if (node->cornerRadius > 0.0f) {
                 canvas.DrawRoundRect(
@@ -471,6 +704,21 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
             node->hovered,
             node->pressed,
             node->disabled
+        );
+    } else if (node->type == NodeType::InputField) {
+        InputField::Render(
+            canvas,
+            node->computedRect,
+            node->text,
+            node->displayText,
+            node->inputOpts,
+            node->uiSize,
+            node->hovered,
+            node->focused,
+            node->cursor,
+            node->disabled,
+            node->cursorVisible,
+            node->cursorWidth
         );
     }
 

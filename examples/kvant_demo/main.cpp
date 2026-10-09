@@ -31,6 +31,7 @@ int main(int argc, char* argv[]) {
 
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     SDL_SetRenderVSync(renderer, 1);
+    SDL_StartTextInput(window);
 
     kvant::Context ui;
     kvant::ThorCanvas canvas;
@@ -53,6 +54,8 @@ int main(int argc, char* argv[]) {
     bool darkMode = true;
     bool showTelemetry = false;
     bool formMode = true;
+    float speedDrop = 50.0f;
+    std::string sampleId = "Specimen-2026-X";
 
     while (running) {
         SDL_Event event;
@@ -88,6 +91,28 @@ int main(int argc, char* argv[]) {
                 case SDL_EVENT_MOUSE_BUTTON_UP:
                     ui.OnMouseUp(event.button.button);
                     break;
+                case SDL_EVENT_TEXT_INPUT:
+                    ui.OnTextInput(event.text.text);
+                    break;
+                case SDL_EVENT_KEY_DOWN: {
+                    kvant::Key key = kvant::Key::None;
+                    switch (event.key.key) {
+                        case SDLK_BACKSPACE: key = kvant::Key::Backspace; break;
+                        case SDLK_DELETE:    key = kvant::Key::Delete; break;
+                        case SDLK_RETURN:    key = kvant::Key::Enter; break;
+                        case SDLK_ESCAPE:    key = kvant::Key::Escape; break;
+                        case SDLK_TAB:       key = kvant::Key::Tab; break;
+                        case SDLK_LEFT:      key = kvant::Key::Left; break;
+                        case SDLK_RIGHT:     key = kvant::Key::Right; break;
+                        case SDLK_HOME:      key = kvant::Key::Home; break;
+                        case SDLK_END:       key = kvant::Key::End; break;
+                        default: break;
+                    }
+                    if (key != kvant::Key::None) {
+                        ui.OnKeyDown(key);
+                    }
+                    break;
+                }
                 default:
                     break;
             }
@@ -167,6 +192,22 @@ int main(int argc, char* argv[]) {
                                 .labelPlacement = kvant::Placement::Stacked
                             });
                             ui.Checkbox("Auto-Scale", true, {.disabled = true});
+                        }
+
+                        if (auto fieldsRow = ui.Wrap({.gap = 24.0f, .runGap = 16.0f})) {
+                            if (auto f1 = ui.Box({.fixedWidth = 260.0f})) {
+                                ui.InputField("Speed Drop dF/dt", speedDrop, {
+                                    .description = "Automatic stop of testing on load drop",
+                                    .suffix = "%",
+                                    .format = "%.0f"
+                                });
+                            }
+                            if (auto f2 = ui.Box({.fixedWidth = 260.0f})) {
+                                ui.InputField("Sample Identifier", sampleId, {
+                                    .description = "Unique test specimen code",
+                                    .placeholder = "Enter sample code..."
+                                });
+                            }
                         }
                     } else {
                         // Flexbox Demo Tab: Equal Stretch & Alignment

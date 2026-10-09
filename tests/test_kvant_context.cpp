@@ -707,8 +707,8 @@ void TestAutonomousTextWidgetAndTypographyRoles() {
 void TestSwitchAndCheckboxWidgets() {
     using namespace kvant;
 
-    static_assert(sizeof(SwitchOptions) <= 24);
-    static_assert(sizeof(CheckboxOptions) <= 24);
+    static_assert(sizeof(SwitchOptions) <= 40);
+    static_assert(sizeof(CheckboxOptions) <= 40);
 
     // 1. Test measurement
     const SwitchMetrics sm = GetSwitchMetrics(UiSize::Md);
@@ -746,6 +746,8 @@ void TestSwitchAndCheckboxWidgets() {
     bool toggleState = false;
     bool descState = false;
     bool stackedState = false;
+    bool optSwitchState = false;
+    bool optCheckState = false;
 
     Response rSwitch;
     Response rCheck;
@@ -753,6 +755,8 @@ void TestSwitchAndCheckboxWidgets() {
     Response rIndeterminate;
     Response rDesc;
     Response rStacked;
+    Response rOptSwitch;
+    Response rOptCheck;
 
     auto renderUI = [&]() {
         if (auto col = ui.Column({.gap = 12.0f, .padding = Padding::All(16.0f)})) {
@@ -767,6 +771,8 @@ void TestSwitchAndCheckboxWidgets() {
                 .description = "Description below switch control",
                 .labelPlacement = Placement::Stacked
             });
+            rOptSwitch = ui.Switch(&optSwitchState, {.label = "Option Switch"});
+            rOptCheck = ui.Checkbox(&optCheckState, {.label = "Option Checkbox"});
         }
     };
 
@@ -864,6 +870,227 @@ void TestSwitchAndCheckboxWidgets() {
     CHECK(rStacked.changed);
     CHECK(static_cast<bool>(rStacked) == true);
     CHECK(stackedState == true);
+
+    // 7. Click Option Switch (label configured via SwitchOptions)
+    CHECK(rOptSwitch.rect.w > 0.0f);
+    CHECK(!optSwitchState);
+    ui.OnMouseMove({rOptSwitch.rect.x + 5.0f, rOptSwitch.rect.y + 5.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(optSwitchState == true);
+    CHECK(rOptSwitch.changed);
+
+    // 8. Click Option Checkbox (label configured via CheckboxOptions)
+    CHECK(rOptCheck.rect.w > 0.0f);
+    CHECK(!optCheckState);
+    ui.OnMouseMove({rOptCheck.rect.x + 5.0f, rOptCheck.rect.y + 5.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(optCheckState == true);
+    CHECK(rOptCheck.changed);
+}
+
+void TestInputFieldWidget() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+
+    const uint32_t width = 600;
+    const uint32_t height = 500;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    float speedDrop = 50.0f;
+    int count = 42;
+    std::string sampleName = "Specimen-A";
+    float optInputVal = 12.3f;
+
+    Response rSpeed;
+    Response rCount;
+    Response rName;
+    Response rOptInput;
+
+    auto renderUI = [&]() {
+        if (auto col = ui.Column({.gap = 16.0f, .padding = Padding::All(20.0f)})) {
+            // Numeric field with unit and description (as in user screenshot)
+            rSpeed = ui.InputField("Speed Drop dF/dt", speedDrop, {
+                .description = "Automatic stop of testing on load drop",
+                .suffix = "%",
+                .format = "%.0f",
+                .labelPlacement = Placement::Stacked
+            });
+
+            // Integer count with unit suffix
+            rCount = ui.InputField("Cycle Count", count, {
+                .suffix = "cycles",
+                .labelPlacement = Placement::Stacked
+            });
+
+            // Text input with placeholder
+            rName = ui.InputField("Sample ID", sampleName, {
+                .placeholder = "Enter identifier...",
+                .labelPlacement = Placement::Stacked
+            });
+
+            // Field with label set exclusively via InputFieldOptions
+            rOptInput = ui.InputField(optInputVal, {
+                .label = "Tolerance Margin",
+                .suffix = "mm",
+                .labelPlacement = Placement::Stacked
+            });
+        }
+    };
+
+    // Frame 1: Measure & Layout
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Frame 2: Bounds populated
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rSpeed.rect.w > 0.0f);
+    CHECK(rSpeed.rect.h > 36.0f); // Default box is 36px, stacked adds label and description
+    CHECK(rCount.rect.w > 0.0f);
+    CHECK(rName.rect.w > 0.0f);
+    CHECK(rOptInput.rect.w > 0.0f);
+    CHECK(rOptInput.rect.h > 36.0f);
+    CHECK(!rSpeed.focused);
+
+    // 1. Click speed field to focus
+    ui.OnMouseMove({rSpeed.rect.x + 15.0f, rSpeed.rect.y + 25.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rSpeed.focused);
+    CHECK(ui.IsFocused(rSpeed.id));
+
+    // 2. Type text into focused speed field: "50" -> backspace -> "5" -> insert "5" -> "55"
+    ui.OnKeyDown(Key::Backspace);
+    ui.OnTextInput("5");
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rSpeed.changed);
+    CHECK_NEAR(speedDrop, 55.0f, 0.01f);
+
+    // 3. Press Enter to submit and blur
+    ui.OnKeyDown(Key::Enter);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rSpeed.submitted);
+    CHECK(!rSpeed.focused);
+    CHECK(!ui.IsFocused(rSpeed.id));
+
+    // 4. Click name field and edit string
+    ui.OnMouseMove({rName.rect.x + 15.0f, rName.rect.y + 25.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rName.focused);
+
+    ui.OnTextInput("-X");
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rName.changed);
+    CHECK(sampleName == "Specimen-A-X");
+
+    // 5. Click outside (e.g. at 5, 5 in padding) to blur focus
+    ui.OnMouseMove({5.0f, 5.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(!rName.focused);
+    CHECK(!ui.IsFocused(rName.id));
+}
+
+void TestCursorBlinkModesAndPhaseReset() {
+    using namespace kvant;
+
+    Context ui;
+
+    // 1. Default Blinking Mode: 1.06s cycle, 530ms on / 530ms off, 500ms initial grace on input
+    ui.SetCurrentTime(0.0);
+    ui.ResetCursorBlink();
+    CHECK(ui.IsCursorVisible() == true);
+
+    // Within 500ms grace period: always visible
+    ui.SetCurrentTime(0.4);
+    CHECK(ui.IsCursorVisible() == true);
+
+    // 0.6s total: 100ms into blink cycle (< 530ms on-phase) -> visible
+    ui.SetCurrentTime(0.6);
+    CHECK(ui.IsCursorVisible() == true);
+
+    // 1.1s total: 600ms into cycle (> 530ms off-phase) -> hidden
+    ui.SetCurrentTime(1.1);
+    CHECK(ui.IsCursorVisible() == false);
+
+    // 2. Typing Phase Reset: user presses a key or inputs text -> resets to visible
+    ui.OnKeyDown(Key::Right);
+    CHECK(ui.IsCursorVisible() == true);
+
+    // Still within grace period after keystroke
+    ui.AdvanceTime(0.3);
+    CHECK(ui.IsCursorVisible() == true);
+
+    // 3. Solid Mode: always visible
+    ui.SetCursorConfig({.mode = CursorBlinkMode::Solid});
+    ui.SetCurrentTime(10.0);
+    CHECK(ui.IsCursorVisible() == true);
+    ui.SetCurrentTime(100.0);
+    CHECK(ui.IsCursorVisible() == true);
+
+    // 4. Hidden Mode: always hidden
+    ui.SetCursorConfig({.mode = CursorBlinkMode::Hidden});
+    CHECK(ui.IsCursorVisible() == false);
+
+    // 5. Local mode override via parameter
+    CHECK(ui.IsCursorVisible(CursorBlinkMode::Solid) == true);
+    CHECK(ui.IsCursorVisible(CursorBlinkMode::Hidden) == false);
 }
 
 int main() {
@@ -883,6 +1110,8 @@ int main() {
     TestBoxContainerGapSpacing();
     TestAutonomousTextWidgetAndTypographyRoles();
     TestSwitchAndCheckboxWidgets();
+    TestInputFieldWidget();
+    TestCursorBlinkModesAndPhaseReset();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

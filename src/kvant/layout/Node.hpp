@@ -8,6 +8,7 @@
 #include "kvant/layout/LayoutTypes.hpp"
 #include "kvant/widgets/Button.hpp"
 #include "kvant/widgets/Checkbox.hpp"
+#include "kvant/widgets/InputField.hpp"
 #include "kvant/widgets/Switch.hpp"
 #include "kvant/widgets/Text.hpp"
 
@@ -20,6 +21,7 @@ enum class NodeType : uint8_t {
     Button,     ///< Clickable button widget
     Switch,     ///< Sliding pill toggle switch
     Checkbox,   ///< Box toggle with checkmark
+    InputField, ///< Text or numeric editable field
     Spacer,     ///< Elastic spacer expanding to fill remaining room
     Custom      ///< User or custom renderer node
 };
@@ -77,7 +79,13 @@ struct Node {
     TextOptions textOpts{};
     SwitchOptions switchOpts{};
     CheckboxOptions checkboxOpts{};
+    InputFieldOptions inputOpts{};
+    std::string_view displayText{};
     bool checked{false};
+    bool focused{false};
+    bool cursorVisible{true};
+    float cursorWidth{1.5f};
+    size_t cursor{0};
 
     /// Appends a child node to this container in O(1).
     void AddChild(Node* child) noexcept {

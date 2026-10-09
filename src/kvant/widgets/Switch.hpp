@@ -13,13 +13,14 @@ class ICanvas;
 
 /// Clean configuration options for Switch widget.
 struct SwitchOptions {
+    std::string_view label{};                      ///< Primary caption text
     std::string_view description{};                ///< Optional explanation text below label
     UiVariant variant{UiVariant::Primary};          ///< Accent fill color when switched ON
     UiSize size{UiSize::Md};                       ///< Scale metrics (Xs, Sm, Md, Lg, Xl)
     Placement labelPlacement{Placement::Trailing}; ///< Placement of label relative to the switch track
     bool disabled{false};                          ///< Interaction suppression
 };
-static_assert(sizeof(SwitchOptions) <= 24, "SwitchOptions must stay compact");
+static_assert(sizeof(SwitchOptions) <= 40, "SwitchOptions must stay compact");
 
 /// Standardized layout and geometry metrics for a Switch widget.
 struct SwitchMetrics {

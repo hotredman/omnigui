@@ -48,6 +48,10 @@ private:
                     node->intrinsicSize = Checkbox::Measure(node->text, node->checkboxOpts, node->uiSize, canvas);
                     break;
                 }
+                case NodeType::InputField: {
+                    node->intrinsicSize = InputField::Measure(node->text, node->displayText, node->inputOpts, node->uiSize, canvas);
+                    break;
+                }
                 case NodeType::Spacer: {
                     node->intrinsicSize = {0.0f, 0.0f};
                     break;

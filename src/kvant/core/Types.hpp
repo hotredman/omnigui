@@ -157,6 +157,44 @@ struct Color {
     }
 };
 
+/// Logical key codes for keyboard navigation and text editing.
+enum class Key : uint16_t {
+    None = 0,
+    Backspace,
+    Delete,
+    Enter,
+    Escape,
+    Tab,
+    Left,
+    Right,
+    Home,
+    End,
+    Up,
+    Down,
+    A, C, V, X, Z
+};
+
+/// Keyboard modifier flags.
+struct KeyModifiers {
+    bool ctrl{false};
+    bool shift{false};
+    bool alt{false};
+};
+
+/// Visual blinking mode for input caret / cursor.
+enum class CursorBlinkMode : uint8_t {
+    Blinking,  ///< Standard alternating visibility (~1 Hz)
+    Solid,     ///< Always visible while focused (reduced motion / industrial UI)
+    Hidden     ///< Never rendered
+};
+
+/// Timing and geometry configuration for text input cursor.
+struct CursorConfig {
+    CursorBlinkMode mode{CursorBlinkMode::Blinking};
+    float blinkPeriod{1.06f};   ///< Full cycle duration in seconds (530ms on, 530ms off)
+    float width{1.5f};          ///< Caret line width in pixels
+};
+
 /// Semantic spacing tokens in density-independent points.
 enum class Spacing : uint8_t {
     None    = 0,

@@ -38,8 +38,10 @@ Response Switch::Run(
     }
 
     Node* node = ctx.CreateNode(NodeType::Switch, id);
-    node->text = ctx.InternString(label);
+    const std::string_view effectiveLabel = !label.empty() ? label : opts.label;
+    node->text = ctx.InternString(effectiveLabel);
     SwitchOptions optsCopy = opts;
+    optsCopy.label = node->text;
     if (!opts.description.empty()) {
         optsCopy.description = ctx.InternString(opts.description);
     }
@@ -64,7 +66,8 @@ Vec2 Switch::Measure(
     ICanvas* canvas
 ) {
     const SwitchMetrics m = GetSwitchMetrics(size);
-    const bool hasLabel = !label.empty();
+    const std::string_view effectiveLabel = !label.empty() ? label : opts.label;
+    const bool hasLabel = !effectiveLabel.empty();
     const bool hasDesc = !opts.description.empty();
 
     if (!hasLabel && !hasDesc) {
@@ -74,9 +77,9 @@ Vec2 Switch::Measure(
     Vec2 labelDims = {0.0f, 0.0f};
     if (hasLabel) {
         if (canvas) {
-            labelDims = canvas->MeasureText(label, m.fontSize);
+            labelDims = canvas->MeasureText(effectiveLabel, m.fontSize);
         } else {
-            const float estW = static_cast<float>(label.length()) * (m.fontSize * 0.58f);
+            const float estW = static_cast<float>(effectiveLabel.length()) * (m.fontSize * 0.58f);
             labelDims = {estW, m.fontSize * 1.25f};
         }
     }
@@ -164,7 +167,8 @@ void Switch::Render(
     }
 
     const SwitchMetrics m = GetSwitchMetrics(size);
-    const bool hasLabel = !label.empty();
+    const std::string_view effectiveLabel = !label.empty() ? label : opts.label;
+    const bool hasLabel = !effectiveLabel.empty();
     const bool hasDesc = !opts.description.empty();
     const bool hasText = hasLabel || hasDesc;
 
@@ -173,7 +177,7 @@ void Switch::Render(
     Rect descRect;
     float alignX = 0.0f;
 
-    const float labelH = hasLabel ? std::max(m.fontSize * 1.2f, canvas.MeasureText(label, m.fontSize).y) : 0.0f;
+    const float labelH = hasLabel ? std::max(m.fontSize * 1.2f, canvas.MeasureText(effectiveLabel, m.fontSize).y) : 0.0f;
     const float descH = hasDesc ? std::max(m.descFontSize * 1.2f, canvas.MeasureText(opts.description, m.descFontSize).y) : 0.0f;
 
     if (!hasText) {
@@ -303,7 +307,7 @@ void Switch::Render(
 
     // Draw text elements
     if (hasLabel) {
-        canvas.DrawTextBox(label, labelRect, m.fontSize, textCol, alignX, 0.5f);
+        canvas.DrawTextBox(effectiveLabel, labelRect, m.fontSize, textCol, alignX, 0.5f);
     }
     if (hasDesc) {
         canvas.DrawTextBox(opts.description, descRect, m.descFontSize, descCol, alignX, 0.5f);

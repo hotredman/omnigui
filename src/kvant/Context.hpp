@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <optional>
 #include <source_location>
 #include <string_view>
 #include <unordered_map>
@@ -17,6 +19,7 @@
 #include "kvant/layout/Scope.hpp"
 #include "kvant/widgets/Button.hpp"
 #include "kvant/widgets/Checkbox.hpp"
+#include "kvant/widgets/InputField.hpp"
 #include "kvant/widgets/Switch.hpp"
 #include "kvant/widgets/Text.hpp"
 
@@ -39,6 +42,8 @@ public:
     void OnMouseMove(Vec2 pos);
     void OnMouseDown(int button);
     void OnMouseUp(int button);
+    void OnTextInput(std::string_view utf8Text);
+    void OnKeyDown(Key key, KeyModifiers mods = {});
 
     // --- Container Scopes ---
     RowScope Row(
@@ -206,6 +211,80 @@ public:
         return Switch(checked, opts, loc);
     }
 
+    // --- InputField Widget ---
+    Response InputField(
+        std::string_view label,
+        std::string& value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response InputField(
+        std::string& value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response InputField(
+        std::string_view label,
+        float& value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response InputField(
+        float& value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response InputField(
+        std::string_view label,
+        double& value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response InputField(
+        double& value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response InputField(
+        std::string_view label,
+        int& value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response InputField(
+        int& value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response InputField(
+        std::string_view label,
+        std::string_view value,
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    template <typename T>
+    Response InputNumber(
+        std::string_view label,
+        T& value,
+        std::string_view unit = {},
+        InputFieldOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        if (!unit.empty()) {
+            opts.suffix = unit;
+        }
+        return InputField(label, value, opts, loc);
+    }
+
     // --- String & Formatting Services ---
     [[nodiscard]] UiString String(std::string_view text);
     [[nodiscard]] std::string_view InternString(std::string_view text);
@@ -230,6 +309,29 @@ public:
 
     // Imperative actions requested from Response
     void RequestFocus(Id id);
+    [[nodiscard]] Id GetFocusedId() const noexcept { return m_focusedId; }
+    [[nodiscard]] bool IsFocused(Id id) const noexcept { return m_focusedId == id && id.IsValid(); }
+    [[nodiscard]] bool HasActiveTextEdit(Id id) const noexcept { return m_editState.id == id && id.IsValid(); }
+    void ClearFocus() noexcept { m_focusedId = Id::Null(); }
+
+    std::string_view GetOrStartTextEdit(
+        Id id,
+        std::string_view initialText,
+        size_t& outCursor,
+        bool& outChanged,
+        bool& outSubmitted
+    );
+
+    // --- Cursor Configuration & State ---
+    void SetCursorConfig(const CursorConfig& config) noexcept { m_cursorConfig = config; }
+    [[nodiscard]] const CursorConfig& GetCursorConfig() const noexcept { return m_cursorConfig; }
+    [[nodiscard]] bool IsCursorVisible(std::optional<CursorBlinkMode> modeOverride = std::nullopt) const noexcept;
+    void ResetCursorBlink() noexcept;
+
+    // --- Deterministic Time Control (for unit tests / animations) ---
+    void SetCurrentTime(double timeSeconds) noexcept;
+    void AdvanceTime(double deltaSeconds) noexcept;
+    [[nodiscard]] double GetCurrentTime() const noexcept { return m_currentTimeSec; }
 
 private:
     void RenderNodeRecursive(Node* node, ICanvas& canvas);
@@ -243,6 +345,13 @@ private:
     Vec2 m_viewportSize{800.0f, 600.0f};
     float m_dpiScale{1.0f};
 
+    // Time & Cursor animation state
+    CursorConfig m_cursorConfig{};
+    std::chrono::steady_clock::time_point m_startTime{std::chrono::steady_clock::now()};
+    double m_currentTimeSec{0.0};
+    double m_lastInputTimeSec{0.0};
+    bool m_manualTime{false};
+
     // Input state
     Vec2 m_mousePos{0.0f, 0.0f};
     bool m_mouseDown{false};
@@ -252,6 +361,23 @@ private:
     Id m_hoveredId{Id::Null()};
     Id m_activeId{Id::Null()};
     Id m_focusedId{Id::Null()};
+
+    // Active text edit state
+    struct ActiveEditState {
+        Id id{Id::Null()};
+        std::string text;
+        size_t cursor{0};
+        bool changed{false};
+        bool submitted{false};
+    };
+    ActiveEditState m_editState;
+
+    struct QueuedKeyEvent {
+        Key key;
+        KeyModifiers mods;
+    };
+    std::vector<std::string> m_pendingTextInput;
+    std::vector<QueuedKeyEvent> m_pendingKeyEvents;
 
     // Previous frame widget bounds for instantaneous hit testing
     std::unordered_map<Id, Rect> m_prevFrameBounds;

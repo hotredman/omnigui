@@ -13,6 +13,7 @@ class ICanvas;
 
 /// Clean configuration options for Checkbox widget.
 struct CheckboxOptions {
+    std::string_view label{};                      ///< Primary caption text
     std::string_view description{};                ///< Optional explanation text below label
     UiVariant variant{UiVariant::Primary};          ///< Accent fill color when checked
     UiSize size{UiSize::Md};                       ///< Scale metrics (Xs, Sm, Md, Lg, Xl)
@@ -20,7 +21,7 @@ struct CheckboxOptions {
     bool disabled{false};                          ///< Interaction suppression
     bool indeterminate{false};                     ///< Tri-state / partial check (horizontal dash)
 };
-static_assert(sizeof(CheckboxOptions) <= 24, "CheckboxOptions must stay compact");
+static_assert(sizeof(CheckboxOptions) <= 40, "CheckboxOptions must stay compact");
 
 /// Standardized layout and geometry metrics for a Checkbox widget.
 struct CheckboxMetrics {
