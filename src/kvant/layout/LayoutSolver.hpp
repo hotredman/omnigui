@@ -257,9 +257,9 @@ private:
 
         // Main axis justification when there are no stretch elements
         if (flexCount == 0 && freeSpace > 0.0f) {
-            if (node->justifyMain == Justify::Center) {
+            if (node->justify == Justify::Center) {
                 currentX += freeSpace * 0.5f;
-            } else if (node->justifyMain == Justify::End) {
+            } else if (node->justify == Justify::End) {
                 currentX += freeSpace;
             }
         }
@@ -284,14 +284,14 @@ private:
             float childH = contentRect.h;
             if (child->heightMode == SizeMode::Fixed) {
                 childH = child->fixedHeight;
-            } else if (child->heightMode == SizeMode::Fit || node->alignCross != Align::Stretch) {
+            } else if (child->heightMode == SizeMode::Fit || node->align != Alignment::Stretch) {
                 childH = child->intrinsicSize.y;
             }
 
             float childY = contentRect.y;
-            if (node->alignCross == Align::Center) {
+            if (node->align == Alignment::Center) {
                 childY = contentRect.y + (contentRect.h - childH) * 0.5f;
-            } else if (node->alignCross == Align::End) {
+            } else if (node->align == Alignment::End) {
                 childY = contentRect.Bottom() - childH;
             }
 
@@ -345,11 +345,11 @@ private:
             float itemGap = node->gap;
             const float freeLineWidth = std::max(0.0f, maxLineWidth - currentLineWidth);
 
-            if (node->justifyMain == Justify::Center) {
+            if (node->justify == Justify::Center) {
                 itemX += freeLineWidth * 0.5f;
-            } else if (node->justifyMain == Justify::End) {
+            } else if (node->justify == Justify::End) {
                 itemX += freeLineWidth;
-            } else if (node->justifyMain == Justify::SpaceBetween && itemsInLine > 1) {
+            } else if (node->justify == Justify::SpaceBetween && itemsInLine > 1) {
                 itemGap += freeLineWidth / static_cast<float>(itemsInLine - 1);
             }
 
@@ -360,14 +360,14 @@ private:
                 const float cw = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
                 float ch = (child->heightMode == SizeMode::Fixed) ? child->fixedHeight : child->intrinsicSize.y;
 
-                if (node->alignCross == Align::Stretch && child->heightMode == SizeMode::Stretch) {
+                if (node->align == Alignment::Stretch && child->heightMode == SizeMode::Stretch) {
                     ch = lineMaxH;
                 }
 
                 float childY = currentY;
-                if (node->alignCross == Align::Center) {
+                if (node->align == Alignment::Center) {
                     childY = currentY + (lineMaxH - ch) * 0.5f;
-                } else if (node->alignCross == Align::End) {
+                } else if (node->align == Alignment::End) {
                     childY = currentY + (lineMaxH - ch);
                 }
 
@@ -414,9 +414,9 @@ private:
 
         // Main axis justification when there are no stretch elements
         if (flexCount == 0 && freeSpace > 0.0f) {
-            if (node->justifyMain == Justify::Center) {
+            if (node->justify == Justify::Center) {
                 currentY += freeSpace * 0.5f;
-            } else if (node->justifyMain == Justify::End) {
+            } else if (node->justify == Justify::End) {
                 currentY += freeSpace;
             }
         }
@@ -445,14 +445,14 @@ private:
             float childW = contentRect.w;
             if (child->widthMode == SizeMode::Fixed) {
                 childW = child->fixedWidth;
-            } else if (child->widthMode == SizeMode::Fit || node->alignCross != Align::Stretch) {
+            } else if (child->widthMode == SizeMode::Fit || node->align != Alignment::Stretch) {
                 childW = child->intrinsicSize.x;
             }
 
             float childX = contentRect.x;
-            if (node->alignCross == Align::Center) {
+            if (node->align == Alignment::Center) {
                 childX = contentRect.x + (contentRect.w - childW) * 0.5f;
-            } else if (node->alignCross == Align::End) {
+            } else if (node->align == Alignment::End) {
                 childX = contentRect.Right() - childW;
             }
 

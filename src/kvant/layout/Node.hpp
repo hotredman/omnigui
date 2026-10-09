@@ -50,8 +50,8 @@ struct Node {
     float gap{0.0f};            ///< Gap between consecutive children on same line
     float runGap{0.0f};         ///< Vertical gap between consecutive wrapped lines
     Padding padding{};          ///< Internal padding inside container
-    Align alignCross{Align::Stretch};
-    Justify justifyMain{Justify::Start};
+    Alignment align{Alignment::Stretch};
+    Justify justify{Justify::Start};
     bool isSpacer{false};
     bool clipChildren{false};
 

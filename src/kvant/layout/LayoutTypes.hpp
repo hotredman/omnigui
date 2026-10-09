@@ -21,12 +21,15 @@ enum class SizeMode : uint8_t {
 };
 
 /// Alignment along the cross axis (perpendicular to FlexDirection).
-enum class Align : uint8_t {
+enum class Alignment : uint8_t {
     Start,      ///< Align to start of cross axis (Top in Row, Left in Column)
     Center,     ///< Center along cross axis
     End,        ///< Align to end of cross axis (Bottom in Row, Right in Column)
     Stretch     ///< Stretch to fill full cross-axis dimension
 };
+
+/// Type alias for backward compatibility.
+using Align = Alignment;
 
 /// Distribution along the main axis (parallel to FlexDirection) when space is not fully stretched.
 enum class Justify : uint8_t {

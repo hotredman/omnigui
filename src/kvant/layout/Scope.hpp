@@ -14,8 +14,8 @@ class Context;
 struct RowOptions {
     float gap{0.0f};
     Padding padding{};
-    Align alignCross{Align::Stretch};
-    Justify justifyMain{Justify::Start};
+    Alignment align{Alignment::Stretch};
+    Justify justify{Justify::Start};
     SizeMode heightMode{SizeMode::Fit};
     std::optional<UiSize> size{std::nullopt};
     bool disabled{false};
@@ -25,8 +25,8 @@ struct RowOptions {
 struct ColumnOptions {
     float gap{0.0f};
     Padding padding{};
-    Align alignCross{Align::Stretch};
-    Justify justifyMain{Justify::Start};
+    Alignment align{Alignment::Stretch};
+    Justify justify{Justify::Start};
     SizeMode widthMode{SizeMode::Stretch};
     SizeMode heightMode{SizeMode::Stretch};
     std::optional<UiSize> size{std::nullopt};
@@ -55,8 +55,8 @@ struct WrapOptions {
     float gap{0.0f};        ///< Horizontal gap between items on same line
     float runGap{0.0f};     ///< Vertical gap between consecutive wrapped lines
     Padding padding{};
-    Align alignCross{Align::Center};
-    Justify justifyMain{Justify::Start};
+    Alignment align{Alignment::Center};
+    Justify justify{Justify::Start};
     SizeMode widthMode{SizeMode::Stretch};
     SizeMode heightMode{SizeMode::Fit};
     std::optional<UiSize> size{std::nullopt};

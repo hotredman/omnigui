@@ -16,7 +16,7 @@ class ICanvas;
 struct TextOptions {
     TextRole role{TextRole::BodyMedium};
     UiVariant variant{UiVariant::Default};
-    Align align{Align::Start};
+    Alignment align{Alignment::Start};
 };
 static_assert(sizeof(TextOptions) == 3, "TextOptions must remain exactly 3 bytes");
 

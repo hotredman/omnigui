@@ -167,8 +167,8 @@ RowScope Context::Row(RowOptions opts, std::source_location loc) {
     node->direction = FlexDirection::Row;
     node->gap = opts.gap;
     node->padding = opts.padding;
-    node->alignCross = opts.alignCross;
-    node->justifyMain = opts.justifyMain;
+    node->align = opts.align;
+    node->justify = opts.justify;
     node->heightMode = opts.heightMode;
     node->widthMode = SizeMode::Stretch;
     node->uiSize = activeSize;
@@ -189,8 +189,8 @@ ColumnScope Context::Column(ColumnOptions opts, std::source_location loc) {
     node->direction = FlexDirection::Column;
     node->gap = opts.gap;
     node->padding = opts.padding;
-    node->alignCross = opts.alignCross;
-    node->justifyMain = opts.justifyMain;
+    node->align = opts.align;
+    node->justify = opts.justify;
     node->widthMode = opts.widthMode;
     node->heightMode = opts.heightMode;
     node->uiSize = activeSize;
@@ -253,8 +253,8 @@ WrapScope Context::Wrap(WrapOptions opts, std::source_location loc) {
     node->gap = opts.gap;
     node->runGap = (opts.runGap > 0.0f) ? opts.runGap : opts.gap;
     node->padding = opts.padding;
-    node->alignCross = opts.alignCross;
-    node->justifyMain = opts.justifyMain;
+    node->align = opts.align;
+    node->justify = opts.justify;
     node->widthMode = opts.widthMode;
     node->heightMode = opts.heightMode;
     node->uiSize = activeSize;

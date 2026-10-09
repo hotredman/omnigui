@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
         {
             if (auto mainCol = ui.Column({.gap = 16.0f, .padding = kvant::Padding::All(24.0f)})) {
                 // Header Bar
-                if (auto header = ui.Row({.gap = 12.0f, .alignCross = kvant::Align::Center})) {
+                if (auto header = ui.Row({.gap = 12.0f, .align = kvant::Alignment::Center})) {
                     ui.Title("KVANT GUI", kvant::UiVariant::Info);
                     ui.Caption("| Autonomous Vector GUI Engine");
                     ui.Spacer(); // Push build badge to right
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
                         ui.Body("Pure immediate mode with zero external widget IDs and instant response.",
                                 kvant::UiVariant::Muted);
 
-                        if (auto actionRow = ui.Wrap({.gap = 12.0f, .runGap = 10.0f, .alignCross = kvant::Align::Center})) {
+                        if (auto actionRow = ui.Wrap({.gap = 12.0f, .runGap = 10.0f, .align = kvant::Alignment::Center})) {
                             if (ui.Button("Increment (+1)", {.icon = kvant::Icon::Plus(), .variant = kvant::UiVariant::Success})) {
                                 ++counter;
                             }
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
                             ui.Text(ui.Format("Value: {}", counter), {.role = kvant::TextRole::HeadlineMedium, .variant = kvant::UiVariant::Info});
                         }
 
-                        if (auto togglesRow = ui.Wrap({.gap = 20.0f, .runGap = 16.0f, .alignCross = kvant::Align::Center})) {
+                        if (auto togglesRow = ui.Wrap({.gap = 20.0f, .runGap = 16.0f, .align = kvant::Alignment::Center})) {
                             ui.Switch("Dark Theme", &darkMode);
                             ui.Switch("VSync (60 FPS)", &vsyncEnabled, {
                                 .description = "Locks rendering rate to display refresh to eliminate tearing",
@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
                 ui.Spacer();
 
                 // Sticky Footer Bar
-                if (auto footer = ui.Row({.gap = 12.0f, .alignCross = kvant::Align::Center})) {
+                if (auto footer = ui.Row({.gap = 12.0f, .align = kvant::Alignment::Center})) {
                     ui.Caption("Zero heap allocations per frame | 0% idle CPU");
                     ui.Spacer();
                     if (auto exitBox = ui.Box({.fixedWidth = 90.0f})) {
