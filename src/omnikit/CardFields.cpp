@@ -100,10 +100,8 @@ void Card::ValueImpl(const char* text, const FieldOptions& o, std::source_locati
         ImGui::SetCursorScreenPos(ImVec2(pos.x, pos.y + lineHeight + spacing));
     }
 
-    float h = ResolveHeight(o.size);
-    if (h <= 0.0f) {
-        h = theme.Scale(80.0f);
-    }
+    UiSize effectiveSize = o.size.value_or(UiSize::Medium);
+    float h = ResolveHeight(o.size, effectiveSize);
 
     ValueDisplayStyle vStyle = theme.valueDisplay;
     const bool customStyle = o.variant != UiVariant::Default;
@@ -113,7 +111,7 @@ void Card::ValueImpl(const char* text, const FieldOptions& o, std::source_locati
         vStyle.colBorder = sem.colBorder;
     }
 
-    OmniKit::ValueDisplay(text, {.unit = o.unit, .style = customStyle ? &vStyle : nullptr, .sizePx = ImVec2(w, h)});
+    OmniKit::ValueDisplay(text, {.unit = o.unit, .size = effectiveSize, .style = customStyle ? &vStyle : nullptr, .sizePx = ImVec2(w, h)});
 
     if (hasLabel) {
         ImGui::EndGroup();
@@ -129,7 +127,7 @@ bool Card::PresetGridImpl(T& value, const std::vector<T>& presets, int columns, 
     float w = 0.0f;
     PrepareField(col, w);
     const UiTheme& theme = UiTheme::Get();
-    float dispH = o.size ? theme.GetMetrics(*o.size).height : theme.Scale(44.0f);
+    float dispH = ResolveHeight(o.size, UiSize::Medium);
     bool changed = OmniKit::PresetGrid(value, presets, {.unit = o.unit, .columns = columns,
                                                  .size = o.size.value_or(UiSize::Medium),
                                                  .displayFormat = o.format ? o.format : "%.1f",

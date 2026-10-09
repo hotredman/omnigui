@@ -279,6 +279,15 @@ int main() {
             viewer.SetRotation(0);
             viewer.SetFlipHorizontal(false);
 
+            // Verify Colormap switching
+            viewer.SetColormap(OmniKit::ImageColormap::Turbo);
+            CHECK(viewer.GetColormap() == OmniKit::ImageColormap::Turbo);
+            Frame([&] {
+                viewer.Render(600.0f, 400.0f);
+            });
+            viewer.SetColormap(OmniKit::ImageColormap::Grayscale);
+            CHECK(viewer.GetColormap() == OmniKit::ImageColormap::Grayscale);
+
             Frame([&] {
                 OmniKit::ImageViewerToolbar(viewer);
                 viewer.Render(600.0f, 400.0f);

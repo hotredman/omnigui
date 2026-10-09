@@ -1,0 +1,148 @@
+#pragma once
+
+#include <source_location>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
+#include "kvant/backend/ICanvas.hpp"
+#include "kvant/core/BumpAllocator.hpp"
+#include "kvant/core/Id.hpp"
+#include "kvant/core/Response.hpp"
+#include "kvant/core/Types.hpp"
+#include "kvant/layout/LayoutSolver.hpp"
+#include "kvant/layout/Node.hpp"
+#include "kvant/layout/Scope.hpp"
+
+namespace kvant {
+
+/// Options for button widget.
+struct ButtonOptions {
+    std::string_view label{};
+    Color backgroundColor{Color::Hex(0x3B82F6FF)}; // Tailwind Blue-500
+    Color hoverColor{Color::Hex(0x60A5FAFF)};      // Tailwind Blue-400
+    Color activeColor{Color::Hex(0x2563EBFF)};     // Tailwind Blue-600
+    Color textColor{Color::Hex(0xFFFFFFFF)};
+    float cornerRadius{6.0f};
+    float fontSize{14.0f};
+    SizeMode widthMode{SizeMode::Fit};
+    SizeMode heightMode{SizeMode::Fit};
+    float fixedWidth{0.0f};
+    float fixedHeight{0.0f};
+};
+
+/// Options for text widget.
+struct TextOptions {
+    Color color{Color::Hex(0xE2E8F0FF)};           // Slate-200
+    float fontSize{14.0f};
+};
+
+/// Primary immediate mode context coordinating input, layout, and rendering.
+class Context {
+public:
+    Context();
+    ~Context() = default;
+
+    Context(const Context&) = delete;
+    Context& operator=(const Context&) = delete;
+
+    // --- Frame Lifecycle ---
+    void BeginFrame(Vec2 viewportSize, float dpiScale = 1.0f);
+    void EndFrame(ICanvas& canvas);
+
+    // --- Input Handling ---
+    void OnMouseMove(Vec2 pos);
+    void OnMouseDown(int button);
+    void OnMouseUp(int button);
+
+    // --- Container Scopes ---
+    RowScope Row(
+        RowOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    ColumnScope Column(
+        ColumnOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    BoxScope Box(
+        BoxOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    WrapScope Wrap(
+        WrapOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    void Spacer(
+        float flex = 1.0f,
+        std::source_location loc = std::source_location::current()
+    );
+
+    // --- Widgets ---
+    WidgetResponse Button(
+        ButtonOptions opts,
+        std::source_location loc = std::source_location::current()
+    );
+
+    void Text(
+        std::string_view label,
+        TextOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    // --- Internal Hierarchy & Scope Management ---
+    void PushContainer(Node* node);
+    void PopContainer(Node* node);
+
+    // Imperative actions requested from WidgetResponse
+    void RequestFocus(Id id);
+
+private:
+    Node* CreateNode(NodeType type, Id id);
+    void RenderNodeRecursive(Node* node, ICanvas& canvas);
+
+    BumpAllocator m_arena;
+    std::vector<Node*> m_containerStack;
+    Node* m_root{nullptr};
+
+    Vec2 m_viewportSize{800.0f, 600.0f};
+    float m_dpiScale{1.0f};
+
+    // Input state
+    Vec2 m_mousePos{0.0f, 0.0f};
+    bool m_mouseDown{false};
+    bool m_mouseClicked{false};
+    bool m_mouseReleased{false};
+
+    Id m_hoveredId{Id::Null()};
+    Id m_activeId{Id::Null()};
+    Id m_focusedId{Id::Null()};
+
+    // Previous frame widget bounds for instantaneous hit testing
+    std::unordered_map<Id, Rect> m_prevFrameBounds;
+    std::unordered_map<Id, Rect> m_currFrameBounds;
+};
+
+// Inline implementations of WidgetResponse imperative actions
+inline void WidgetResponse::Focus() {
+    if (ctx && id.IsValid()) {
+        ctx->RequestFocus(id);
+    }
+}
+
+inline void WidgetResponse::ScrollTo() {
+    // Forward to scroll controller when ScrollArea is implemented
+}
+
+// Inline implementation of ContainerScope destructor
+inline ContainerScope::~ContainerScope() {
+    if (m_ctx && m_node) {
+        m_ctx->PopContainer(m_node);
+        m_ctx = nullptr;
+        m_node = nullptr;
+    }
+}
+
+} // namespace kvant

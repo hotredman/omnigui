@@ -1,24 +1,24 @@
 cmake_minimum_required(VERSION 3.20)
 project(omnigui CXX C)
 
-# Исходники приложения-демо: каркас и страницы (общие для desktop и WASM целей)
+# Demo application sources: shell and pages (common for desktop and WASM targets)
 set(DEMO_APP_SOURCES
     examples/demo/OmniKitShowcase.cpp
     examples/demo/pages/TestRunPage.cpp
-    examples/demo/pages/CalcAreaPage.cpp
+    examples/demo/pages/CardsPage.cpp
     examples/demo/pages/ImageViewerPage.cpp
 )
 
-# Единый стандарт C++20 для всего проекта (designated initializers в опциях компонентов)
+# Uniform C++20 standard across the project (designated initializers in component options)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Одноконфигурационные генераторы (Ninja, Makefiles): по умолчанию Release
+# Single-configuration generators (Ninja, Makefiles): default to Release
 if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# Исходники в UTF-8 (русские комментарии и литералы): MSVC иначе читает их в ANSI-кодовой странице
+# Source files in UTF-8: MSVC otherwise assumes ANSI code page
 if (MSVC)
     add_compile_options(/utf-8 /Zc:__cplusplus)
 endif()
@@ -121,7 +121,7 @@ set(OMNIKIT_SOURCES
 )
 
 add_library(omnikit STATIC ${OMNIKIT_SOURCES})
-# C++20 нужен ради designated initializers в опциях компонентов: Button({.label = "Save"});
+# C++20 required for designated initializers in component options: Button({.label = "Save"});
 target_compile_features(omnikit PUBLIC cxx_std_20)
 target_include_directories(omnikit PUBLIC src)
 target_link_libraries(omnikit PUBLIC imgui)
@@ -148,16 +148,34 @@ if (WIN32 AND NOT EMSCRIPTEN)
     target_link_libraries(omnigui PUBLIC ws2_32 crypt32)
 endif()
 
+# --- Kvant Autonomous Vector GUI Engine ---
+set(KVANT_SOURCES
+    src/kvant/Context.cpp
+    src/kvant/backend/ThorCanvas.cpp
+)
+add_library(kvant STATIC ${KVANT_SOURCES})
+target_compile_features(kvant PUBLIC cxx_std_20)
+target_include_directories(kvant PUBLIC src)
+target_link_libraries(kvant PUBLIC thorvg)
+if (NOT EMSCRIPTEN)
+    target_link_libraries(kvant PUBLIC Threads::Threads)
+endif()
+
 # ========================================================
 #  Desktop vs WebAssembly (Emscripten) Target Matrix
 # ========================================================
 if (NOT EMSCRIPTEN)
-    # --- Desktop Demo Executable ---
+    # --- Desktop Demo Executables ---
     add_executable(demo
         examples/demo/main.cpp
         ${DEMO_APP_SOURCES}
     )
     target_link_libraries(demo PRIVATE imthorgui)
+
+    add_executable(kvant_demo
+        examples/kvant_demo/main.cpp
+    )
+    target_link_libraries(kvant_demo PRIVATE kvant SDL3::SDL3-static)
 
     # --- Tests ---
     add_executable(test_text_metrics
@@ -205,7 +223,22 @@ if (NOT EMSCRIPTEN)
     )
     target_link_libraries(test_dom PRIVATE imthorgui)
 
-    # --- ctest: те же проверки, что в scripts/windows/run_tests.cmd ---
+    add_executable(test_kvant_core
+        tests/test_kvant_core.cpp
+    )
+    target_link_libraries(test_kvant_core PRIVATE imthorgui)
+
+    add_executable(test_kvant_layout
+        tests/test_kvant_layout.cpp
+    )
+    target_link_libraries(test_kvant_layout PRIVATE imthorgui)
+
+    add_executable(test_kvant_context
+        tests/test_kvant_context.cpp
+    )
+    target_link_libraries(test_kvant_context PRIVATE kvant)
+
+    # --- ctest: same validation suites as scripts/windows/run_tests.cmd ---
     enable_testing()
     add_test(NAME frame_dedup COMMAND test_frame_dedup)
     add_test(NAME text_metrics COMMAND test_text_metrics)
@@ -213,6 +246,9 @@ if (NOT EMSCRIPTEN)
     add_test(NAME lttb COMMAND test_lttb)
     add_test(NAME modal COMMAND test_modal)
     add_test(NAME components COMMAND test_components)
+    add_test(NAME kvant_core COMMAND test_kvant_core)
+    add_test(NAME kvant_layout COMMAND test_kvant_layout)
+    add_test(NAME kvant_context COMMAND test_kvant_context)
 
 else()
     # ========================================================

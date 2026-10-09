@@ -30,12 +30,23 @@ void ImageViewer::LoadImage16(const uint16_t* data, int width, int height) {
 }
 
 void ImageViewer::SetParams(const WindowLevelParams& params) {
+    if (&m_params == &params) {
+        m_displayDirty = true;
+        return;
+    }
     if (m_params.window != params.window ||
         m_params.level != params.level ||
         m_params.gamma != params.gamma ||
         m_params.invert != params.invert ||
         m_params.colormap != params.colormap) {
         m_params = params;
+        m_displayDirty = true;
+    }
+}
+
+void ImageViewer::SetColormap(ImageColormap colormap) {
+    if (m_params.colormap != colormap) {
+        m_params.colormap = colormap;
         m_displayDirty = true;
     }
 }
@@ -389,7 +400,7 @@ void ImageViewer::Render(float width, float height, const ImageViewerStyle* styl
     }
 
     // Info overlay (bottom-left)
-    {
+    if (m_showInfoOverlay) {
         char buf[128];
         std::snprintf(buf, sizeof(buf), "Zoom: %.0f%%  |  %d x %d  |  Rot: %d\xC2\xB0",
                       m_zoom * 100.0f, m_origWidth, m_origHeight, m_rotation);

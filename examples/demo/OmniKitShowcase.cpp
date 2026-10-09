@@ -2,7 +2,7 @@
 #include "omnikit.hpp"
 #include "core/TimeUtil.hpp"
 #include "pages/TestRunPage.hpp"
-#include "pages/CalcAreaPage.hpp"
+#include "pages/CardsPage.hpp"
 #include "pages/ImageViewerPage.hpp"
 
 #include <algorithm>
@@ -23,11 +23,11 @@ using namespace OmniKit;
 
 namespace {
 
-// Экраны навигации (пункты верхней части сайдбара)
+// Navigation screens (items in top section of sidebar)
 enum class NavScreen {
-    TestRun = 0, // Прогон: вкладки с пультом и графиком
-    CalcArea,    // Расчет площади сечения образца (CalcAreaPage)
-    Image,       // Просмотр изображений и гистограммы (ImageViewerPage)
+    TestRun = 0, // Run: tabs with control panel and chart
+    Cards,       // Cards: Data Records (1M rows), Processing Pipeline, Section Geometry
+    Image,       // Image viewer and histogram
 };
 
 // Узлы дерева сайдбара: проект → серия → прогон
@@ -249,7 +249,7 @@ void RenderSidebar() {
 
     if (auto sidebar = Sidebar({.posYPx = topPx})) {
         sidebar.Item({.label = "Test Run", .icon = Icon::Gamepad}, NavScreen::TestRun, s_screen);
-        sidebar.Item({.label = "Calc Area", .icon = Icon::Clipboard}, NavScreen::CalcArea, s_screen);
+        sidebar.Item({.label = "Cards", .icon = Icon::Clipboard}, NavScreen::Cards, s_screen);
         sidebar.Item({.label = "Image", .icon = Icon::Image}, NavScreen::Image, s_screen);
 
         sidebar.Spacer();
@@ -299,8 +299,8 @@ void RenderContent() {
             case NavScreen::TestRun:
                 RenderTestRunPage();
                 break;
-            case NavScreen::CalcArea:
-                RenderCalcAreaPage();
+            case NavScreen::Cards:
+                RenderCardsPage();
                 break;
             case NavScreen::Image:
                 RenderImageViewerPage();

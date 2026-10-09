@@ -28,11 +28,13 @@ struct ImageViewerToolbarOptions {
 // Options for standard ImageViewer histogram & contrast card
 // ============================================================================
 struct ImageViewerHistogramOptions {
-    const char* title       = "Histogram & Contrast";
-    const char* key         = "CardHist";
-    float height            = 85.0f;
-    bool showAutoWindow     = true;
-    bool showResetWindow    = true;
+    const char* title            = "Histogram & Contrast";
+    const char* key              = "CardHist";
+    float height                 = 85.0f;
+    bool showAutoWindow          = true;
+    bool showResetWindow         = true;
+    const char* autoWindowLabel  = nullptr;
+    const char* resetWindowLabel = nullptr;
 };
 
 // ============================================================================

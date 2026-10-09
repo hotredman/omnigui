@@ -41,6 +41,20 @@ public:
         theme.PopFont();
     }
 
+    // Vertically centered text in table row based on font line height
+    static void Centered(const std::string& text, float fontSize, ImU32 color = 0) {
+        UiTheme& theme = UiTheme::Get();
+        theme.PushFont(theme.fontRegular, fontSize);
+        const float lineHeight = ImGui::GetTextLineHeight();
+        const float offset = (theme.Scale(theme.table.rowHeight) - lineHeight) * 0.5f -
+                             theme.Scale(theme.table.cellPaddingY);
+        if (offset > 0.0f) {
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + offset);
+        }
+        ImGui::TextColored(ImColor(color != 0 ? color : theme.palette.textPrimary).Value, "%s", text.c_str());
+        theme.PopFont();
+    }
+
     // Text cell with standard vertical padding
     static void Text(const std::string& text, float topOffset = -1.0f, ImU32 color = 0) {
         UiTheme& theme = UiTheme::Get();

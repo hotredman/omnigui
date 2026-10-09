@@ -47,68 +47,40 @@ void RenderImageViewerPage() {
     }
 
     if (auto side = split.Side()) {
-        auto& params = s_imageViewer.GetParamsMutable();
-
         // 1. Histogram & Auto-Fit Contrast Card
         OmniKit::ImageViewerHistogramCard(s_imageViewer);
 
-        // 2. Window / Level Controls Card
-        if (Card card(CardOptions{.title = "Window & Level Controls", .key = "CardWL"}); card) {
-            if (card.Float(params.window, {.label = "Window Width (W)", .format = "%.0f", .col = Col::Full()})) {
-                if (params.window < 1.0f) params.window = 1.0f;
-                s_imageViewer.SetParams(params);
-            }
-
-            if (card.Float(params.level, {.label = "Window Level (L)", .format = "%.0f", .col = Col::Full()})) {
-                s_imageViewer.SetParams(params);
-            }
-
-            if (card.Float(params.gamma, {.label = "Gamma (Midtones)", .format = "%.2f", .col = Col::Full()})) {
-                if (params.gamma < 0.1f) params.gamma = 0.1f;
-                if (params.gamma > 5.0f) params.gamma = 5.0f;
-                s_imageViewer.SetParams(params);
-            }
-
-            bool inv = params.invert;
-            if (card.Toggle(inv, {.label = "Invert Polarity (MONOCHROME1)", .col = Col::Full(), .key = "toggle_invert"})) {
-                params.invert = inv;
-                s_imageViewer.SetParams(params);
-            }
-        }
-
-        // 3. Colormap Card
+        // 2. Colormap Card
         if (Card card(CardOptions{.title = "Colormap", .key = "CardColormap"}); card) {
-            bool isGray = (params.colormap == OmniKit::ImageColormap::Grayscale);
+            bool isGray = (s_imageViewer.GetColormap() == OmniKit::ImageColormap::Grayscale);
             if (card.Button({.label = "Grayscale", .variant = isGray ? UiVariant::Primary : UiVariant::Default, .col = Col::Half(), .key = "cmap_gray"})) {
-                params.colormap = OmniKit::ImageColormap::Grayscale;
-                s_imageViewer.SetParams(params);
+                s_imageViewer.SetColormap(OmniKit::ImageColormap::Grayscale);
             }
 
-            bool isTurbo = (params.colormap == OmniKit::ImageColormap::Turbo);
+            bool isTurbo = (s_imageViewer.GetColormap() == OmniKit::ImageColormap::Turbo);
             if (card.Button({.label = "Turbo (HDR)", .variant = isTurbo ? UiVariant::Primary : UiVariant::Default, .col = Col::Half(), .key = "cmap_turbo"})) {
-                params.colormap = OmniKit::ImageColormap::Turbo;
-                s_imageViewer.SetParams(params);
+                s_imageViewer.SetColormap(OmniKit::ImageColormap::Turbo);
             }
         }
 
-        // 4. Pixel Inspector & Metrics Card
+        // 3. Pixel Inspector & Metrics Card
         if (Card card(CardOptions{.title = "Pixel Inspector", .key = "CardInspector"}); card) {
             auto hover = s_imageViewer.GetHoverInfo();
             if (hover.valid) {
-                card.Value(static_cast<double>(hover.pixelX), {.label = "Hovered X", .format = "%.0f", .col = Col::Half()});
-                card.Value(static_cast<double>(hover.pixelY), {.label = "Hovered Y", .format = "%.0f", .col = Col::Half()});
-                card.Value(static_cast<double>(hover.rawValue), {.label = "Raw 16-bit Intensity", .unit = "/ 65535", .format = "%.0f", .col = Col::Full()});
+                card.Value(static_cast<double>(hover.pixelX), {.label = "Hovered X", .format = "%.0f", .col = Col::Half(), .size = UiSize::Small});
+                card.Value(static_cast<double>(hover.pixelY), {.label = "Hovered Y", .format = "%.0f", .col = Col::Half(), .size = UiSize::Small});
+                card.Value(static_cast<double>(hover.rawValue), {.label = "Raw 16-bit Intensity", .unit = "/ 65535", .format = "%.0f", .col = Col::Full(), .size = UiSize::Small});
             } else {
-                card.Value("Hover over image", {.label = "Cursor", .col = Col::Full()});
+                card.Value("Hover over image", {.label = "Cursor", .col = Col::Full(), .size = UiSize::Small});
             }
 
             char dimBuf[64];
             std::snprintf(dimBuf, sizeof(dimBuf), "%d \xC3\x97 %d px", s_imageViewer.GetWidth(), s_imageViewer.GetHeight());
-            card.Value(dimBuf, {.label = "Image Dimensions", .unit = "16-bit HDR", .col = Col::Full()});
+            card.Value(dimBuf, {.label = "Image Dimensions", .unit = "16-bit HDR", .col = Col::Full(), .size = UiSize::Small});
 
-            card.Value(static_cast<double>(s_imageViewer.GetZoom() * 100.0f), {.label = "Zoom Level", .unit = "%", .format = "%.0f", .col = Col::Half()});
+            card.Value(static_cast<double>(s_imageViewer.GetZoom() * 100.0f), {.label = "Zoom Level", .unit = "%", .format = "%.0f", .col = Col::Half(), .size = UiSize::Small});
 
-            card.Value(static_cast<double>(s_imageViewer.GetRotation()), {.label = "Rotation", .unit = "\xC2\xB0", .format = "%.0f", .col = Col::Half()});
+            card.Value(static_cast<double>(s_imageViewer.GetRotation()), {.label = "Rotation", .unit = "\xC2\xB0", .format = "%.0f", .col = Col::Half(), .size = UiSize::Small});
         }
     }
 }

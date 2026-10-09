@@ -22,6 +22,9 @@ public:
     const WindowLevelParams& GetParams() const { return m_params; }
     WindowLevelParams& GetParamsMutable() { return m_params; }
 
+    void SetColormap(ImageColormap colormap);
+    ImageColormap GetColormap() const { return m_params.colormap; }
+
     // Fits window & level based on histogram data
     void AutoFitWindow();
 
@@ -53,6 +56,10 @@ public:
     void SetProfileTool(bool enabled);
     bool IsProfileToolEnabled() const { return m_profileTool; }
     void ClearProfileLine();
+ 
+    // On-canvas info overlay
+    void SetShowInfoOverlay(bool show) { m_showInfoOverlay = show; }
+    bool GetShowInfoOverlay() const { return m_showInfoOverlay; }
 
     // Hover & metrics
     ImageHoverInfo GetHoverInfo() const { return m_hoverInfo; }
@@ -117,8 +124,9 @@ private:
     int  m_profileX0 = 0, m_profileY0 = 0;
     int  m_profileX1 = 0, m_profileY1 = 0;
 
-    // Inspection
+    // Inspection & overlay
     mutable ImageHoverInfo m_hoverInfo;
+    bool m_showInfoOverlay = false;
 
     // Style
     ImageViewerStyle m_style = ImageViewerStyle::Dark();

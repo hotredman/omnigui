@@ -145,21 +145,27 @@ void ImageViewerHistogramCard(ImageViewer& viewer, const ImageViewerHistogramOpt
             }
         }
 
+        const bool bothButtons = options.showAutoWindow && options.showResetWindow;
+        const Col btnCol = bothButtons ? Col::Half() : Col::Full();
+
         if (options.showAutoWindow) {
-            if (card.Button({.label = "Auto Window (Fit Contrast)", .variant = UiVariant::Primary,
-                             .col = Col::Full(), .key = "autowin"})) {
+            const char* label = options.autoWindowLabel ? options.autoWindowLabel : "Auto Window";
+            if (card.Button({.label = label, .variant = UiVariant::Primary,
+                             .tooltip = "Auto Window (Fit Contrast)", .col = btnCol, .key = "autowin"})) {
                 viewer.AutoFitWindow();
             }
         }
 
         if (options.showResetWindow) {
-            if (card.Button({.label = "Reset Window (Full Range)", .variant = UiVariant::Default,
-                             .col = Col::Full(), .key = "rstwin"})) {
+            const char* label = options.resetWindowLabel ? options.resetWindowLabel : "Reset Window";
+            if (card.Button({.label = label, .variant = UiVariant::Default,
+                             .tooltip = "Reset Window (Full Range)", .col = btnCol, .key = "rstwin"})) {
                 float minV = viewer.GetHistogram().GetMinValue();
                 float maxV = viewer.GetHistogram().GetMaxValue();
-                params.window = (maxV > minV) ? (maxV - minV) : 65535.0f;
-                params.level = (minV + maxV) * 0.5f;
-                viewer.SetParams(params);
+                WindowLevelParams resetParams = viewer.GetParams();
+                resetParams.window = (maxV > minV) ? (maxV - minV) : 65535.0f;
+                resetParams.level = (minV + maxV) * 0.5f;
+                viewer.SetParams(resetParams);
             }
         }
     }

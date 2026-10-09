@@ -28,9 +28,11 @@ void ValueDisplay(const char* text, const ValueDisplayOptions& options)
     // Height: final px from container or input field height of selected UiSize.
     // Font size at UiSize scales from compact style (designed for 40 px)
     float h = options.sizePx.y;
-    float fontFactor = 1.0f;
     if (h <= 0.0f) {
         h = theme.GetMetrics(options.size).height;
+    }
+    float fontFactor = 1.0f;
+    if (h < theme.Scale(60.0f)) {
         fontFactor = (h / theme.GetScale()) / 40.0f;
     }
 
