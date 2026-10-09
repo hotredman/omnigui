@@ -24,8 +24,79 @@ enum class UiVariant : uint8_t {
     Warning,    ///< Caution / alert (amber)
     Danger,     ///< Destructive / emergency / error (red)
     Info,       ///< Informational / accent (blue/cyan)
-    Ghost       ///< Transparent background with hover highlighting
+    Ghost,      ///< Transparent background with hover highlighting
+    Muted       ///< Subdued / secondary styling (slate-400)
 };
+
+/// 6x3 Typographic Role Matrix (Material 3 scale extended for desktop/engineering).
+enum class TextRole : uint8_t {
+    // Display (hero metrics, large gauges, KPI counters)
+    DisplayLarge,   ///< 40px / LH 48px
+    DisplayMedium,  ///< 32px / LH 40px
+    DisplaySmall,   ///< 28px / LH 36px
+
+    // Headline (primary window and screen titles)
+    HeadlineLarge,  ///< 24px / LH 32px
+    HeadlineMedium, ///< 22px / LH 28px
+    HeadlineSmall,  ///< 20px / LH 26px
+
+    // Title (section headers, card titles, modal titles)
+    TitleLarge,     ///< 18px / LH 24px
+    TitleMedium,    ///< 16px / LH 22px
+    TitleSmall,     ///< 15px / LH 20px
+
+    // Body (standard content, forms, table values)
+    BodyLarge,      ///< 16px / LH 24px
+    BodyMedium,     ///< 14px / LH 20px (Default)
+    BodySmall,      ///< 13px / LH 18px (Dense)
+
+    // Label (control captions, badges, toolbars, hints)
+    LabelLarge,     ///< 14px / LH 18px
+    LabelMedium,    ///< 12px / LH 16px
+    LabelSmall,     ///< 11px / LH 14px
+
+    // Code (monospace telemetry, registers, hex dumps, log traces)
+    CodeLarge,      ///< 15px / LH 20px
+    CodeMedium,     ///< 13px / LH 18px
+    CodeSmall       ///< 11px / LH 15px
+};
+
+/// Metrics associated with a TextRole.
+struct TypographyMetrics {
+    float fontSize;
+    float lineHeight;
+    bool isMonospace;
+};
+
+/// Returns standardized typography metrics for a given TextRole.
+[[nodiscard]] constexpr TypographyMetrics GetTypographyMetrics(TextRole role) noexcept {
+    switch (role) {
+        case TextRole::DisplayLarge:   return { 40.0f, 48.0f, false };
+        case TextRole::DisplayMedium:  return { 32.0f, 40.0f, false };
+        case TextRole::DisplaySmall:   return { 28.0f, 36.0f, false };
+
+        case TextRole::HeadlineLarge:  return { 24.0f, 32.0f, false };
+        case TextRole::HeadlineMedium: return { 22.0f, 28.0f, false };
+        case TextRole::HeadlineSmall:  return { 20.0f, 26.0f, false };
+
+        case TextRole::TitleLarge:     return { 18.0f, 24.0f, false };
+        case TextRole::TitleMedium:    return { 16.0f, 22.0f, false };
+        case TextRole::TitleSmall:     return { 15.0f, 20.0f, false };
+
+        case TextRole::BodyLarge:      return { 16.0f, 24.0f, false };
+        case TextRole::BodyMedium:     return { 14.0f, 20.0f, false };
+        case TextRole::BodySmall:      return { 13.0f, 18.0f, false };
+
+        case TextRole::LabelLarge:     return { 14.0f, 18.0f, false };
+        case TextRole::LabelMedium:    return { 12.0f, 16.0f, false };
+        case TextRole::LabelSmall:     return { 11.0f, 14.0f, false };
+
+        case TextRole::CodeLarge:      return { 15.0f, 20.0f, true  };
+        case TextRole::CodeMedium:     return { 13.0f, 18.0f, true  };
+        case TextRole::CodeSmall:      return { 11.0f, 15.0f, true  };
+    }
+    return { 14.0f, 20.0f, false };
+}
 
 /// Semantic gap spacing tokens.
 enum class Gap : uint8_t {
@@ -142,6 +213,15 @@ struct VariantColors {
                 Color::Hex(0xFFFFFF18), // 10% white
                 Color::Hex(0xFFFFFF28), // 16% white
                 Color::Hex(0xF1F5F9FF), // Slate-100
+                Color::Hex(0x00000000),
+                0.0f
+            };
+        case UiVariant::Muted:
+            return {
+                Color::Hex(0x00000000),
+                Color::Hex(0x00000000),
+                Color::Hex(0x00000000),
+                Color::Hex(0x94A3B8FF), // Slate-400
                 Color::Hex(0x00000000),
                 0.0f
             };

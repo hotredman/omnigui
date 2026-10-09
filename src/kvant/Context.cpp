@@ -268,6 +268,10 @@ Response Context::Button(std::string_view label, ButtonOptions opts, std::source
     return Button::Run(*this, opts, loc);
 }
 
+UiString Context::String(std::string_view text) {
+    return UiString(InternString(text));
+}
+
 std::string_view Context::InternString(std::string_view text) {
     if (text.empty()) return {};
     char* buf = static_cast<char*>(m_arena.AllocateRaw(text.size() + 1, alignof(char)));
@@ -276,18 +280,36 @@ std::string_view Context::InternString(std::string_view text) {
     return std::string_view(buf, text.size());
 }
 
-UiString Context::String(std::string_view text) {
-    return UiString(InternString(text));
+Response Context::Text(std::string_view label, TextOptions opts, std::source_location loc) {
+    return Text::Run(*this, label, opts, loc);
 }
 
-void Context::Text(std::string_view label, TextOptions opts, std::source_location loc) {
-    const Id id = MakeChildId(loc);
-    Node* node = CreateNode(NodeType::Text, id);
-    node->text = InternString(label);
-    node->textColor = opts.color;
-    node->fontSize = opts.fontSize;
-    node->widthMode = SizeMode::Fit;
-    node->heightMode = SizeMode::Fit;
+Response Context::Display(std::string_view label, UiVariant variant, std::source_location loc) {
+    return Text(label, {.role = TextRole::DisplayLarge, .variant = variant}, loc);
+}
+
+Response Context::Headline(std::string_view label, UiVariant variant, std::source_location loc) {
+    return Text(label, {.role = TextRole::HeadlineMedium, .variant = variant}, loc);
+}
+
+Response Context::Title(std::string_view label, UiVariant variant, std::source_location loc) {
+    return Text(label, {.role = TextRole::TitleLarge, .variant = variant}, loc);
+}
+
+Response Context::Subtitle(std::string_view label, UiVariant variant, std::source_location loc) {
+    return Text(label, {.role = TextRole::TitleMedium, .variant = variant}, loc);
+}
+
+Response Context::Body(std::string_view label, UiVariant variant, std::source_location loc) {
+    return Text(label, {.role = TextRole::BodyMedium, .variant = variant}, loc);
+}
+
+Response Context::Caption(std::string_view label, UiVariant variant, std::source_location loc) {
+    return Text(label, {.role = TextRole::LabelMedium, .variant = variant}, loc);
+}
+
+Response Context::Code(std::string_view label, UiVariant variant, std::source_location loc) {
+    return Text(label, {.role = TextRole::CodeMedium, .variant = variant}, loc);
 }
 
 void Context::RequestFocus(Id id) {
@@ -356,8 +378,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
         canvas.PushClip(node->computedRect);
     }
 
-    // Render background / border if present (skip for Button as Button::Render handles it)
-    if (node->type != NodeType::Button) {
+    // Render background / border if present (skip for Button and Text as their renders handle their styling)
+    if (node->type != NodeType::Button && node->type != NodeType::Text) {
         if (node->backgroundColor.a > 0 || (node->borderColor.a > 0 && node->borderWidth > 0.0f)) {
             if (node->cornerRadius > 0.0f) {
                 canvas.DrawRoundRect(
@@ -375,7 +397,14 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
 
     // Render specific widget contents
     if (node->type == NodeType::Text && !node->text.empty()) {
-        canvas.DrawTextBox(node->text, node->computedRect, node->fontSize, node->textColor, 0.0f, 0.5f);
+        Text::Render(
+            canvas,
+            node->computedRect,
+            node->text,
+            node->textOpts,
+            node->hovered,
+            node->disabled
+        );
     } else if (node->type == NodeType::Button) {
         Button::Render(
             canvas,

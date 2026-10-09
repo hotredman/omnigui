@@ -154,6 +154,7 @@ set(KVANT_SOURCES
     src/kvant/backend/ThorCanvas.cpp
     src/kvant/graphics/Icon.cpp
     src/kvant/widgets/Button.cpp
+    src/kvant/widgets/Text.cpp
 )
 add_library(kvant STATIC ${KVANT_SOURCES})
 target_compile_features(kvant PUBLIC cxx_std_20)

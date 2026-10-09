@@ -194,17 +194,17 @@ void TestFooterExitButtonStaysVisibleInNarrowWindow() {
         if (auto col = ui.Column({.gap = 16.0f, .padding = Padding::All(24.0f)})) {
             // Wide header (requires ~600px+)
             if (auto header = ui.Row({.gap = 12.0f})) {
-                ui.Text("KVANT GUI", {.fontSize = 24.0f});
-                ui.Text("| Autonomous Vector GUI Engine", {.fontSize = 14.0f});
+                ui.Title("KVANT GUI");
+                ui.Caption("| Autonomous Vector GUI Engine");
                 ui.Spacer();
-                ui.Text("C++20 Immediate + ThorVG", {.fontSize = 12.0f});
+                ui.Caption("C++20 Immediate + ThorVG");
             }
 
             ui.Spacer();
 
             // Footer with Exit button pushed to right
             if (auto footer = ui.Row({.gap = 12.0f})) {
-                ui.Text("Zero heap allocations per frame | 0% idle CPU", {.fontSize = 12.0f});
+                ui.Caption("Zero heap allocations per frame | 0% idle CPU");
                 ui.Spacer();
                 if (auto b = ui.Box({.fixedWidth = 80.0f})) {
                     exitBtn = ui.Button("Exit");
@@ -298,7 +298,7 @@ void TestFooterExitButtonPushedToBottomWithCardAndWrap() {
     auto renderUI = [&]() {
         if (auto mainCol = ui.Column({.gap = 16.0f, .padding = Padding::All(24.0f)})) {
             if (auto header = ui.Row({.gap = 12.0f})) {
-                ui.Text("KVANT GUI", {.fontSize = 24.0f});
+                ui.Title("KVANT GUI");
                 ui.Spacer();
             }
             if (auto navRow = ui.Row({.gap = 8.0f})) {
@@ -307,7 +307,7 @@ void TestFooterExitButtonPushedToBottomWithCardAndWrap() {
                 }
             }
             if (auto card = ui.Box({.gap = 16.0f, .padding = Padding::All(20.0f)})) {
-                ui.Text("Card title");
+                ui.Headline("Card title");
                 if (auto wrap = ui.Wrap({.gap = 12.0f, .runGap = 10.0f})) {
                     ui.Button("Btn 1");
                     ui.Button("Btn 2");
@@ -315,7 +315,7 @@ void TestFooterExitButtonPushedToBottomWithCardAndWrap() {
             }
             ui.Spacer();
             if (auto footer = ui.Row({.gap = 12.0f})) {
-                ui.Text("Footer text");
+                ui.Caption("Footer text");
                 ui.Spacer();
                 if (auto box = ui.Box({.fixedWidth = 80.0f})) {
                     exitBtn = ui.Button("Exit");
@@ -611,6 +611,99 @@ void TestBoxContainerGapSpacing() {
     CHECK_NEAR(b2.rect.y, b1.rect.Bottom() + 16.0f, 0.01f);
 }
 
+void TestAutonomousTextWidgetAndTypographyRoles() {
+    using namespace kvant;
+
+    // 1. Verify intrinsic metrics and measurement for different roles
+    const TypographyMetrics mDisplay = GetTypographyMetrics(TextRole::DisplayLarge);
+    CHECK(mDisplay.fontSize == 40.0f);
+    CHECK(mDisplay.lineHeight == 48.0f);
+    CHECK(!mDisplay.isMonospace);
+
+    const TypographyMetrics mBody = GetTypographyMetrics(TextRole::BodyMedium);
+    CHECK(mBody.fontSize == 14.0f);
+    CHECK(mBody.lineHeight == 20.0f);
+
+    const TypographyMetrics mCode = GetTypographyMetrics(TextRole::CodeMedium);
+    CHECK(mCode.fontSize == 13.0f);
+    CHECK(mCode.lineHeight == 18.0f);
+    CHECK(mCode.isMonospace);
+
+    Vec2 estDisplay = Text::Measure("Heading", {.role = TextRole::DisplayLarge});
+    Vec2 estBody = Text::Measure("Heading", {.role = TextRole::BodyMedium});
+    CHECK(estDisplay.x > estBody.x);
+    CHECK(estDisplay.y > estBody.y);
+
+    // 2. Immediate mode rendering and semantic shorthands
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    Response rDisp;
+    Response rHead;
+    Response rTitle;
+    Response rSub;
+    Response rBody;
+    Response rCap;
+    Response rCode;
+    Response rCustom;
+
+    auto renderUI = [&]() {
+        if (auto col = ui.Column({.gap = 8.0f, .padding = Padding::All(16.0f)})) {
+            rDisp = ui.Display("Display Title");
+            rHead = ui.Headline("Headline Section", UiVariant::Primary);
+            rTitle = ui.Title("Title Header");
+            rSub = ui.Subtitle("Subtitle Header");
+            rBody = ui.Body("Standard body text content");
+            rCap = ui.Caption("Muted caption info");
+            rCode = ui.Code("auto x = 42;");
+            rCustom = ui.Text("Aligned End", {.role = TextRole::LabelLarge, .variant = UiVariant::Success, .align = Align::End});
+        }
+    };
+
+    // Frame 1: Measure and layout
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Frame 2: Bounds populated and interaction check
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rDisp.rect.w > 0.0f);
+    CHECK(rDisp.rect.h >= mDisplay.lineHeight);
+    CHECK(rBody.rect.w > 0.0f);
+    CHECK(rBody.rect.h >= mBody.lineHeight);
+    CHECK(rDisp.rect.h > rBody.rect.h);
+    CHECK(rCustom.rect.w > 0.0f);
+
+    // 3. Test interaction: hover, press, and click on text widget
+    ui.OnMouseMove({rDisp.rect.x + 5.0f, rDisp.rect.y + 5.0f});
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(rDisp.hovered);
+
+    // Mouse press
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(rDisp.pressed);
+
+    // Mouse release completes click
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(rDisp.clicked);
+    CHECK(static_cast<bool>(rDisp) == true);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -626,6 +719,7 @@ int main() {
     TestButtonWidgetRunAndResponseChaining();
     TestUiStringAndContextFormatting();
     TestBoxContainerGapSpacing();
+    TestAutonomousTextWidgetAndTypographyRoles();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

@@ -16,14 +16,9 @@
 #include "kvant/layout/Node.hpp"
 #include "kvant/layout/Scope.hpp"
 #include "kvant/widgets/Button.hpp"
+#include "kvant/widgets/Text.hpp"
 
 namespace kvant {
-
-/// Options for text widget.
-struct TextOptions {
-    Color color{Color::Hex(0xE2E8F0FF)};           // Slate-200
-    float fontSize{14.0f};
-};
 
 /// Primary immediate mode context coordinating input, layout, and rendering.
 class Context {
@@ -97,19 +92,28 @@ public:
         std::source_location loc = std::source_location::current()
     );
 
-    void Text(
+    Response Text(
         std::string_view label,
         TextOptions opts = {},
         std::source_location loc = std::source_location::current()
     );
 
     template <typename... Args>
-    void TextFormat(
+    Response TextFormat(
         std::format_string<Args...> fmt,
         Args&&... args
     ) {
-        Text(Format(fmt, std::forward<Args>(args)...));
+        return Text(Format(fmt, std::forward<Args>(args)...));
     }
+
+    // Semantic typography shorthands
+    Response Display(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
+    Response Headline(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
+    Response Title(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
+    Response Subtitle(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
+    Response Body(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
+    Response Caption(std::string_view label, UiVariant variant = UiVariant::Muted, std::source_location loc = std::source_location::current());
+    Response Code(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
 
     // --- String & Formatting Services ---
     [[nodiscard]] UiString String(std::string_view text);

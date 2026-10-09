@@ -33,14 +33,7 @@ private:
         if (node->childCount == 0) {
             switch (node->type) {
                 case NodeType::Text: {
-                    if (canvas) {
-                        node->intrinsicSize = canvas->MeasureText(node->text, node->fontSize);
-                    } else {
-                        // Approximate text metrics fallback when no canvas is provided
-                        const float estimatedWidth = static_cast<float>(node->text.length()) * (node->fontSize * 0.60f);
-                        const float estimatedHeight = node->fontSize * 1.4f;
-                        node->intrinsicSize = {estimatedWidth, estimatedHeight};
-                    }
+                    node->intrinsicSize = Text::Measure(node->text, node->textOpts, canvas);
                     break;
                 }
                 case NodeType::Button: {

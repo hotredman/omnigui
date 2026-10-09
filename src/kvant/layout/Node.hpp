@@ -7,6 +7,7 @@
 #include "kvant/core/Types.hpp"
 #include "kvant/layout/LayoutTypes.hpp"
 #include "kvant/widgets/Button.hpp"
+#include "kvant/widgets/Text.hpp"
 
 namespace kvant {
 
@@ -69,6 +70,7 @@ struct Node {
     bool hovered{false};
     bool pressed{false};
     ButtonOptions buttonOpts{};
+    TextOptions textOpts{};
 
     /// Appends a child node to this container in O(1).
     void AddChild(Node* child) noexcept {

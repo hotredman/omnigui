@@ -98,10 +98,10 @@ int main(int argc, char* argv[]) {
             if (auto mainCol = ui.Column({.gap = 16.0f, .padding = kvant::Padding::All(24.0f)})) {
                 // Header Bar
                 if (auto header = ui.Row({.gap = 12.0f, .alignCross = kvant::Align::Center})) {
-                    ui.Text("KVANT GUI", {.color = kvant::Color::Hex(0x38BDF8FF), .fontSize = 24.0f});
-                    ui.Text("| Autonomous Vector GUI Engine", {.color = kvant::Color::Hex(0x94A3B8FF), .fontSize = 14.0f});
+                    ui.Title("KVANT GUI", kvant::UiVariant::Info);
+                    ui.Caption("| Autonomous Vector GUI Engine");
                     ui.Spacer(); // Push build badge to right
-                    ui.Text("C++20 Immediate + ThorVG", {.color = kvant::Color::Hex(0x64748BFF), .fontSize = 12.0f});
+                    ui.Caption("C++20 Immediate + ThorVG");
                 }
 
                 // Navigation Tabs
@@ -133,9 +133,9 @@ int main(int argc, char* argv[]) {
                 })) {
                     if (activeTabIndex == 0) {
                         // Overview Tab: Interactive Counter
-                        ui.Text("Interactive Reactive State", {.color = kvant::Color::Hex(0xF8FAFCFF), .fontSize = 18.0f});
-                        ui.Text("Pure immediate mode with zero external widget IDs and instant response.",
-                                {.color = kvant::Color::Hex(0xCBD5E1FF), .fontSize = 13.0f});
+                        ui.Headline("Interactive Reactive State");
+                        ui.Body("Pure immediate mode with zero external widget IDs and instant response.",
+                                kvant::UiVariant::Muted);
 
                         if (auto actionRow = ui.Wrap({.gap = 12.0f, .runGap = 10.0f, .alignCross = kvant::Align::Center})) {
                             if (ui.Button("Increment (+1)", {.icon = kvant::Icon::Plus(), .variant = kvant::UiVariant::Success})) {
@@ -148,13 +148,13 @@ int main(int argc, char* argv[]) {
                                 counter = 0;
                             }
 
-                            ui.Text(ui.Format("Value: {}", counter), {.color = kvant::Color::Hex(0x38BDF8FF), .fontSize = 20.0f});
+                            ui.Text(ui.Format("Value: {}", counter), {.role = kvant::TextRole::HeadlineMedium, .variant = kvant::UiVariant::Info});
                         }
                     } else {
                         // Flexbox Demo Tab: Equal Stretch & Alignment
-                        ui.Text("Dynamic 3-Way Equal Stretch Layout", {.color = kvant::Color::Hex(0xF8FAFCFF), .fontSize = 18.0f});
-                        ui.Text("Each button automatically receives exactly 33.3% available width.",
-                                {.color = kvant::Color::Hex(0x94A3B8FF), .fontSize = 13.0f});
+                        ui.Headline("Dynamic 3-Way Equal Stretch Layout");
+                        ui.Body("Each button automatically receives exactly 33.3% available width.",
+                                kvant::UiVariant::Muted);
 
                         if (auto stretchRow = ui.Row({.gap = 12.0f})) {
                             if (auto col1 = ui.Box({.widthMode = kvant::SizeMode::Stretch})) {
@@ -175,8 +175,7 @@ int main(int argc, char* argv[]) {
 
                 // Sticky Footer Bar
                 if (auto footer = ui.Row({.gap = 12.0f, .alignCross = kvant::Align::Center})) {
-                    ui.Text("Zero heap allocations per frame | 0% idle CPU",
-                            {.color = kvant::Color::Hex(0x64748BFF), .fontSize = 12.0f});
+                    ui.Caption("Zero heap allocations per frame | 0% idle CPU");
                     ui.Spacer();
                     if (auto exitBox = ui.Box({.fixedWidth = 90.0f})) {
                         if (ui.Button("Exit", {.icon = kvant::Icon::Close(), .variant = kvant::UiVariant::Ghost})) {
