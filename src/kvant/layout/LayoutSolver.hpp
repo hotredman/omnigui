@@ -73,7 +73,45 @@ private:
         }
 
         // Container intrinsic size aggregation
+        if (node->type == NodeType::ScrollArea) {
+            float totalHeight = node->padding.Vertical();
+            float maxWidth = 0.0f;
+            uint32_t activeChildren = 0;
+
+            for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+                const float cw = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
+                const float ch = (child->heightMode == SizeMode::Fixed) ? child->fixedHeight : child->intrinsicSize.y;
+                totalHeight += ch;
+                maxWidth = std::max(maxWidth, cw);
+                ++activeChildren;
+            }
+
+            if (activeChildren > 1) {
+                totalHeight += static_cast<float>(activeChildren - 1) * node->gap;
+            }
+            node->scrollContentSize = {maxWidth + node->padding.Horizontal(), totalHeight};
+            node->intrinsicSize = {0.0f, 0.0f};
+            return;
+        }
+
         if (node->direction == FlexDirection::Row || node->direction == FlexDirection::Wrap) {
+            float totalWidth = node->padding.Horizontal();
+            float maxHeight = 0.0f;
+            uint32_t activeChildren = 0;
+
+            for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+                const float cw = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
+                const float ch = (child->heightMode == SizeMode::Fixed) ? child->fixedHeight : child->intrinsicSize.y;
+                totalWidth += cw;
+                maxHeight = std::max(maxHeight, ch);
+                ++activeChildren;
+            }
+
+            if (activeChildren > 1) {
+                totalWidth += static_cast<float>(activeChildren - 1) * node->gap;
+            }
+            node->intrinsicSize = {totalWidth, maxHeight + node->padding.Vertical()};
+        } else if (node->direction == FlexDirection::Grid) {
             float totalWidth = node->padding.Horizontal();
             float maxHeight = 0.0f;
             uint32_t activeChildren = 0;
@@ -188,6 +226,74 @@ private:
             return sumH;
         }
 
+        if (node->direction == FlexDirection::Grid) {
+            const float availW = std::max(0.0f, availableWidth - node->padding.Horizontal());
+            const int totalCols = (node->gridColumns > 0) ? node->gridColumns : 12;
+            const float gap = node->gap;
+            const float runGap = (node->runGap > 0.0f) ? node->runGap : node->gap;
+
+            float totalH = 0.0f;
+            bool hasLines = false;
+            Node* lineStart = node->firstChild;
+
+            while (lineStart != nullptr) {
+                Node* lineEnd = lineStart;
+                int currentLineSpan = 0;
+                float lineMaxH = 0.0f;
+                uint32_t itemsInLine = 0;
+
+                while (lineEnd != nullptr) {
+                    if (lineEnd->isSpacer) {
+                        lineEnd = lineEnd->nextSibling;
+                        continue;
+                    }
+
+                    int span = std::clamp(lineEnd->colSpan, 1, totalCols);
+                    const float reqMinW = (lineEnd->minWidth > 0.0f) ? lineEnd->minWidth : node->minColWidth;
+
+                    if (itemsInLine > 0) {
+                        if (currentLineSpan + span > totalCols) {
+                            break;
+                        }
+                        if (reqMinW > 0.0f) {
+                            const float testW = (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap;
+                            if (testW < reqMinW) {
+                                break;
+                            }
+                        }
+                    } else {
+                        if (reqMinW > 0.0f) {
+                            const float testW = (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap;
+                            if (testW < reqMinW) {
+                                span = totalCols;
+                            }
+                        }
+                    }
+
+                    const float childW = std::max(0.0f, (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap);
+                    const float childH = ResolveNodeHeight(lineEnd, childW);
+
+                    lineMaxH = std::max(lineMaxH, childH);
+                    currentLineSpan += span;
+                    ++itemsInLine;
+                    lineEnd = lineEnd->nextSibling;
+                }
+
+                if (itemsInLine == 0) {
+                    break;
+                }
+
+                if (hasLines) {
+                    totalH += runGap;
+                }
+                totalH += lineMaxH;
+                hasLines = true;
+                lineStart = lineEnd;
+            }
+
+            return totalH + node->padding.Vertical();
+        }
+
         return node->intrinsicSize.y;
     }
 
@@ -216,6 +322,70 @@ private:
             return;
         }
 
+        if (node->type == NodeType::ScrollArea) {
+            const ScrollbarMetrics sm = GetScrollbarMetrics(node->uiSize);
+            const float fullW = std::max(0.0f, node->computedRect.w - node->padding.Horizontal());
+            const float viewportH = std::max(0.0f, node->computedRect.h - node->padding.Vertical());
+
+            // 1. Determine if vertical scrollbar is required
+            bool needScrollbar = (node->scrollbarPolicy == VisibilityPolicy::Always);
+            if (!needScrollbar && node->scrollbarPolicy == VisibilityPolicy::Auto && node->scrollOrientation != Orientation::Horizontal) {
+                float testH = 0.0f;
+                uint32_t active = 0;
+                for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+                    if (child->isSpacer) continue;
+                    testH += ResolveNodeHeight(child, fullW);
+                    ++active;
+                }
+                if (active > 1) {
+                    testH += static_cast<float>(active - 1) * node->gap;
+                }
+                testH += node->padding.Vertical();
+                if (testH > viewportH) {
+                    needScrollbar = true;
+                }
+            }
+
+            // 2. Reserve gutter so scrollbar never overlays content
+            const float activeGutter = (needScrollbar && node->scrollOrientation != Orientation::Horizontal)
+                ? sm.gutter
+                : 0.0f;
+            const float viewportW = std::max(0.0f, fullW - activeGutter);
+
+            float contentH = 0.0f;
+            uint32_t activeChildren = 0;
+            for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+                if (child->isSpacer) continue;
+                contentH += ResolveNodeHeight(child, viewportW);
+                ++activeChildren;
+            }
+            if (activeChildren > 1) {
+                contentH += static_cast<float>(activeChildren - 1) * node->gap;
+            }
+            contentH += node->padding.Vertical();
+
+            node->scrollContentSize = {viewportW, contentH};
+
+            const float maxScrollY = std::max(0.0f, contentH - viewportH);
+            node->scrollOffset.y = std::clamp(node->scrollOffset.y, 0.0f, maxScrollY);
+
+            const Rect scrollContentRect(
+                node->computedRect.x + node->padding.left - node->scrollOffset.x,
+                node->computedRect.y + node->padding.top - node->scrollOffset.y,
+                viewportW,
+                contentH
+            );
+
+            if (node->direction == FlexDirection::Grid) {
+                ArrangeGrid(node, scrollContentRect);
+            } else if (node->direction == FlexDirection::Row) {
+                ArrangeRow(node, scrollContentRect);
+            } else {
+                ArrangeColumn(node, scrollContentRect);
+            }
+            return;
+        }
+
         const Rect contentRect(
             node->computedRect.x + node->padding.left,
             node->computedRect.y + node->padding.top,
@@ -227,6 +397,8 @@ private:
             ArrangeRow(node, contentRect);
         } else if (node->direction == FlexDirection::Wrap) {
             ArrangeWrap(node, contentRect);
+        } else if (node->direction == FlexDirection::Grid) {
+            ArrangeGrid(node, contentRect);
         } else {
             ArrangeColumn(node, contentRect);
         }
@@ -467,6 +639,121 @@ private:
         if (node->heightMode == SizeMode::Fit) {
             node->computedRect.h = (currentY > contentRect.y)
                 ? (currentY - contentRect.y - node->gap) + node->padding.Vertical()
+                : node->padding.Vertical();
+        }
+    }
+
+    static void ArrangeGrid(Node* node, const Rect& contentRect) {
+        const float availW = contentRect.w;
+        const int totalCols = (node->gridColumns > 0) ? node->gridColumns : 12;
+        const float gap = node->gap;
+        const float runGap = (node->runGap > 0.0f) ? node->runGap : node->gap;
+
+        float currentY = contentRect.y;
+        bool hasLines = false;
+        Node* lineStart = node->firstChild;
+
+        while (lineStart != nullptr) {
+            Node* lineEnd = lineStart;
+            int currentLineSpan = 0;
+            float lineMaxH = 0.0f;
+            uint32_t itemsInLine = 0;
+
+            // Pass 1: measure items fitting in line and find maximum line height
+            while (lineEnd != nullptr) {
+                if (lineEnd->isSpacer) {
+                    lineEnd = lineEnd->nextSibling;
+                    continue;
+                }
+
+                int span = std::clamp(lineEnd->colSpan, 1, totalCols);
+                const float reqMinW = (lineEnd->minWidth > 0.0f) ? lineEnd->minWidth : node->minColWidth;
+
+                if (itemsInLine > 0) {
+                    if (currentLineSpan + span > totalCols) {
+                        break;
+                    }
+                    if (reqMinW > 0.0f) {
+                        const float testW = (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap;
+                        if (testW < reqMinW) {
+                            break;
+                        }
+                    }
+                } else {
+                    if (reqMinW > 0.0f) {
+                        const float testW = (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap;
+                        if (testW < reqMinW) {
+                            span = totalCols;
+                        }
+                    }
+                }
+
+                const float childW = std::max(0.0f, (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap);
+                float childH = 0.0f;
+                if (lineEnd->heightMode == SizeMode::Fixed) {
+                    childH = lineEnd->fixedHeight;
+                } else {
+                    childH = ResolveNodeHeight(lineEnd, childW);
+                }
+
+                lineMaxH = std::max(lineMaxH, childH);
+                currentLineSpan += span;
+                ++itemsInLine;
+                lineEnd = lineEnd->nextSibling;
+            }
+
+            if (itemsInLine == 0) {
+                break;
+            }
+
+            if (hasLines) {
+                currentY += runGap;
+            }
+
+            // Pass 2: position items along the line
+            float currentX = contentRect.x;
+            for (Node* child = lineStart; child != lineEnd; child = child->nextSibling) {
+                if (child->isSpacer) continue;
+
+                int span = std::clamp(child->colSpan, 1, totalCols);
+                const float reqMinW = (child->minWidth > 0.0f) ? child->minWidth : node->minColWidth;
+                if (itemsInLine == 1 && reqMinW > 0.0f) {
+                    const float testW = (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap;
+                    if (testW < reqMinW) {
+                        span = totalCols;
+                    }
+                }
+
+                const float childW = std::max(0.0f, (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap);
+
+                float childH = 0.0f;
+                if (child->heightMode == SizeMode::Fixed) {
+                    childH = child->fixedHeight;
+                } else if (child->heightMode == SizeMode::Stretch || node->align == Alignment::Stretch) {
+                    childH = lineMaxH;
+                } else {
+                    childH = ResolveNodeHeight(child, childW);
+                }
+
+                float childY = currentY;
+                if (node->align == Alignment::Center) {
+                    childY = currentY + (lineMaxH - childH) * 0.5f;
+                } else if (node->align == Alignment::End) {
+                    childY = currentY + (lineMaxH - childH);
+                }
+
+                ArrangeNode(child, Rect(currentX, childY, childW, childH));
+                currentX += childW + gap;
+            }
+
+            currentY += lineMaxH;
+            hasLines = true;
+            lineStart = lineEnd;
+        }
+
+        if (node->heightMode == SizeMode::Fit) {
+            node->computedRect.h = (currentY > contentRect.y)
+                ? (currentY - contentRect.y) + node->padding.Vertical()
                 : node->padding.Vertical();
         }
     }

@@ -10,7 +10,8 @@ namespace kvant {
 enum class FlexDirection : uint8_t {
     Row,    ///< Children laid out horizontally from left to right
     Column, ///< Children laid out vertically from top to bottom
-    Wrap    ///< Children laid out horizontally and wrapped to subsequent lines upon overflow
+    Wrap,   ///< Children laid out horizontally and wrapped to subsequent lines upon overflow
+    Grid    ///< 12-column responsive grid with automatic line wrapping
 };
 
 /// Sizing policy along an axis.

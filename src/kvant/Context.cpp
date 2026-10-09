@@ -21,7 +21,6 @@ void Context::BeginFrame(Vec2 viewportSize, float dpiScale) {
     }
 
     m_overlayPasses.clear();
-    m_mouseWheel = {0.0f, 0.0f};
 
     if (m_mouseClicked && m_openPopupId.IsValid()) {
         auto it = m_prevFrameBounds.find(m_openPopupId);
@@ -119,7 +118,7 @@ Response Context::Interact(Id id) {
 void Context::AdaptChildToContainer(Node* node) {
     if (!node || m_containerStack.empty()) return;
     Node* parent = m_containerStack.back();
-    if (parent->direction == FlexDirection::Column) {
+    if (parent->direction == FlexDirection::Column || parent->direction == FlexDirection::Grid) {
         node->widthMode = SizeMode::Stretch;
         if (parent->heightMode == SizeMode::Fixed) {
             node->heightMode = SizeMode::Stretch;
@@ -282,6 +281,205 @@ WrapScope Context::Wrap(WrapOptions opts, std::source_location loc) {
     PushDisabled(activeDisabled);
     PushContainer(node);
     return WrapScope(this, node);
+}
+
+GridScope Context::Grid(GridOptions opts, std::source_location loc) {
+    const Id id = MakeChildId(loc);
+    const UiSize activeSize = opts.size.value_or(GetCurrentSize());
+    const bool activeDisabled = opts.disabled || IsDisabled();
+
+    Node* node = CreateNode(NodeType::Container, id);
+    node->direction = FlexDirection::Grid;
+    node->gridColumns = (opts.columns > 0) ? opts.columns : 12;
+    node->minColWidth = opts.minColWidth;
+    node->gap = opts.gap;
+    node->runGap = (opts.runGap > 0.0f) ? opts.runGap : opts.gap;
+    node->padding = opts.padding;
+    node->align = opts.align;
+    node->justify = opts.justify;
+    node->widthMode = opts.widthMode;
+    node->heightMode = opts.heightMode;
+    node->uiSize = activeSize;
+    node->disabled = activeDisabled;
+
+    PushSize(activeSize);
+    PushDisabled(activeDisabled);
+    PushContainer(node);
+    return GridScope(this, node);
+}
+
+ScrollAreaScope Context::ScrollArea(ScrollAreaOptions opts, std::source_location loc) {
+    const Id id = MakeChildId(loc);
+    const UiSize activeSize = opts.size.value_or(GetCurrentSize());
+    const bool activeDisabled = opts.disabled || IsDisabled();
+
+    Node* node = CreateNode(NodeType::ScrollArea, id);
+    node->direction = FlexDirection::Column;
+    node->clipChildren = true;
+    node->widthMode = SizeMode::Stretch;
+    node->heightMode = SizeMode::Stretch;
+    node->flexGrow = 1.0f;
+    node->padding = opts.padding;
+    node->scrollOrientation = opts.orientation;
+    node->scrollbarPolicy = opts.scrollbar;
+    node->uiSize = activeSize;
+    node->disabled = activeDisabled;
+
+    // Retrieve persistent scroll state
+    auto& state = m_scrollStates[id];
+
+    // Handle immediate mouse wheel scroll if hovered on previous frame bounds
+    auto itPrev = m_prevFrameBounds.find(id);
+    if (itPrev != m_prevFrameBounds.end() && !node->disabled) {
+        if (itPrev->second.Contains(m_mousePos) && (m_mouseWheel.x != 0.0f || m_mouseWheel.y != 0.0f)) {
+            const ScrollbarMetrics m = GetScrollbarMetrics(activeSize);
+            state.offset.y -= m_mouseWheel.y * m.scrollStep;
+            state.offset.x -= m_mouseWheel.x * m.scrollStep;
+            if (state.offset.y < 0.0f) state.offset.y = 0.0f;
+            if (state.offset.x < 0.0f) state.offset.x = 0.0f;
+        }
+    }
+
+    node->scrollOffset = state.offset;
+
+    PushSize(activeSize);
+    PushDisabled(activeDisabled);
+    PushContainer(node);
+    return ScrollAreaScope(this, node);
+}
+
+CardScope Context::Card(std::string_view title, CardOptions opts, std::source_location loc) {
+    const Id idOuter = MakeChildId(loc);
+    const UiSize activeSize = opts.size.value_or(GetCurrentSize());
+    const bool activeDisabled = opts.disabled || IsDisabled();
+
+    // 1. Outer styled container frame
+    Node* outerNode = CreateNode(NodeType::Container, idOuter);
+    outerNode->direction = FlexDirection::Column;
+    outerNode->gap = 12.0f;
+    outerNode->minWidth = opts.minWidth;
+    outerNode->widthMode = opts.widthMode;
+    outerNode->heightMode = opts.heightMode;
+    outerNode->padding = opts.padding;
+    outerNode->backgroundColor = opts.backgroundColor;
+    outerNode->borderColor = opts.borderColor;
+    outerNode->borderWidth = opts.borderWidth;
+    outerNode->cornerRadius = opts.cornerRadius;
+    outerNode->clipChildren = opts.clipChildren;
+    outerNode->uiSize = activeSize;
+    outerNode->disabled = activeDisabled;
+
+    PushSize(activeSize);
+    PushDisabled(activeDisabled);
+    PushContainer(outerNode);
+
+    // 2. Optional Header block
+    if (!title.empty() || !opts.subtitle.empty()) {
+        const Id idHeader = Id{idOuter.value ^ 0x517CC1B727220A95ULL};
+        Node* headerNode = CreateNode(NodeType::Container, idHeader);
+        headerNode->direction = FlexDirection::Column;
+        headerNode->gap = 2.0f;
+        headerNode->widthMode = SizeMode::Stretch;
+        headerNode->heightMode = SizeMode::Fit;
+        headerNode->uiSize = activeSize;
+        headerNode->disabled = activeDisabled;
+
+        PushSize(activeSize);
+        PushDisabled(activeDisabled);
+        PushContainer(headerNode);
+
+        if (!title.empty()) {
+            Text(title, {.role = TextRole::TitleMedium, .variant = opts.variant});
+        }
+        if (!opts.subtitle.empty()) {
+            Caption(opts.subtitle, UiVariant::Muted);
+        }
+
+        PopContainer(headerNode);
+    }
+
+    // 3. Inner layout container (Grid if gridLayout == true)
+    Node* innerNode = nullptr;
+    if (opts.gridLayout) {
+        const Id idInner = Id{idOuter.value ^ 0x9E3779B97F4A7C15ULL};
+        innerNode = CreateNode(NodeType::Container, idInner);
+        innerNode->direction = FlexDirection::Grid;
+        innerNode->gridColumns = (opts.gridColumns > 0) ? opts.gridColumns : 12;
+        innerNode->minColWidth = opts.minCellWidth;
+        innerNode->gap = opts.gap;
+        innerNode->runGap = (opts.runGap > 0.0f) ? opts.runGap : opts.gap;
+        innerNode->widthMode = SizeMode::Stretch;
+        innerNode->heightMode = SizeMode::Fit;
+        innerNode->uiSize = activeSize;
+        innerNode->disabled = activeDisabled;
+
+        PushSize(activeSize);
+        PushDisabled(activeDisabled);
+        PushContainer(innerNode);
+    }
+
+    return CardScope(this, outerNode, innerNode);
+}
+
+CardScope Context::Card(CardOptions opts, std::source_location loc) {
+    return Card({}, opts, loc);
+}
+
+CellScope Context::Cell(int span, CellOptions opts, std::source_location loc) {
+    const Id id = MakeChildId(loc);
+    const UiSize activeSize = opts.size.value_or(GetCurrentSize());
+    const bool activeDisabled = opts.disabled || IsDisabled();
+
+    Node* node = CreateNode(NodeType::Container, id);
+    node->direction = FlexDirection::Column;
+    node->colSpan = std::clamp(span, 1, 12);
+    node->minWidth = opts.minWidth;
+    node->clipChildren = true;
+    node->gap = opts.gap;
+    node->padding = opts.padding;
+    node->align = opts.align;
+    node->justify = opts.justify;
+    node->widthMode = SizeMode::Stretch;
+    node->heightMode = opts.heightMode;
+    node->uiSize = activeSize;
+    node->disabled = activeDisabled;
+
+    PushSize(activeSize);
+    PushDisabled(activeDisabled);
+    PushContainer(node);
+    return CellScope(this, node);
+}
+
+CellScope Context::Cell(CellOptions opts, std::source_location loc) {
+    return Cell(opts.span, opts, loc);
+}
+
+CellScope Context::Cell12(CellOptions opts, std::source_location loc) {
+    return Cell(12, opts, loc);
+}
+
+CellScope Context::Cell8(CellOptions opts, std::source_location loc) {
+    return Cell(8, opts, loc);
+}
+
+CellScope Context::Cell6(CellOptions opts, std::source_location loc) {
+    return Cell(6, opts, loc);
+}
+
+CellScope Context::Cell4(CellOptions opts, std::source_location loc) {
+    return Cell(4, opts, loc);
+}
+
+CellScope Context::Cell3(CellOptions opts, std::source_location loc) {
+    return Cell(3, opts, loc);
+}
+
+CellScope Context::Cell2(CellOptions opts, std::source_location loc) {
+    return Cell(2, opts, loc);
+}
+
+CellScope Context::Cell1(CellOptions opts, std::source_location loc) {
+    return Cell(1, opts, loc);
 }
 
 void Context::Spacer(float flex, std::source_location loc) {
@@ -681,13 +879,151 @@ bool Context::IsCursorVisible(std::optional<CursorBlinkMode> modeOverride) const
     return true;
 }
 
-static void CollectBoundsRecursive(Node* node, std::unordered_map<Id, Rect>& outBounds) {
+static void CollectBoundsRecursive(Node* node, std::unordered_map<Id, Rect>& outBounds, Rect parentClip) {
     if (!node) return;
-    if (node->id.IsValid()) {
-        outBounds[node->id] = node->computedRect;
+
+    Rect effectiveClip = parentClip;
+    if (node->clipChildren) {
+        if (node->type == NodeType::ScrollArea) {
+            const ScrollbarMetrics sm = GetScrollbarMetrics(node->uiSize);
+            const bool showScrollbar = (node->scrollbarPolicy == VisibilityPolicy::Always) ||
+                (node->scrollbarPolicy == VisibilityPolicy::Auto && node->scrollContentSize.y > node->computedRect.h);
+            const float gutter = (showScrollbar && node->scrollOrientation != Orientation::Horizontal) ? sm.gutter : 0.0f;
+            const Rect viewRect(
+                node->computedRect.x + node->padding.left,
+                node->computedRect.y + node->padding.top,
+                std::max(0.0f, node->computedRect.w - node->padding.Horizontal() - gutter),
+                std::max(0.0f, node->computedRect.h - node->padding.Vertical())
+            );
+            effectiveClip = parentClip.Intersect(viewRect);
+        } else {
+            effectiveClip = parentClip.Intersect(node->computedRect);
+        }
     }
+
+    if (node->id.IsValid()) {
+        const Rect clipped = node->computedRect.Intersect(effectiveClip);
+        if (clipped.w > 0.0f && clipped.h > 0.0f) {
+            outBounds[node->id] = clipped;
+        }
+    }
+
     for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
-        CollectBoundsRecursive(child, outBounds);
+        CollectBoundsRecursive(child, outBounds, effectiveClip);
+    }
+}
+
+void Context::UpdateScrollAreasRecursive(Node* node) {
+    if (!node) return;
+
+    if (node->type == NodeType::ScrollArea && node->id.IsValid()) {
+        auto& state = m_scrollStates[node->id];
+        const ScrollbarMetrics m = GetScrollbarMetrics(node->uiSize);
+
+        const float viewportW = node->computedRect.w;
+        const float viewportH = node->computedRect.h;
+        const float contentW = node->scrollContentSize.x;
+        const float contentH = node->scrollContentSize.y;
+
+        const float maxScrollY = std::max(0.0f, contentH - viewportH);
+        const float maxScrollX = std::max(0.0f, contentW - viewportW);
+
+        state.offset.y = std::clamp(state.offset.y, 0.0f, maxScrollY);
+        state.offset.x = std::clamp(state.offset.x, 0.0f, maxScrollX);
+        node->scrollOffset = state.offset;
+
+        // Thumb geometry for vertical scroll
+        if (viewportH > 10.0f && maxScrollY > 0.0f) {
+            const float trackX = node->computedRect.Right() - m.trackWidth - m.margin;
+            const float trackY = node->computedRect.y + m.margin;
+            const float trackH = std::max(0.0f, viewportH - 2.0f * m.margin);
+
+            const float thumbH = std::clamp((viewportH / contentH) * trackH, m.minThumbLength, trackH);
+            const float travelH = trackH - thumbH;
+            const float scrollRatio = (maxScrollY > 0.0f) ? (state.offset.y / maxScrollY) : 0.0f;
+            const float thumbY = trackY + scrollRatio * travelH;
+            const Rect trackRect(trackX, trackY, m.trackWidth, trackH);
+            const Rect thumbRect(trackX, thumbY, m.trackWidth, thumbH);
+
+            const bool hoverThumb = thumbRect.Contains(m_mousePos);
+            const bool hoverTrack = trackRect.Contains(m_mousePos);
+            node->scrollbarHovered = hoverThumb || hoverTrack;
+
+            if (hoverThumb && m_mouseClicked) {
+                state.draggingY = true;
+                state.dragStartMouse = m_mousePos;
+                state.dragStartOffset = state.offset.y;
+                m_activeId = node->id;
+            } else if (hoverTrack && m_mouseClicked && !hoverThumb) {
+                // Page jump towards click position on track
+                if (m_mousePos.y < thumbY) {
+                    state.offset.y = std::max(0.0f, state.offset.y - viewportH * 0.8f);
+                } else {
+                    state.offset.y = std::min(maxScrollY, state.offset.y + viewportH * 0.8f);
+                }
+                node->scrollOffset = state.offset;
+            }
+
+            if (state.draggingY) {
+                node->scrollbarActive = true;
+                if (m_mouseDown) {
+                    const float deltaY = m_mousePos.y - state.dragStartMouse.y;
+                    if (travelH > 0.0f) {
+                        state.offset.y = std::clamp(state.dragStartOffset + (deltaY / travelH) * maxScrollY, 0.0f, maxScrollY);
+                        node->scrollOffset = state.offset;
+                    }
+                } else {
+                    state.draggingY = false;
+                    if (m_activeId == node->id) {
+                        m_activeId = Id::Null();
+                    }
+                }
+            }
+        } else {
+            state.draggingY = false;
+        }
+    }
+
+    for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+        UpdateScrollAreasRecursive(child);
+    }
+}
+
+void Context::ScrollToId(Id id) {
+    if (!id.IsValid() || !m_root) return;
+
+    Node* target = nullptr;
+    std::function<void(Node*)> findNode = [&](Node* n) {
+        if (!n || target) return;
+        if (n->id == id) {
+            target = n;
+            return;
+        }
+        for (Node* c = n->firstChild; c != nullptr; c = c->nextSibling) {
+            findNode(c);
+        }
+    };
+    findNode(m_root);
+
+    if (!target) return;
+
+    for (Node* p = target->parent; p != nullptr; p = p->parent) {
+        if (p->type == NodeType::ScrollArea && p->id.IsValid()) {
+            auto& state = m_scrollStates[p->id];
+            const float targetTop = target->computedRect.y;
+            const float targetBottom = target->computedRect.Bottom();
+            const float viewTop = p->computedRect.y;
+            const float viewBottom = p->computedRect.Bottom();
+
+            if (targetTop < viewTop) {
+                state.offset.y -= (viewTop - targetTop);
+            } else if (targetBottom > viewBottom) {
+                state.offset.y += (targetBottom - viewBottom);
+            }
+            if (state.offset.y < 0.0f) state.offset.y = 0.0f;
+            p->scrollOffset = state.offset;
+            break;
+        }
     }
 }
 
@@ -701,13 +1037,17 @@ void Context::EndFrame(ICanvas& canvas) {
     LayoutSolver::Measure(m_root, &canvas);
     LayoutSolver::Arrange(m_root, Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y));
 
+    // Update interactive scroll areas
+    UpdateScrollAreasRecursive(m_root);
+
     // Cache computed bounds for instantaneous interaction feedback next frame
-    CollectBoundsRecursive(m_root, m_currFrameBounds);
+    CollectBoundsRecursive(m_root, m_currFrameBounds, Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y));
     m_prevFrameBounds = std::move(m_currFrameBounds);
 
     // Reset single-frame mouse impulse states
     m_mouseClicked = false;
     m_mouseReleased = false;
+    m_mouseWheel = {0.0f, 0.0f};
 
     // Render entire frame graph
     canvas.Begin(static_cast<uint32_t>(m_viewportSize.x), static_cast<uint32_t>(m_viewportSize.y));
@@ -731,7 +1071,21 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
     if (node->computedRect.w <= 0.0f || node->computedRect.h <= 0.0f) return;
 
     if (node->clipChildren) {
-        canvas.PushClip(node->computedRect);
+        if (node->type == NodeType::ScrollArea) {
+            const ScrollbarMetrics sm = GetScrollbarMetrics(node->uiSize);
+            const bool showScrollbar = (node->scrollbarPolicy == VisibilityPolicy::Always) ||
+                (node->scrollbarPolicy == VisibilityPolicy::Auto && node->scrollContentSize.y > node->computedRect.h);
+            const float gutter = (showScrollbar && node->scrollOrientation != Orientation::Horizontal) ? sm.gutter : 0.0f;
+            const Rect clipRect(
+                node->computedRect.x + node->padding.left,
+                node->computedRect.y + node->padding.top,
+                std::max(0.0f, node->computedRect.w - node->padding.Horizontal() - gutter),
+                std::max(0.0f, node->computedRect.h - node->padding.Vertical())
+            );
+            canvas.PushClip(clipRect);
+        } else {
+            canvas.PushClip(node->computedRect);
+        }
     }
 
     // Render background / border if present (skip for self-rendering widgets)
@@ -833,6 +1187,47 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
 
     if (node->clipChildren) {
         canvas.PopClip();
+    }
+
+    // Render scrollbar for ScrollArea
+    if (node->type == NodeType::ScrollArea) {
+        bool showScrollbar = false;
+        if (node->scrollbarPolicy == VisibilityPolicy::Always) {
+            showScrollbar = true;
+        } else if (node->scrollbarPolicy == VisibilityPolicy::Auto) {
+            showScrollbar = (node->scrollContentSize.y > node->computedRect.h);
+        }
+
+        if (showScrollbar && node->computedRect.h > 10.0f) {
+            const ScrollbarMetrics m = GetScrollbarMetrics(node->uiSize);
+            const float trackX = node->computedRect.Right() - m.trackWidth - m.margin;
+            const float trackY = node->computedRect.y + m.margin;
+            const float trackH = std::max(0.0f, node->computedRect.h - 2.0f * m.margin);
+
+            const float contentH = std::max(node->computedRect.h, node->scrollContentSize.y);
+            const float maxScrollY = contentH - node->computedRect.h;
+            const float thumbH = std::clamp((node->computedRect.h / contentH) * trackH, m.minThumbLength, trackH);
+            const float travelH = trackH - thumbH;
+            const float scrollRatio = (maxScrollY > 0.0f) ? (node->scrollOffset.y / maxScrollY) : 0.0f;
+            const float thumbY = trackY + scrollRatio * travelH;
+
+            const Rect trackRect(trackX, trackY, m.trackWidth, trackH);
+            const Rect thumbRect(trackX, thumbY, m.trackWidth, thumbH);
+
+            // Subtle track background
+            const Color trackCol = Color::Hex(0x1E293B33); // Slate-800 20%
+            canvas.DrawRoundRect(trackRect, m.cornerRadius, trackCol);
+
+            // Thumb pill
+            Color thumbCol = Color::Hex(0x64748B80); // Slate-500 50%
+            if (node->scrollbarActive) {
+                thumbCol = Color::Hex(0xCBD5E1FF); // Slate-300 100%
+            } else if (node->scrollbarHovered) {
+                thumbCol = Color::Hex(0x94A3B8B3); // Slate-400 70%
+            }
+
+            canvas.DrawRoundRect(thumbRect, m.cornerRadius, thumbCol);
+        }
     }
 }
 

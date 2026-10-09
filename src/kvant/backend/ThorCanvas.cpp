@@ -103,15 +103,18 @@ void ThorCanvas::PopClip() {
 void ThorCanvas::ApplyClip(tvg::Paint* paint) {
     if (!paint || m_clipStack.empty()) return;
     const Rect& cr = m_clipStack.back();
-    if (cr.w <= 0.0f || cr.h <= 0.0f) return;
-
     auto clipShape = tvg::Shape::gen();
-    clipShape->appendRect(cr.x, cr.y, cr.w, cr.h);
+    if (cr.w <= 0.0f || cr.h <= 0.0f) {
+        clipShape->appendRect(0.0f, 0.0f, 0.0f, 0.0f);
+    } else {
+        clipShape->appendRect(cr.x, cr.y, cr.w, cr.h);
+    }
     paint->clip(clipShape);
 }
 
 void ThorCanvas::DrawRect(Rect rect, Color fill) {
     if (fill.a == 0 || rect.w <= 0.0f || rect.h <= 0.0f || !m_canvas) return;
+    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
 
     auto shape = tvg::Shape::gen();
     shape->appendRect(rect.x, rect.y, rect.w, rect.h);
@@ -129,6 +132,7 @@ void ThorCanvas::DrawRoundRect(
     float strokeWidth
 ) {
     if (rect.w <= 0.0f || rect.h <= 0.0f || !m_canvas) return;
+    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
 
     auto shape = tvg::Shape::gen();
     shape->appendRect(rect.x, rect.y, rect.w, rect.h, radius, radius);
@@ -181,6 +185,7 @@ Vec2 ThorCanvas::MeasureText(std::string_view text, float fontSize) {
 
 void ThorCanvas::DrawText(std::string_view text, Vec2 pos, float fontSize, Color color) {
     if (text.empty() || color.a == 0 || !m_canvas) return;
+    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
 
     auto txt = tvg::Text::gen();
     std::string textStr(text);
@@ -211,6 +216,7 @@ void ThorCanvas::DrawTextBox(
     float alignY
 ) {
     if (text.empty() || color.a == 0 || bounds.w <= 0.0f || bounds.h <= 0.0f || !m_canvas) return;
+    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
 
     auto txt = tvg::Text::gen();
     std::string textStr(text);
@@ -235,6 +241,7 @@ void ThorCanvas::DrawTextBox(
 
 void ThorCanvas::DrawLine(Vec2 p1, Vec2 p2, Color color, float strokeWidth) {
     if (color.a == 0 || strokeWidth <= 0.0f || !m_canvas) return;
+    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
 
     auto shape = tvg::Shape::gen();
     shape->moveTo(p1.x, p1.y);

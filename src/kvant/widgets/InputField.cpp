@@ -371,11 +371,15 @@ void InputField::Render(
     canvas.PopClip();
 
     // Draw external label & description
-    if (hasLabel) {
+    if (hasLabel && labelRect.w > 0.0f && labelRect.h > 0.0f) {
+        canvas.PushClip(labelRect);
         canvas.DrawTextBox(effectiveLabel, labelRect, m.labelFontSize, labelCol, 0.0f, 0.5f);
+        canvas.PopClip();
     }
-    if (hasDesc) {
+    if (hasDesc && descRect.w > 0.0f && descRect.h > 0.0f) {
+        canvas.PushClip(descRect);
         canvas.DrawTextBox(opts.description, descRect, m.descFontSize, descCol, 0.0f, 0.5f);
+        canvas.PopClip();
     }
 }
 

@@ -158,6 +158,28 @@ struct ComponentMetrics {
     return { 40.0f, 15.0f, 16.0f, 8.0f, 6.0f, 18.0f };
 }
 
+/// Standardized metrics for scrollbars derived from UiSize tokens.
+struct ScrollbarMetrics {
+    float trackWidth;      ///< Thickness of the scrollbar track and thumb in points
+    float minThumbLength;  ///< Minimum thumb size preventing it from becoming unclickable
+    float cornerRadius;    ///< Rounding radius of the thumb pill
+    float scrollStep;      ///< Pixels / points scrolled per mouse wheel tick
+    float margin;          ///< Margin between track and viewport edge / content
+    float gutter;          ///< Total reserved gutter (trackWidth + 2 * margin)
+};
+
+/// Returns standardized scrollbar metrics for a given UiSize token.
+[[nodiscard]] constexpr ScrollbarMetrics GetScrollbarMetrics(UiSize size) noexcept {
+    switch (size) {
+        case UiSize::Xs: return {  4.0f, 16.0f, 2.0f, 24.0f, 2.0f,  8.0f };
+        case UiSize::Sm: return {  6.0f, 20.0f, 3.0f, 32.0f, 3.0f, 12.0f };
+        case UiSize::Md: return {  8.0f, 28.0f, 4.0f, 40.0f, 3.0f, 14.0f };
+        case UiSize::Lg: return { 10.0f, 36.0f, 5.0f, 48.0f, 4.0f, 18.0f };
+        case UiSize::Xl: return { 12.0f, 44.0f, 6.0f, 56.0f, 4.0f, 20.0f };
+    }
+    return { 8.0f, 28.0f, 4.0f, 40.0f, 3.0f, 14.0f };
+}
+
 /// Color set for rendering a widget variant across its interaction states.
 struct VariantColors {
     Color bg;

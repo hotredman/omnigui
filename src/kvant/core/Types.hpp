@@ -87,12 +87,23 @@ struct Rect {
     }
 
     [[nodiscard]] constexpr bool Contains(Vec2 pt) const noexcept {
-        return pt.x >= x && pt.x <= (x + w) && pt.y >= y && pt.y <= (y + h);
+        return w > 0.0f && h > 0.0f && pt.x >= x && pt.x <= (x + w) && pt.y >= y && pt.y <= (y + h);
     }
 
     [[nodiscard]] constexpr bool Intersects(const Rect& other) const noexcept {
         return x < other.Right() && Right() > other.x &&
                y < other.Bottom() && Bottom() > other.y;
+    }
+
+    [[nodiscard]] constexpr Rect Intersect(const Rect& other) const noexcept {
+        const float nx = std::max(x, other.x);
+        const float ny = std::max(y, other.y);
+        const float nr = std::min(Right(), other.Right());
+        const float nb = std::min(Bottom(), other.Bottom());
+        if (nr <= nx || nb <= ny) {
+            return {nx, ny, 0.0f, 0.0f};
+        }
+        return {nx, ny, nr - nx, nb - ny};
     }
 
     [[nodiscard]] constexpr Rect Inset(float amount) const noexcept {
@@ -210,6 +221,20 @@ enum class Spacing : uint8_t {
 [[nodiscard]] constexpr float ToPoints(Spacing spacing) noexcept {
     return static_cast<float>(static_cast<uint8_t>(spacing));
 }
+
+/// Universal 1D/2D orientation for layout and components (ScrollArea, Splitter, Slider, Separator).
+enum class Orientation : uint8_t {
+    Vertical,
+    Horizontal,
+    Both
+};
+
+/// Universal conditional visibility policy (Scrollbars, ClearButtons, Headers, Legends).
+enum class VisibilityPolicy : uint8_t {
+    Auto,    ///< Context-dependent / shown when needed (e.g. on overflow, content presence, hover)
+    Always,  ///< Unconditionally shown
+    Never    ///< Suppressed / never rendered
+};
 
 /// Density-independent point unit (dp) wrapper.
 struct Dp {

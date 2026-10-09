@@ -71,6 +71,46 @@ public:
         std::source_location loc = std::source_location::current()
     );
 
+    GridScope Grid(
+        GridOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    ScrollAreaScope ScrollArea(
+        ScrollAreaOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    CardScope Card(
+        std::string_view title = {},
+        CardOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    CardScope Card(
+        CardOptions opts,
+        std::source_location loc = std::source_location::current()
+    );
+
+    CellScope Cell(
+        int span = 12,
+        CellOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    CellScope Cell(
+        CellOptions opts,
+        std::source_location loc = std::source_location::current()
+    );
+
+    CellScope Cell12(CellOptions opts = {}, std::source_location loc = std::source_location::current());
+    CellScope Cell8(CellOptions opts = {}, std::source_location loc = std::source_location::current());
+    CellScope Cell6(CellOptions opts = {}, std::source_location loc = std::source_location::current());
+    CellScope Cell4(CellOptions opts = {}, std::source_location loc = std::source_location::current());
+    CellScope Cell3(CellOptions opts = {}, std::source_location loc = std::source_location::current());
+    CellScope Cell2(CellOptions opts = {}, std::source_location loc = std::source_location::current());
+    CellScope Cell1(CellOptions opts = {}, std::source_location loc = std::source_location::current());
+
     void Spacer(
         float flex = 1.0f,
         std::source_location loc = std::source_location::current()
@@ -473,9 +513,11 @@ public:
     [[nodiscard]] Vec2 GetViewportSize() const noexcept { return m_viewportSize; }
     [[nodiscard]] Vec2 GetMouseWheel() const noexcept { return m_mouseWheel; }
     bool ConsumeKey(Key key);
+    void ScrollToId(Id id);
 
 private:
     void RenderNodeRecursive(Node* node, ICanvas& canvas);
+    void UpdateScrollAreasRecursive(Node* node);
 
     BumpAllocator m_arena;
     std::vector<Node*> m_containerStack;
@@ -524,6 +566,16 @@ private:
     std::unordered_map<Id, Rect> m_prevFrameBounds;
     std::unordered_map<Id, Rect> m_currFrameBounds;
 
+    // Persistent scroll state for ScrollArea viewports
+    struct ScrollState {
+        Vec2 offset{0.0f, 0.0f};
+        bool draggingY{false};
+        bool draggingX{false};
+        float dragStartOffset{0.0f};
+        Vec2 dragStartMouse{0.0f, 0.0f};
+    };
+    std::unordered_map<Id, ScrollState> m_scrollStates;
+
     // Floating popup & overlay state
     Id m_openPopupId{Id::Null()};
     Rect m_openPopupRect{0.0f, 0.0f, 0.0f, 0.0f};
@@ -539,7 +591,9 @@ inline void Response::Focus() {
 }
 
 inline void Response::ScrollTo() {
-    // Forward to scroll controller when ScrollArea is implemented
+    if (ctx && id.IsValid()) {
+        ctx->ScrollToId(id);
+    }
 }
 
 // Inline implementation of ContainerScope destructor
@@ -548,6 +602,21 @@ inline ContainerScope::~ContainerScope() {
         m_ctx->PopContainer(m_node);
         m_ctx = nullptr;
         m_node = nullptr;
+    }
+}
+
+// Inline implementation of CardScope destructor
+inline CardScope::~CardScope() {
+    if (m_ctx) {
+        if (m_innerNode) {
+            m_ctx->PopContainer(m_innerNode);
+            m_innerNode = nullptr;
+        }
+        if (m_outerNode) {
+            m_ctx->PopContainer(m_outerNode);
+            m_outerNode = nullptr;
+        }
+        m_ctx = nullptr;
     }
 }
 

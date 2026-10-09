@@ -408,6 +408,229 @@ void TestWrapInColumnWithSpacer() {
     CHECK_NEAR(footer->computedRect.Bottom(), 300.0f, 0.001f);
 }
 
+void TestGridLayoutSolver() {
+    using namespace kvant;
+
+    BumpAllocator arena;
+
+    // Grid container with width 600, gap 12, runGap 16
+    Node* grid = arena.Allocate<Node>();
+    grid->direction = FlexDirection::Grid;
+    grid->gridColumns = 12;
+    grid->gap = 12.0f;
+    grid->runGap = 16.0f;
+    grid->widthMode = SizeMode::Fixed;
+    grid->fixedWidth = 600.0f;
+    grid->heightMode = SizeMode::Fit;
+
+    // Row 1: Two cells with colSpan = 6
+    Node* c1 = arena.Allocate<Node>();
+    c1->colSpan = 6;
+    c1->heightMode = SizeMode::Fixed;
+    c1->fixedHeight = 40.0f;
+    grid->AddChild(c1);
+
+    Node* c2 = arena.Allocate<Node>();
+    c2->colSpan = 6;
+    c2->heightMode = SizeMode::Fixed;
+    c2->fixedHeight = 40.0f;
+    grid->AddChild(c2);
+
+    // Row 2: Three cells with colSpan = 4
+    Node* c3 = arena.Allocate<Node>();
+    c3->colSpan = 4;
+    c3->heightMode = SizeMode::Fixed;
+    c3->fixedHeight = 50.0f;
+    grid->AddChild(c3);
+
+    Node* c4 = arena.Allocate<Node>();
+    c4->colSpan = 4;
+    c4->heightMode = SizeMode::Fixed;
+    c4->fixedHeight = 50.0f;
+    grid->AddChild(c4);
+
+    Node* c5 = arena.Allocate<Node>();
+    c5->colSpan = 4;
+    c5->heightMode = SizeMode::Fixed;
+    c5->fixedHeight = 50.0f;
+    grid->AddChild(c5);
+
+    // Row 3: One cell with colSpan = 12
+    Node* c6 = arena.Allocate<Node>();
+    c6->colSpan = 12;
+    c6->heightMode = SizeMode::Fixed;
+    c6->fixedHeight = 60.0f;
+    grid->AddChild(c6);
+
+    LayoutSolver::Measure(grid);
+    LayoutSolver::Arrange(grid, Rect(0.0f, 0.0f, 600.0f, 0.0f));
+
+    // Row 1 checks: W(6) = (6/12)*(600+12) - 12 = 306 - 12 = 294
+    CHECK_NEAR(c1->computedRect.x, 0.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.y, 0.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.w, 294.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.h, 40.0f, 0.001f);
+
+    CHECK_NEAR(c2->computedRect.x, 306.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.y, 0.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.w, 294.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.h, 40.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.Right(), 600.0f, 0.001f);
+
+    // Row 2 checks: W(4) = (4/12)*(600+12) - 12 = 204 - 12 = 192
+    // y = 40 + runGap(16) = 56
+    CHECK_NEAR(c3->computedRect.x, 0.0f, 0.001f);
+    CHECK_NEAR(c3->computedRect.y, 56.0f, 0.001f);
+    CHECK_NEAR(c3->computedRect.w, 192.0f, 0.001f);
+    CHECK_NEAR(c3->computedRect.h, 50.0f, 0.001f);
+
+    CHECK_NEAR(c4->computedRect.x, 204.0f, 0.001f);
+    CHECK_NEAR(c4->computedRect.y, 56.0f, 0.001f);
+    CHECK_NEAR(c4->computedRect.w, 192.0f, 0.001f);
+
+    CHECK_NEAR(c5->computedRect.x, 408.0f, 0.001f);
+    CHECK_NEAR(c5->computedRect.y, 56.0f, 0.001f);
+    CHECK_NEAR(c5->computedRect.w, 192.0f, 0.001f);
+    CHECK_NEAR(c5->computedRect.Right(), 600.0f, 0.001f);
+
+    // Row 3 checks: W(12) = 600
+    // y = 56 + 50 + runGap(16) = 122
+    CHECK_NEAR(c6->computedRect.x, 0.0f, 0.001f);
+    CHECK_NEAR(c6->computedRect.y, 122.0f, 0.001f);
+    CHECK_NEAR(c6->computedRect.w, 600.0f, 0.001f);
+    CHECK_NEAR(c6->computedRect.h, 60.0f, 0.001f);
+
+    // Total grid height in Fit mode: 122 + 60 = 182
+    CHECK_NEAR(grid->computedRect.h, 182.0f, 0.001f);
+}
+
+void TestGridResponsiveWrapAndExpand() {
+    using namespace kvant;
+
+    BumpAllocator arena;
+
+    // Grid container with width 400, gap 10, runGap 15
+    Node* grid = arena.Allocate<Node>();
+    grid->direction = FlexDirection::Grid;
+    grid->gridColumns = 12;
+    grid->gap = 10.0f;
+    grid->runGap = 15.0f;
+    grid->widthMode = SizeMode::Fixed;
+    grid->fixedWidth = 400.0f;
+    grid->heightMode = SizeMode::Fit;
+
+    // Two cells with span 6 and minWidth 250
+    Node* c1 = arena.Allocate<Node>();
+    c1->colSpan = 6;
+    c1->minWidth = 250.0f;
+    c1->heightMode = SizeMode::Fixed;
+    c1->fixedHeight = 40.0f;
+    grid->AddChild(c1);
+
+    Node* c2 = arena.Allocate<Node>();
+    c2->colSpan = 6;
+    c2->minWidth = 250.0f;
+    c2->heightMode = SizeMode::Fixed;
+    c2->fixedHeight = 40.0f;
+    grid->AddChild(c2);
+
+    // Case 1: Constrained space (width 400 < 2 * 250) -> wrap and expand to 100% width
+    LayoutSolver::Measure(grid);
+    LayoutSolver::Arrange(grid, Rect(0.0f, 0.0f, 400.0f, 0.0f));
+
+    CHECK_NEAR(c1->computedRect.x, 0.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.y, 0.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.w, 400.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.h, 40.0f, 0.001f);
+
+    CHECK_NEAR(c2->computedRect.x, 0.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.y, 55.0f, 0.001f); // 40 + 15
+    CHECK_NEAR(c2->computedRect.w, 400.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.h, 40.0f, 0.001f);
+    CHECK_NEAR(grid->computedRect.h, 95.0f, 0.001f); // 55 + 40
+
+    // Case 2: Sufficient space (width 600 >= 2 * 250) -> fit side by side
+    grid->fixedWidth = 600.0f;
+    LayoutSolver::Measure(grid);
+    LayoutSolver::Arrange(grid, Rect(0.0f, 0.0f, 600.0f, 0.0f));
+
+    // W(6) = (6/12)*(600+10) - 10 = 305 - 10 = 295
+    CHECK_NEAR(c1->computedRect.x, 0.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.y, 0.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.w, 295.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.h, 40.0f, 0.001f);
+
+    CHECK_NEAR(c2->computedRect.x, 305.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.y, 0.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.w, 295.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.h, 40.0f, 0.001f);
+    CHECK_NEAR(grid->computedRect.h, 40.0f, 0.001f);
+}
+
+void TestScrollAreaLayoutSolver() {
+    using namespace kvant;
+
+    BumpAllocator arena;
+
+    // Viewport container 400x300
+    Node* scroll = arena.Allocate<Node>();
+    scroll->type = NodeType::ScrollArea;
+    scroll->direction = FlexDirection::Column;
+    scroll->clipChildren = true;
+    scroll->widthMode = SizeMode::Stretch;
+    scroll->heightMode = SizeMode::Stretch;
+    scroll->scrollOffset = {0.0f, 50.0f};
+
+    // 3 children, 150px height each -> total content height = 450px
+    Node* c1 = arena.Allocate<Node>();
+    c1->heightMode = SizeMode::Fixed;
+    c1->fixedHeight = 150.0f;
+    scroll->AddChild(c1);
+
+    Node* c2 = arena.Allocate<Node>();
+    c2->heightMode = SizeMode::Fixed;
+    c2->fixedHeight = 150.0f;
+    scroll->AddChild(c2);
+
+    Node* c3 = arena.Allocate<Node>();
+    c3->heightMode = SizeMode::Fixed;
+    c3->fixedHeight = 150.0f;
+    scroll->AddChild(c3);
+
+    LayoutSolver::Measure(scroll);
+    LayoutSolver::Arrange(scroll, Rect(0.0f, 0.0f, 400.0f, 300.0f));
+
+    // ScrollArea viewport dimensions remain strictly bounded
+    CHECK_NEAR(scroll->computedRect.w, 400.0f, 0.001f);
+    CHECK_NEAR(scroll->computedRect.h, 300.0f, 0.001f);
+    CHECK_NEAR(scroll->scrollContentSize.y, 450.0f, 0.001f);
+
+    // Children are offset by -50px
+    CHECK_NEAR(c1->computedRect.y, -50.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.y, 100.0f, 0.001f);
+    CHECK_NEAR(c3->computedRect.y, 250.0f, 0.001f);
+
+    // Verify that content width strictly reserves scrollbar gutter (so scrollbar never overlays children)
+    const ScrollbarMetrics sm = GetScrollbarMetrics(scroll->uiSize);
+    CHECK_NEAR(scroll->scrollContentSize.x, 400.0f - sm.gutter, 0.001f);
+    CHECK_NEAR(c1->computedRect.w, 400.0f - sm.gutter, 0.001f);
+
+    // Verify over-scroll clamping (offset 500 clamped to max 450 - 300 = 150)
+    scroll->scrollOffset = {0.0f, 500.0f};
+    LayoutSolver::Arrange(scroll, Rect(0.0f, 0.0f, 400.0f, 300.0f));
+
+    CHECK_NEAR(scroll->scrollOffset.y, 150.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.y, -150.0f, 0.001f);
+    CHECK_NEAR(c2->computedRect.y, 0.0f, 0.001f);
+    CHECK_NEAR(c3->computedRect.y, 150.0f, 0.001f);
+
+    // Verify that when scrollbar policy is Never, no gutter is reserved and children occupy full 400px
+    scroll->scrollbarPolicy = VisibilityPolicy::Never;
+    LayoutSolver::Arrange(scroll, Rect(0.0f, 0.0f, 400.0f, 300.0f));
+    CHECK_NEAR(scroll->scrollContentSize.x, 400.0f, 0.001f);
+    CHECK_NEAR(c1->computedRect.w, 400.0f, 0.001f);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Layout Solver...\n";
 
@@ -418,6 +641,9 @@ int main() {
     TestColumnDeficitNoSquishAndCrop();
     TestWrapContainer();
     TestWrapInColumnWithSpacer();
+    TestGridLayoutSolver();
+    TestGridResponsiveWrapAndExpand();
+    TestScrollAreaLayoutSolver();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Layout tests passed successfully!\n";

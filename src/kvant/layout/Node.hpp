@@ -18,6 +18,7 @@ namespace kvant {
 /// Type of element represented by a frame graph node.
 enum class NodeType : uint8_t {
     Container,  ///< General flex layout container (Row, Column, Box)
+    ScrollArea, ///< Viewport container providing scrollable view into overflowed children
     Text,       ///< Text label
     Button,     ///< Clickable button widget
     Switch,     ///< Sliding pill toggle switch
@@ -51,11 +52,23 @@ struct Node {
     float flexGrow{1.0f};       ///< Distribution factor for Stretch/Spacer elements
     float gap{0.0f};            ///< Gap between consecutive children on same line
     float runGap{0.0f};         ///< Vertical gap between consecutive wrapped lines
+    int gridColumns{12};        ///< Number of columns in Grid layout container
+    int colSpan{12};            ///< Number of grid columns occupied by this item (1..12)
+    float minWidth{0.0f};       ///< Minimum width constraint for responsive wrapping
+    float minColWidth{0.0f};    ///< Minimum column width constraint for Grid container
     Padding padding{};          ///< Internal padding inside container
     Alignment align{Alignment::Stretch};
     Justify justify{Justify::Start};
     bool isSpacer{false};
     bool clipChildren{false};
+
+    // Scroll area configuration and state
+    Orientation scrollOrientation{Orientation::Vertical};
+    VisibilityPolicy scrollbarPolicy{VisibilityPolicy::Auto};
+    Vec2 scrollOffset{0.0f, 0.0f};      ///< Active scroll offset in points
+    Vec2 scrollContentSize{0.0f, 0.0f}; ///< Total extent of child content
+    bool scrollbarHovered{false};
+    bool scrollbarActive{false};
 
     // Measured and computed bounds
     Vec2 intrinsicSize{0.0f, 0.0f};  ///< Natural content size (bottom-up measure pass)

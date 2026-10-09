@@ -1356,6 +1356,193 @@ void TestCursorBlinkModesAndPhaseReset() {
     CHECK(ui.IsCursorVisible(CursorBlinkMode::Hidden) == false);
 }
 
+void TestGridAndCardLayout() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    bool switchVal1 = false;
+    bool switchVal2 = true;
+    float speedVal = 120.0f;
+    std::string nameVal = "Axis-1";
+
+    WidgetResponse sw1Res;
+    WidgetResponse sw2Res;
+    WidgetResponse inp1Res;
+    WidgetResponse inp2Res;
+
+    auto renderUI = [&]() {
+        // 1. Standalone Grid with 12-column slots
+        if (auto grid = ui.Grid({.gap = 10.0f, .runGap = 15.0f})) {
+            if (auto c1 = ui.Cell6()) {
+                sw1Res = ui.Switch("Sensor A", &switchVal1);
+            }
+            if (auto c2 = ui.Cell6()) {
+                sw2Res = ui.Switch("Sensor B", &switchVal2);
+            }
+            if (auto c3 = ui.Cell12()) {
+                inp1Res = ui.InputField("Speed Target", speedVal);
+            }
+        }
+
+        // 2. High-level Card with inner Grid and title
+        if (auto card = ui.Card("Motion Controller", {.subtitle = "Direct axis tuning"})) {
+            if (auto c1 = ui.Cell6()) {
+                inp2Res = ui.InputField("Device Name", nameVal);
+            }
+            if (auto c2 = ui.Cell6()) {
+                ui.Button("Calibrate Zero");
+            }
+        }
+    };
+
+    // Frame 1: Initial render pass
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Frame 2: verify bounds and positioning
+    // Viewport width = 800.
+    // Standalone grid content width = 800.
+    // Gap = 10.
+    // Cell 1 (span 6): W(6) = (6/12) * (800 + 10) - 10 = 0.5 * 810 - 10 = 405 - 10 = 395.
+    // Cell 2 (span 6): starts at 395 + 10 = 405, width = 395, ends at 800.
+    Rect bSw1 = ui.GetPrevFrameBounds(sw1Res.id);
+    Rect bSw2 = ui.GetPrevFrameBounds(sw2Res.id);
+    Rect bInp1 = ui.GetPrevFrameBounds(inp1Res.id);
+    Rect bInp2 = ui.GetPrevFrameBounds(inp2Res.id);
+
+    CHECK(bSw1.w > 0.0f);
+    CHECK(bSw2.w > 0.0f);
+    // In Cell6, the switch should be contained within the left half [0, 395]
+    CHECK(bSw1.x < 395.0f);
+    CHECK(bSw1.Right() <= 395.0f + 1.0f);
+
+    // Sensor B switch should be in the right half [405, 800]
+    CHECK(bSw2.x >= 405.0f - 1.0f);
+    CHECK(bSw2.Right() <= 800.0f + 1.0f);
+
+    // Input 1 was in Cell12, so it should be on line 2 (y > bSw1.Bottom())
+    CHECK(bInp1.y >= bSw1.Bottom());
+    // And should stretch across the full width [0, 800]
+    CHECK_NEAR(bInp1.w, 800.0f, 1.0f);
+
+    // Inside Card:
+    // Card has padding 16 on all sides. Content width = 800 - 32 = 768.
+    // Inner grid has gap 12.
+    // Cell 1 (span 6): W(6) = (6/12)*(768 + 12) - 12 = 0.5 * 780 - 12 = 390 - 12 = 378.
+    // Input 2 should start at 16, width 378!
+    CHECK_NEAR(bInp2.x, 16.0f, 1.0f);
+    CHECK_NEAR(bInp2.w, 378.0f, 1.0f);
+
+    // Frame 3: Mouse down on Switch inside Cell6
+    ui.OnMouseMove({bSw1.x + 10.0f, bSw1.y + 10.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(sw1Res.pressed);
+
+    // Frame 4: Mouse up on Switch -> click fired and boolean toggled
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(sw1Res.clicked);
+    CHECK(switchVal1 == true);
+}
+
+void TestScrollAreaImmediateMode() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 400;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    WidgetResponse btn1Res;
+    WidgetResponse btn2Res;
+    WidgetResponse btn3Res;
+
+    auto renderUI = [&]() {
+        if (auto scroll = ui.ScrollArea()) {
+            if (auto box1 = ui.Box({.heightMode = SizeMode::Fixed, .fixedHeight = 200.0f})) {
+                btn1Res = ui.Button("Top Item");
+            }
+            if (auto box2 = ui.Box({.heightMode = SizeMode::Fixed, .fixedHeight = 200.0f})) {
+                btn2Res = ui.Button("Middle Item");
+            }
+            if (auto box3 = ui.Box({.heightMode = SizeMode::Fixed, .fixedHeight = 200.0f})) {
+                btn3Res = ui.Button("Bottom Item");
+            }
+        }
+    };
+
+    // Frame 1: Initial layout
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    Rect bBtn1 = ui.GetPrevFrameBounds(btn1Res.id);
+    Rect bBtn3 = ui.GetPrevFrameBounds(btn3Res.id);
+
+    // Button 1 is visible at the top
+    CHECK_NEAR(bBtn1.y, 0.0f, 1.0f);
+    // Button 1 right edge strictly respects the scrollbar gutter (800 - 14 = 786px)
+    const ScrollbarMetrics sm = GetScrollbarMetrics(UiSize::Md);
+    CHECK_NEAR(bBtn1.Right(), 800.0f - sm.gutter, 1.0f);
+    // Button 3 was placed at y = 400, which is outside the viewport (0..400) -> its clipped interaction bounds have h = 0
+    CHECK(bBtn3.h <= 0.0f);
+
+    // Frame 2: Mouse wheel down by 5 ticks -> 5 * 40 = 200px scroll
+    ui.OnMouseMove({100.0f, 100.0f});
+    ui.OnMouseWheel(0.0f, -5.0f);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    bBtn1 = ui.GetPrevFrameBounds(btn1Res.id);
+    bBtn3 = ui.GetPrevFrameBounds(btn3Res.id);
+
+    // Button 1 scrolled above top (clipped)
+    CHECK(bBtn1.h <= 0.0f);
+    // Button 3 is now visible in the viewport [200, 400]
+    CHECK(bBtn3.h > 0.0f);
+    CHECK(bBtn3.y >= 200.0f - 1.0f);
+
+    // Frame 3: Click on Button 3
+    ui.OnMouseMove({bBtn3.Center().x, bBtn3.Center().y});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(btn3Res.pressed);
+
+    // Frame 4: Release mouse -> clicked event
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(btn3Res.clicked);
+
+    // Frame 5: ScrollTo brings Button 1 back into view
+    btn1Res.ScrollTo();
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    bBtn1 = ui.GetPrevFrameBounds(btn1Res.id);
+    CHECK(bBtn1.h > 0.0f);
+    CHECK_NEAR(bBtn1.y, 0.0f, 1.0f);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -1376,6 +1563,8 @@ int main() {
     TestInputFieldWidget();
     TestSelectWidget();
     TestCursorBlinkModesAndPhaseReset();
+    TestGridAndCardLayout();
+    TestScrollAreaImmediateMode();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";
