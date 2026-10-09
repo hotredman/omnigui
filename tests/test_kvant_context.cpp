@@ -1047,6 +1047,269 @@ void TestInputFieldWidget() {
     CHECK(!ui.IsFocused(rName.id));
 }
 
+void TestSelectWidget() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+
+    const uint32_t width = 800;
+    const uint32_t height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    size_t baudIndex = 1; // "19200"
+    int modeIndex = 0;   // "Auto"
+    std::string profile = "Standard";
+    bool disabledMode = false;
+
+    WidgetResponse rBaud;
+    WidgetResponse rMode;
+    WidgetResponse rProfile;
+
+    auto renderUI = [&]() {
+        if (auto col = ui.Column({.gap = 12.0f, .padding = Padding::All(20.0f)})) {
+            rBaud = ui.Select("Baud Rate", baudIndex, {"9600", "19200", "38400", "115200"}, {
+                .description = "Serial bus communication speed",
+                .labelPlacement = Placement::Stacked
+            });
+
+            rMode = ui.Select("Control Mode", modeIndex, {"Auto", "Manual", "Direct"}, {
+                .disabled = disabledMode
+            });
+
+            rProfile = ui.Select("Profile", profile, {"Eco", "Standard", "Performance", "Extreme"});
+        }
+    };
+
+    // Frame 1: Measure & Layout pass
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Frame 2: Bounds populated
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rBaud.rect.w > 0.0f);
+    CHECK(rBaud.rect.h > 36.0f); // Stacked adds label and description
+    CHECK(rMode.rect.w > 0.0f);
+    CHECK(rProfile.rect.w > 0.0f);
+    CHECK(!ui.IsPopupOpen(rBaud.id));
+    CHECK(!ui.IsPopupOpen(rMode.id));
+    CHECK(!ui.IsPopupOpen(rProfile.id));
+
+    // 1. Click Baud Rate select box to open dropdown popup
+    ui.OnMouseMove({rBaud.rect.x + 20.0f, rBaud.rect.y + 25.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(ui.IsPopupOpen(rBaud.id));
+    Rect popupRect = ui.GetOpenPopupRect();
+    CHECK(popupRect.w > 0.0f);
+    CHECK(popupRect.h > 0.0f);
+
+    // 2. Hover over item 3 ("115200") in the popup and click it
+    // Item 3 rect is at popupRect.y + 4.0f + 3 * itemHeight (32px)
+    const float item3Y = popupRect.y + 4.0f + 3.0f * 32.0f + 10.0f;
+    ui.OnMouseMove({popupRect.x + 30.0f, item3Y});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rBaud.changed);
+    CHECK(baudIndex == 3);
+    CHECK(!ui.IsPopupOpen(rBaud.id)); // Popup is now closed
+
+    // 3. Toggle open and close on clicking the select box again
+    ui.OnMouseMove({rBaud.rect.x + 20.0f, rBaud.rect.y + 25.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(ui.IsPopupOpen(rBaud.id));
+
+    // Click select box again
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(!ui.IsPopupOpen(rBaud.id)); // Closed on toggle
+
+    // 4. Open popup and close via Escape key
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(ui.IsPopupOpen(rBaud.id));
+
+    ui.OnKeyDown(Key::Escape);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(!ui.IsPopupOpen(rBaud.id)); // Closed on Escape
+
+    // 5. Open popup and close via outside click
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(ui.IsPopupOpen(rBaud.id));
+
+    // Click at outside position (5, 5)
+    ui.OnMouseMove({5.0f, 5.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(!ui.IsPopupOpen(rBaud.id)); // Closed on outside click
+
+    // 6. Keyboard navigation with Down / Up / Enter
+    ui.OnMouseMove({rBaud.rect.x + 20.0f, rBaud.rect.y + 25.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(ui.IsPopupOpen(rBaud.id));
+
+    // Current baudIndex is 3 (max). Navigate Up to 2
+    ui.OnKeyDown(Key::Up);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(baudIndex == 2);
+    CHECK(rBaud.changed);
+
+    // Press Enter to accept and close
+    ui.OnKeyDown(Key::Enter);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(!ui.IsPopupOpen(rBaud.id));
+    CHECK(baudIndex == 2);
+
+    // 7. String-based selection with Profile
+    ui.OnMouseMove({rProfile.rect.x + 20.0f, rProfile.rect.y + 15.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(ui.IsPopupOpen(rProfile.id));
+
+    popupRect = ui.GetOpenPopupRect();
+    // Item 3 in Profile is "Extreme" (index 3)
+    const float extremeY = popupRect.y + 4.0f + 3.0f * 32.0f + 10.0f;
+    ui.OnMouseMove({popupRect.x + 30.0f, extremeY});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(rProfile.changed);
+    CHECK(profile == "Extreme");
+    CHECK(!ui.IsPopupOpen(rProfile.id));
+
+    // 8. Disabled mode suppresses interaction
+    disabledMode = true;
+    ui.OnMouseMove({rMode.rect.x + 20.0f, rMode.rect.y + 15.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(!rMode.clicked);
+    CHECK(!ui.IsPopupOpen(rMode.id));
+    CHECK(modeIndex == 0);
+
+    // 9. Verify maxVisibleItems limits popup height to visibleCount * itemHeight + 8
+    size_t limIdx = 0;
+    WidgetResponse rLim;
+    auto renderLimited = [&]() {
+        rLim = ui.Select("Limited Dropdown", limIdx, {"Item 1", "Item 2", "Item 3", "Item 4", "Item 5"}, {
+            .maxVisibleItems = 2
+        });
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderLimited();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseMove({rLim.rect.x + 10.0f, rLim.rect.y + 10.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderLimited();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderLimited();
+    ui.EndFrame(canvas);
+
+    CHECK(ui.IsPopupOpen(rLim.id));
+    const Rect limPopupRect = ui.GetOpenPopupRect();
+    // 2 visible items: 2 * 32.0f + 8.0f = 72.0f
+    CHECK_NEAR(limPopupRect.h, 72.0f, 0.5f);
+}
+
 void TestCursorBlinkModesAndPhaseReset() {
     using namespace kvant;
 
@@ -1111,6 +1374,7 @@ int main() {
     TestAutonomousTextWidgetAndTypographyRoles();
     TestSwitchAndCheckboxWidgets();
     TestInputFieldWidget();
+    TestSelectWidget();
     TestCursorBlinkModesAndPhaseReset();
 
     if (g_failures == 0) {

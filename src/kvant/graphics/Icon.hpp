@@ -101,6 +101,8 @@ public:
     [[nodiscard]] static constexpr Icon ArrowDown()    noexcept { return Icon(IconId::ArrowDown); }
     [[nodiscard]] static constexpr Icon ChevronLeft()  noexcept { return Icon(IconId::ChevronLeft); }
     [[nodiscard]] static constexpr Icon ChevronRight() noexcept { return Icon(IconId::ChevronRight); }
+    [[nodiscard]] static constexpr Icon ChevronUp()    noexcept { return Icon(IconId::ChevronUp); }
+    [[nodiscard]] static constexpr Icon ChevronDown()  noexcept { return Icon(IconId::ChevronDown); }
     [[nodiscard]] static constexpr Icon Eye()          noexcept { return Icon(IconId::Eye); }
     [[nodiscard]] static constexpr Icon EyeOff()       noexcept { return Icon(IconId::EyeOff); }
 

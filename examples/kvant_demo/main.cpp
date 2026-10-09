@@ -56,6 +56,8 @@ int main(int argc, char* argv[]) {
     bool formMode = true;
     float speedDrop = 50.0f;
     std::string sampleId = "Specimen-2026-X";
+    size_t baudIndex = 1;
+    std::string profileMode = "Standard Performance";
 
     while (running) {
         SDL_Event event;
@@ -91,6 +93,9 @@ int main(int argc, char* argv[]) {
                 case SDL_EVENT_MOUSE_BUTTON_UP:
                     ui.OnMouseUp(event.button.button);
                     break;
+                case SDL_EVENT_MOUSE_WHEEL:
+                    ui.OnMouseWheel(event.wheel.x, event.wheel.y);
+                    break;
                 case SDL_EVENT_TEXT_INPUT:
                     ui.OnTextInput(event.text.text);
                     break;
@@ -104,6 +109,8 @@ int main(int argc, char* argv[]) {
                         case SDLK_TAB:       key = kvant::Key::Tab; break;
                         case SDLK_LEFT:      key = kvant::Key::Left; break;
                         case SDLK_RIGHT:     key = kvant::Key::Right; break;
+                        case SDLK_UP:        key = kvant::Key::Up; break;
+                        case SDLK_DOWN:      key = kvant::Key::Down; break;
                         case SDLK_HOME:      key = kvant::Key::Home; break;
                         case SDLK_END:       key = kvant::Key::End; break;
                         default: break;
@@ -206,6 +213,18 @@ int main(int argc, char* argv[]) {
                                 ui.InputField("Sample Identifier", sampleId, {
                                     .description = "Unique test specimen code",
                                     .placeholder = "Enter sample code..."
+                                });
+                            }
+                            if (auto f3 = ui.Box({.fixedWidth = 260.0f})) {
+                                ui.Select("Baud Rate", baudIndex, {"9600 bps", "19200 bps", "38400 bps", "115200 bps"}, {
+                                    .description = "Serial communication bus rate",
+                                    .labelPlacement = kvant::Placement::Stacked
+                                });
+                            }
+                            if (auto f4 = ui.Box({.fixedWidth = 260.0f})) {
+                                ui.Select("Operation Profile", profileMode, {"Eco Saver", "Standard Performance", "Industrial High-Speed", "Extreme Calibration"}, {
+                                    .description = "Active runtime sensor & compute profile",
+                                    .labelPlacement = kvant::Placement::Stacked
                                 });
                             }
                         }

@@ -9,6 +9,7 @@
 #include "kvant/widgets/Button.hpp"
 #include "kvant/widgets/Checkbox.hpp"
 #include "kvant/widgets/InputField.hpp"
+#include "kvant/widgets/Select.hpp"
 #include "kvant/widgets/Switch.hpp"
 #include "kvant/widgets/Text.hpp"
 
@@ -22,6 +23,7 @@ enum class NodeType : uint8_t {
     Switch,     ///< Sliding pill toggle switch
     Checkbox,   ///< Box toggle with checkmark
     InputField, ///< Text or numeric editable field
+    Select,     ///< Dropdown combo box widget
     Spacer,     ///< Elastic spacer expanding to fill remaining room
     Custom      ///< User or custom renderer node
 };
@@ -80,6 +82,7 @@ struct Node {
     SwitchOptions switchOpts{};
     CheckboxOptions checkboxOpts{};
     InputFieldOptions inputOpts{};
+    SelectOptions selectOpts{};
     std::string_view displayText{};
     bool checked{false};
     bool focused{false};

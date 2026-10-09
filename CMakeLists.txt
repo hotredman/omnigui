@@ -156,6 +156,7 @@ set(KVANT_SOURCES
     src/kvant/widgets/Button.cpp
     src/kvant/widgets/Checkbox.cpp
     src/kvant/widgets/InputField.cpp
+    src/kvant/widgets/Select.cpp
     src/kvant/widgets/Switch.cpp
     src/kvant/widgets/Text.cpp
 )

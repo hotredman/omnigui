@@ -1,7 +1,10 @@
 #pragma once
 
 #include <chrono>
+#include <functional>
+#include <initializer_list>
 #include <optional>
+#include <span>
 #include <source_location>
 #include <string_view>
 #include <unordered_map>
@@ -20,6 +23,7 @@
 #include "kvant/widgets/Button.hpp"
 #include "kvant/widgets/Checkbox.hpp"
 #include "kvant/widgets/InputField.hpp"
+#include "kvant/widgets/Select.hpp"
 #include "kvant/widgets/Switch.hpp"
 #include "kvant/widgets/Text.hpp"
 
@@ -44,6 +48,7 @@ public:
     void OnMouseUp(int button);
     void OnTextInput(std::string_view utf8Text);
     void OnKeyDown(Key key, KeyModifiers mods = {});
+    void OnMouseWheel(float x, float y);
 
     // --- Container Scopes ---
     RowScope Row(
@@ -285,6 +290,124 @@ public:
         return InputField(label, value, opts, loc);
     }
 
+    // --- Select (Dropdown) Widget ---
+    Response Select(
+        std::string_view label,
+        size_t& selectedIndex,
+        std::span<const std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Select(
+        size_t& selectedIndex,
+        std::span<const std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Select(
+        std::string_view label,
+        int& selectedIndex,
+        std::span<const std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Select(
+        int& selectedIndex,
+        std::span<const std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Select(
+        std::string_view label,
+        std::string& selectedValue,
+        std::span<const std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Select(
+        std::string& selectedValue,
+        std::span<const std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Select(
+        std::string_view label,
+        std::string_view& selectedValue,
+        std::span<const std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Select(
+        std::string_view& selectedValue,
+        std::span<const std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Select(
+        std::string_view label,
+        size_t& selectedIndex,
+        std::initializer_list<std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Select(label, selectedIndex, std::span<const std::string_view>(items.begin(), items.size()), opts, loc);
+    }
+
+    Response Select(
+        size_t& selectedIndex,
+        std::initializer_list<std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Select(selectedIndex, std::span<const std::string_view>(items.begin(), items.size()), opts, loc);
+    }
+
+    Response Select(
+        std::string_view label,
+        int& selectedIndex,
+        std::initializer_list<std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Select(label, selectedIndex, std::span<const std::string_view>(items.begin(), items.size()), opts, loc);
+    }
+
+    Response Select(
+        int& selectedIndex,
+        std::initializer_list<std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Select(selectedIndex, std::span<const std::string_view>(items.begin(), items.size()), opts, loc);
+    }
+
+    Response Select(
+        std::string_view label,
+        std::string& selectedValue,
+        std::initializer_list<std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Select(label, selectedValue, std::span<const std::string_view>(items.begin(), items.size()), opts, loc);
+    }
+
+    Response Select(
+        std::string& selectedValue,
+        std::initializer_list<std::string_view> items,
+        SelectOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return Select(selectedValue, std::span<const std::string_view>(items.begin(), items.size()), opts, loc);
+    }
+
     // --- String & Formatting Services ---
     [[nodiscard]] UiString String(std::string_view text);
     [[nodiscard]] std::string_view InternString(std::string_view text);
@@ -332,6 +455,24 @@ public:
     void SetCurrentTime(double timeSeconds) noexcept;
     void AdvanceTime(double deltaSeconds) noexcept;
     [[nodiscard]] double GetCurrentTime() const noexcept { return m_currentTimeSec; }
+
+    // --- Popup & Overlay Management ---
+    void OpenPopup(Id id, Rect bounds);
+    void ClosePopup();
+    [[nodiscard]] bool IsPopupOpen(Id id) const noexcept { return m_openPopupId == id && id.IsValid(); }
+    [[nodiscard]] Id GetOpenPopupId() const noexcept { return m_openPopupId; }
+    [[nodiscard]] Rect GetOpenPopupRect() const noexcept { return m_openPopupRect; }
+    void RegisterOverlay(std::function<void(ICanvas&)> drawFn);
+
+    // --- Input Queries & Consumption ---
+    [[nodiscard]] Vec2 GetMousePos() const noexcept { return m_mousePos; }
+    [[nodiscard]] bool IsMouseDown() const noexcept { return m_mouseDown; }
+    [[nodiscard]] bool IsMouseClicked() const noexcept { return m_mouseClicked; }
+    [[nodiscard]] bool IsMouseReleased() const noexcept { return m_mouseReleased; }
+    void ConsumeMouseClick() noexcept { m_mouseClicked = false; m_mouseReleased = false; }
+    [[nodiscard]] Vec2 GetViewportSize() const noexcept { return m_viewportSize; }
+    [[nodiscard]] Vec2 GetMouseWheel() const noexcept { return m_mouseWheel; }
+    bool ConsumeKey(Key key);
 
 private:
     void RenderNodeRecursive(Node* node, ICanvas& canvas);
@@ -382,6 +523,12 @@ private:
     // Previous frame widget bounds for instantaneous hit testing
     std::unordered_map<Id, Rect> m_prevFrameBounds;
     std::unordered_map<Id, Rect> m_currFrameBounds;
+
+    // Floating popup & overlay state
+    Id m_openPopupId{Id::Null()};
+    Rect m_openPopupRect{0.0f, 0.0f, 0.0f, 0.0f};
+    std::vector<std::function<void(ICanvas&)>> m_overlayPasses;
+    Vec2 m_mouseWheel{0.0f, 0.0f};
 };
 
 // Inline implementations of Response imperative actions

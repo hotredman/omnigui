@@ -20,6 +20,19 @@ void Context::BeginFrame(Vec2 viewportSize, float dpiScale) {
         m_currentTimeSec = std::chrono::duration<double>(now - m_startTime).count();
     }
 
+    m_overlayPasses.clear();
+    m_mouseWheel = {0.0f, 0.0f};
+
+    if (m_mouseClicked && m_openPopupId.IsValid()) {
+        auto it = m_prevFrameBounds.find(m_openPopupId);
+        const bool overSelect = (it != m_prevFrameBounds.end()) && it->second.Contains(m_mousePos);
+        const bool overPopup = m_openPopupRect.Contains(m_mousePos);
+        if (!overSelect && !overPopup) {
+            ClosePopup();
+            ConsumeMouseClick();
+        }
+    }
+
     if (m_mouseClicked && m_focusedId.IsValid()) {
         auto it = m_prevFrameBounds.find(m_focusedId);
         if (it != m_prevFrameBounds.end()) {
@@ -74,6 +87,11 @@ Response Context::Interact(Id id) {
     Response res;
     res.id = id;
     res.ctx = this;
+
+    // Suppress interaction on background widgets occluded by a floating overlay popup
+    if (m_openPopupId.IsValid() && id != m_openPopupId && m_openPopupRect.Contains(m_mousePos)) {
+        return res;
+    }
 
     auto it = m_prevFrameBounds.find(id);
     if (it != m_prevFrameBounds.end()) {
@@ -396,6 +414,38 @@ Response Context::InputField(std::string_view label, std::string_view value, Inp
     return InputField::Run(*this, label, nullptr, nullptr, nullptr, nullptr, value, opts, loc);
 }
 
+Response Context::Select(std::string_view label, size_t& selectedIndex, std::span<const std::string_view> items, SelectOptions opts, std::source_location loc) {
+    return Select::Run(*this, label, &selectedIndex, nullptr, nullptr, nullptr, items, opts, loc);
+}
+
+Response Context::Select(size_t& selectedIndex, std::span<const std::string_view> items, SelectOptions opts, std::source_location loc) {
+    return Select::Run(*this, {}, &selectedIndex, nullptr, nullptr, nullptr, items, opts, loc);
+}
+
+Response Context::Select(std::string_view label, int& selectedIndex, std::span<const std::string_view> items, SelectOptions opts, std::source_location loc) {
+    return Select::Run(*this, label, nullptr, &selectedIndex, nullptr, nullptr, items, opts, loc);
+}
+
+Response Context::Select(int& selectedIndex, std::span<const std::string_view> items, SelectOptions opts, std::source_location loc) {
+    return Select::Run(*this, {}, nullptr, &selectedIndex, nullptr, nullptr, items, opts, loc);
+}
+
+Response Context::Select(std::string_view label, std::string& selectedValue, std::span<const std::string_view> items, SelectOptions opts, std::source_location loc) {
+    return Select::Run(*this, label, nullptr, nullptr, &selectedValue, nullptr, items, opts, loc);
+}
+
+Response Context::Select(std::string& selectedValue, std::span<const std::string_view> items, SelectOptions opts, std::source_location loc) {
+    return Select::Run(*this, {}, nullptr, nullptr, &selectedValue, nullptr, items, opts, loc);
+}
+
+Response Context::Select(std::string_view label, std::string_view& selectedValue, std::span<const std::string_view> items, SelectOptions opts, std::source_location loc) {
+    return Select::Run(*this, label, nullptr, nullptr, nullptr, &selectedValue, items, opts, loc);
+}
+
+Response Context::Select(std::string_view& selectedValue, std::span<const std::string_view> items, SelectOptions opts, std::source_location loc) {
+    return Select::Run(*this, {}, nullptr, nullptr, nullptr, &selectedValue, items, opts, loc);
+}
+
 void Context::RequestFocus(Id id) {
     m_focusedId = id;
     ResetCursorBlink();
@@ -420,6 +470,10 @@ void Context::OnMouseUp(int button) {
     }
 }
 
+void Context::OnMouseWheel(float x, float y) {
+    m_mouseWheel = {x, y};
+}
+
 void Context::OnTextInput(std::string_view utf8Text) {
     ResetCursorBlink();
     if (m_focusedId.IsValid() && m_editState.id == m_focusedId) {
@@ -435,6 +489,11 @@ void Context::OnTextInput(std::string_view utf8Text) {
 
 void Context::OnKeyDown(Key key, KeyModifiers mods) {
     ResetCursorBlink();
+
+    if (key == Key::Escape && m_openPopupId.IsValid()) {
+        ClosePopup();
+    }
+
     if (m_focusedId.IsValid() && m_editState.id == m_focusedId) {
         switch (key) {
             case Key::Backspace:
@@ -480,6 +539,30 @@ void Context::OnKeyDown(Key key, KeyModifiers mods) {
     } else {
         m_pendingKeyEvents.push_back({key, mods});
     }
+}
+
+void Context::OpenPopup(Id id, Rect bounds) {
+    m_openPopupId = id;
+    m_openPopupRect = bounds;
+}
+
+void Context::ClosePopup() {
+    m_openPopupId = Id::Null();
+    m_openPopupRect = Rect{};
+}
+
+void Context::RegisterOverlay(std::function<void(ICanvas&)> drawFn) {
+    m_overlayPasses.push_back(std::move(drawFn));
+}
+
+bool Context::ConsumeKey(Key key) {
+    for (auto it = m_pendingKeyEvents.begin(); it != m_pendingKeyEvents.end(); ++it) {
+        if (it->key == key) {
+            m_pendingKeyEvents.erase(it);
+            return true;
+        }
+    }
+    return false;
 }
 
 std::string_view Context::GetOrStartTextEdit(
@@ -630,8 +713,17 @@ void Context::EndFrame(ICanvas& canvas) {
     canvas.Begin(static_cast<uint32_t>(m_viewportSize.x), static_cast<uint32_t>(m_viewportSize.y));
     canvas.PushClip(Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y));
     RenderNodeRecursive(m_root, canvas);
+
+    // Render floating overlay passes (e.g. dropdown popups, tooltips)
+    for (const auto& overlayFn : m_overlayPasses) {
+        overlayFn(canvas);
+    }
+
     canvas.PopClip();
     canvas.End();
+
+    m_pendingKeyEvents.clear();
+    m_pendingTextInput.clear();
 }
 
 void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
@@ -645,7 +737,7 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
     // Render background / border if present (skip for self-rendering widgets)
     if (node->type != NodeType::Button && node->type != NodeType::Text &&
         node->type != NodeType::Switch && node->type != NodeType::Checkbox &&
-        node->type != NodeType::InputField) {
+        node->type != NodeType::InputField && node->type != NodeType::Select) {
         if (node->backgroundColor.a > 0 || (node->borderColor.a > 0 && node->borderWidth > 0.0f)) {
             if (node->cornerRadius > 0.0f) {
                 canvas.DrawRoundRect(
@@ -719,6 +811,18 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
             node->disabled,
             node->cursorVisible,
             node->cursorWidth
+        );
+    } else if (node->type == NodeType::Select) {
+        Select::Render(
+            canvas,
+            node->computedRect,
+            node->text,
+            node->displayText,
+            node->selectOpts,
+            node->uiSize,
+            node->hovered,
+            node->focused,
+            node->disabled
         );
     }
 
