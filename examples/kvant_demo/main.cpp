@@ -205,7 +205,7 @@ int main(int argc, char* argv[]) {
                 }
 
                 // Engine HUD Toolbar
-                if (auto tb = ui.Toolbar({.fixedHeight = 42.0f})) {
+                if (auto tb = ui.Toolbar()) {
                     // Density Preset Toggle
                     const char* densityLabel = (ui.GetDensity() == kvant::Density::Standard) ? "Density: Standard" :
                                               ((ui.GetDensity() == kvant::Density::Compact) ? "Density: Compact" : "Density: Touch");
@@ -309,11 +309,15 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
-                // First-class Vector TabBar
+                // First-class Vector TabBar with Carousel auto-scrolling
                 const std::vector<kvant::TabItem> navTabs = {
                     {.label = "Overview", .icon = kvant::Icon::Eye()},
                     {.label = "Flexbox Demo", .icon = kvant::Icon::Settings()},
-                    {.label = "Industrial Dashboard", .icon = kvant::Icon::Folder(), .badge = "Live"}
+                    {.label = "Industrial Dashboard", .icon = kvant::Icon::Folder(), .badge = "Live"},
+                    {.label = "Telemetry & Logs", .icon = kvant::Icon::Play()},
+                    {.label = "Network Diagnostics", .icon = kvant::Icon::Plus()},
+                    {.label = "Calibration Matrix", .icon = kvant::Icon::Settings()},
+                    {.label = "System Audit", .icon = kvant::Icon::Trash()}
                 };
                 ui.TabBar(activeTabIndex, navTabs, {.style = tabStyle});
 
@@ -484,6 +488,15 @@ int main(int argc, char* argv[]) {
                                 ui.Button("Col 1 (Stretch)", {.stretch = true});
                                 ui.Button("Col 2 (Stretch)", {.stretch = true});
                                 ui.Button("Col 3 (Stretch)", {.stretch = true});
+                            }
+
+                            ui.Heading({.title = "Horizontal Carousel Ribbon", .subtitle = "Autonomous scroll container with navigation arrows and mouse wheel support."});
+                            if (auto ribbon = ui.Carousel({.gap = kvant::UiSize::Sm})) {
+                                for (int k = 1; k <= 10; ++k) {
+                                    ui.Button(ui.Format("Module #{:02d}", k), {
+                                        .variant = (k % 3 == 0) ? kvant::UiVariant::Primary : kvant::UiVariant::Default
+                                    });
+                                }
                             }
                         }
                     }

@@ -1886,7 +1886,7 @@ void TestToolbarWidgetWorkflow() {
     bool toolSettingsActive = false;
 
     auto renderToolbar = [&]() {
-        if (auto tb = ui.Toolbar({.fixedHeight = 44.0f, .padding = Padding::Symmetric(12.0f, 4.0f)})) {
+        if (auto tb = ui.Toolbar({.size = UiSize::Md, .padding = UiSize::Sm})) {
             btnNew = tb.ToolButton("New", {.icon = Icon::Plus()});
             btnSave = tb.ToolButton("Save", {.icon = Icon::Check(), .disabled = true});
             tb.Separator();
@@ -2501,7 +2501,7 @@ void TestIndustrialDashboardNoBlackLines() {
                     ui.Caption("C++20 Immediate + ThorVG");
                 }
 
-                if (auto tb = ui.Toolbar({.fixedHeight = 42.0f})) {
+                if (auto tb = ui.Toolbar()) {
                     tb.ToolButton("Density: Standard");
                     tb.Separator();
                     tb.ToolButton("Scale: 100%");
@@ -2636,6 +2636,133 @@ void TestIndustrialDashboardNoBlackLines() {
     }
 }
 
+void TestCarouselWidgetAndTabBarOverflow() {
+    using namespace kvant;
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 300;
+    const uint32_t height = 400;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    // 1. Standalone Carousel with buttons
+    WidgetResponse b1, b2, b3;
+    Node* carouselNode = nullptr;
+    auto renderCarousel = [&]() {
+        if (auto c = ui.Carousel({.gap = UiSize::Sm})) {
+            carouselNode = c.GetNode();
+            b1 = ui.Button("Button 1");
+            b2 = ui.Button("Button 2");
+            b3 = ui.Button("Button 3");
+            ui.Button("Button 4");
+            ui.Button("Button 5");
+        }
+    };
+
+    // Frame 1: Measure and layout
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderCarousel();
+    ui.EndFrame(canvas);
+
+    // Frame 2: Bounds collected
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderCarousel();
+    ui.EndFrame(canvas);
+
+    CHECK(b1.rect.w > 0.0f);
+    CHECK(b2.rect.w > 0.0f);
+    const float initialB1X = b1.rect.x;
+
+    // At offset 0: left arrow hidden, right arrow visible
+    CHECK(carouselNode != nullptr);
+    if (carouselNode) {
+        CHECK(!carouselNode->showLeftArrow);
+        CHECK(carouselNode->showRightArrow);
+        CHECK(carouselNode->leftArrowRect.w == 0.0f);
+        CHECK(carouselNode->rightArrowRect.w > 0.0f);
+    }
+
+    // Initial offset is 0, so right arrow is visible at the right edge (x ~ 268..300, y ~ 0..36)
+    // Click near right edge: x = 285, y = 18
+    ui.OnMouseMove({285.0f, 18.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderCarousel();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderCarousel();
+    ui.EndFrame(canvas);
+
+    // Frame after click propagation
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderCarousel();
+    ui.EndFrame(canvas);
+
+    // Button 1 should have moved left due to arrow scroll!
+    CHECK(b1.rect.x < initialB1X || b1.rect.w == 0.0f);
+    CHECK(b3.rect.w > 0.0f); // Button 3 is now scrolled into view
+
+    // Scrolled: left arrow should now be visible!
+    if (carouselNode) {
+        CHECK(carouselNode->showLeftArrow);
+        CHECK(carouselNode->leftArrowRect.w > 0.0f);
+    }
+
+    // Test mouse wheel on carousel
+    const float prevB3X = b3.rect.x;
+    ui.OnMouseMove({150.0f, 18.0f});
+    ui.OnMouseWheel(0.0f, -2.0f); // Wheel down/right
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderCarousel();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderCarousel();
+    ui.EndFrame(canvas);
+
+    CHECK(b3.rect.x < prevB3X); // Scrolled further left
+
+    // 2. TabBar with overflow and auto-scroll to active tab
+    int activeTab = 0;
+    const std::vector<TabItem> longTabs = {
+        {.label = "General"},
+        {.label = "Network"},
+        {.label = "Security"},
+        {.label = "Storage"},
+        {.label = "Sensors"},
+        {.label = "Diagnostics"},
+        {.label = "Advanced"}
+    };
+
+    auto renderTabBar = [&]() {
+        ui.TabBar(activeTab, longTabs);
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderTabBar();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderTabBar();
+    ui.EndFrame(canvas);
+
+    CHECK(activeTab == 0);
+
+    // Switch active tab programmatically to last tab (Advanced)
+    activeTab = 6;
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderTabBar();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderTabBar();
+    ui.EndFrame(canvas);
+
+    CHECK(activeTab == 6);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -2664,6 +2791,7 @@ int main() {
     TestDirtyRectDamageTracking();
     TestTabBarWidgetWorkflow();
     TestToolbarWidgetWorkflow();
+    TestCarouselWidgetAndTabBarOverflow();
     TestLabelVariantsStableSizing();
     TestContainerSizeInheritanceAndWidgetStretch();
     TestUiStyleAndDensityScaling();

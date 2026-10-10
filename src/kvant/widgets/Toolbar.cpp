@@ -77,22 +77,36 @@ ToolbarScope Toolbar::Open(
     const Id id = ctx.MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(ctx.GetCurrentSize());
     const ComponentMetrics m = ctx.GetStyle().GetComponentMetrics(activeSize);
-    const float barH = (opts.fixedHeight > 0.0f) ? opts.fixedHeight : (m.defaultHeight + 8.0f);
+    const float barH = m.defaultHeight + 8.0f;
     const bool effectiveDisabled = opts.disabled || ctx.IsDisabled();
 
     Node* node = ctx.CreateNode(NodeType::Container, id);
     node->direction = FlexDirection::Row;
     node->align = Alignment::Center;
     node->gap = opts.gap.has_value() ? ctx.GetStyle().GetGap(*opts.gap) : ctx.GetStyle().GetGap(activeSize);
-    node->padding = opts.padding.value_or(Padding::Symmetric(ctx.GetStyle().GetGap(activeSize), ctx.GetStyle().GetGap(activeSize) * 0.5f));
+
+    Padding toolbarPadding;
+    if (opts.padding.has_value()) {
+        if (*opts.padding == UiSize::None) {
+            toolbarPadding = Padding{};
+        } else {
+            const float g = ctx.GetStyle().GetGap(*opts.padding);
+            toolbarPadding = Padding::Symmetric(g, g * 0.5f);
+        }
+    } else {
+        const float g = ctx.GetStyle().GetGap(activeSize);
+        toolbarPadding = Padding::Symmetric(g, g * 0.5f);
+    }
+    node->padding = toolbarPadding;
+
     node->widthMode = SizeMode::Stretch;
     node->heightMode = SizeMode::Fixed;
     node->fixedHeight = barH;
     const auto pal = ctx.GetThemePalette();
     node->backgroundColor = opts.backgroundColor.a > 0 ? opts.backgroundColor : pal.surface;
     node->borderColor = opts.borderColor.a > 0 ? opts.borderColor : pal.border;
-    node->borderWidth = opts.borderWidth;
-    node->cornerRadius = opts.radius.has_value() ? ctx.GetStyle().GetRadius(*opts.radius) : (opts.cornerRadius > 0.0f ? opts.cornerRadius : ctx.GetStyle().GetRadius(activeSize));
+    node->borderWidth = (opts.borderColor.a > 0) ? 1.0f : 0.0f;
+    node->cornerRadius = opts.radius.has_value() ? ctx.GetStyle().GetRadius(*opts.radius) : ctx.GetStyle().GetRadius(activeSize);
     node->uiSize = activeSize;
     node->disabled = effectiveDisabled;
 

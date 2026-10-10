@@ -22,6 +22,7 @@
 #include "kvant/layout/Node.hpp"
 #include "kvant/layout/Scope.hpp"
 #include "kvant/widgets/Button.hpp"
+#include "kvant/widgets/Carousel.hpp"
 #include "kvant/widgets/Checkbox.hpp"
 #include "kvant/widgets/Heading.hpp"
 #include "kvant/widgets/InputField.hpp"
@@ -177,6 +178,11 @@ public:
 
     ScrollAreaScope ScrollArea(
         ScrollAreaOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    CarouselScope Carousel(
+        CarouselOptions opts = {},
         std::source_location loc = std::source_location::current()
     );
 
@@ -784,8 +790,11 @@ private:
     Rect m_openPopupRect{0.0f, 0.0f, 0.0f, 0.0f};
     std::vector<std::function<void(ICanvas&)>> m_overlayPasses;
     Vec2 m_mouseWheel{0.0f, 0.0f};
+    std::unordered_map<Id, int> m_lastActiveTabs;
 
     friend class CellGridScope;
+    friend class TabBar;
+    friend class Carousel;
     CellScope CreateCell(int span, CellOptions opts, std::source_location loc = std::source_location::current());
 };
 

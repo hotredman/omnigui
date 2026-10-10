@@ -88,6 +88,27 @@ private:
         }
 
         // Container intrinsic size aggregation
+        if (node->type == NodeType::Carousel) {
+            float totalWidth = node->padding.Horizontal();
+            float maxHeight = 0.0f;
+            uint32_t activeChildren = 0;
+
+            for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+                const float cw = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
+                const float ch = (child->heightMode == SizeMode::Fixed) ? child->fixedHeight : child->intrinsicSize.y;
+                totalWidth += cw;
+                maxHeight = std::max(maxHeight, ch);
+                ++activeChildren;
+            }
+
+            if (activeChildren > 1) {
+                totalWidth += static_cast<float>(activeChildren - 1) * node->gap;
+            }
+            node->scrollContentSize = {totalWidth, maxHeight + node->padding.Vertical()};
+            node->intrinsicSize = {totalWidth, maxHeight + node->padding.Vertical()};
+            return;
+        }
+
         if (node->type == NodeType::ScrollArea) {
             float totalHeight = node->padding.Vertical();
             float maxWidth = 0.0f;
@@ -127,22 +148,65 @@ private:
             }
             node->intrinsicSize = {totalWidth, maxHeight + node->padding.Vertical()};
         } else if (node->direction == FlexDirection::Grid) {
-            float totalWidth = node->padding.Horizontal();
-            float maxHeight = 0.0f;
-            uint32_t activeChildren = 0;
+            const int totalCols = (node->gridColumns > 0) ? node->gridColumns : 12;
+            const float gap = node->gap;
+            const float runGap = (node->runGap > 0.0f) ? node->runGap : gap;
 
-            for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
-                const float cw = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
-                const float ch = (child->heightMode == SizeMode::Fixed) ? child->fixedHeight : child->intrinsicSize.y;
-                totalWidth += cw;
-                maxHeight = std::max(maxHeight, ch);
-                ++activeChildren;
+            float maxLineWidth = 0.0f;
+            float totalHeight = 0.0f;
+            bool hasLines = false;
+
+            Node* lineStart = node->firstChild;
+            while (lineStart != nullptr) {
+                Node* lineEnd = lineStart;
+                int currentSpan = 0;
+                float currentLineWidth = 0.0f;
+                float lineMaxH = 0.0f;
+                uint32_t itemsInLine = 0;
+
+                while (lineEnd != nullptr) {
+                    if (lineEnd->isSpacer) {
+                        lineEnd = lineEnd->nextSibling;
+                        continue;
+                    }
+
+                    const int span = std::clamp(lineEnd->colSpan, 1, totalCols);
+                    if (itemsInLine > 0 && currentSpan + span > totalCols) {
+                        break;
+                    }
+
+                    const float cw = (lineEnd->widthMode == SizeMode::Fixed) ? lineEnd->fixedWidth : lineEnd->intrinsicSize.x;
+                    const float ch = (lineEnd->heightMode == SizeMode::Fixed) ? lineEnd->fixedHeight : lineEnd->intrinsicSize.y;
+
+                    currentLineWidth += cw;
+                    lineMaxH = std::max(lineMaxH, ch);
+                    currentSpan += span;
+                    ++itemsInLine;
+                    lineEnd = lineEnd->nextSibling;
+                }
+
+                if (itemsInLine == 0) {
+                    break;
+                }
+
+                if (itemsInLine > 1) {
+                    currentLineWidth += static_cast<float>(itemsInLine - 1) * gap;
+                }
+
+                maxLineWidth = std::max(maxLineWidth, currentLineWidth);
+
+                if (hasLines) {
+                    totalHeight += runGap;
+                }
+                totalHeight += lineMaxH;
+                hasLines = true;
+                lineStart = lineEnd;
             }
 
-            if (activeChildren > 1) {
-                totalWidth += static_cast<float>(activeChildren - 1) * node->gap;
-            }
-            node->intrinsicSize = {totalWidth, maxHeight + node->padding.Vertical()};
+            node->intrinsicSize = {
+                maxLineWidth + node->padding.Horizontal(),
+                totalHeight + node->padding.Vertical()
+            };
         } else { // FlexDirection::Column
             float totalHeight = node->padding.Vertical();
             float maxWidth = 0.0f;
@@ -298,6 +362,11 @@ private:
                     break;
                 }
 
+                if (itemsInLine == 1 && lineEnd != nullptr) {
+                    const float childW = availW;
+                    lineMaxH = ResolveNodeHeight(lineStart, childW);
+                }
+
                 if (hasLines) {
                     totalH += runGap;
                 }
@@ -401,6 +470,11 @@ private:
             return;
         }
 
+        if (node->type == NodeType::Carousel) {
+            ArrangeCarousel(node, availableRect);
+            return;
+        }
+
         const Rect contentRect(
             node->computedRect.x + node->padding.left,
             node->computedRect.y + node->padding.top,
@@ -416,6 +490,158 @@ private:
             ArrangeGrid(node, contentRect);
         } else {
             ArrangeColumn(node, contentRect);
+        }
+    }
+
+    static void ArrangeCarousel(Node* node, const Rect& availableRect) {
+        float w = availableRect.w;
+        float h = availableRect.h;
+
+        if (node->parent == nullptr && !node->isSpacer) {
+            if (node->widthMode == SizeMode::Fit) {
+                w = node->intrinsicSize.x;
+            } else if (node->widthMode == SizeMode::Fixed) {
+                w = node->fixedWidth;
+            }
+
+            if (node->heightMode == SizeMode::Fit) {
+                h = (node->childCount == 0) ? node->intrinsicSize.y : node->intrinsicSize.y;
+            } else if (node->heightMode == SizeMode::Fixed) {
+                h = node->fixedHeight;
+            }
+        } else {
+            if (node->heightMode == SizeMode::Fixed) {
+                h = node->fixedHeight;
+            } else if (node->heightMode == SizeMode::Fit) {
+                h = node->intrinsicSize.y;
+            }
+        }
+
+        node->computedRect = Rect(availableRect.x, availableRect.y, w, h);
+        if (node->childCount == 0) return;
+
+        const float startX = node->computedRect.x + node->padding.left;
+        const float startY = node->computedRect.y + node->padding.top;
+        const float fullW = std::max(0.0f, node->computedRect.w - node->padding.Horizontal());
+        const float fullH = std::max(0.0f, node->computedRect.h - node->padding.Vertical());
+
+        // 1. Calculate total width of all children
+        float totalChildrenW = 0.0f;
+        uint32_t activeChildren = 0;
+        for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+            const float cw = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
+            totalChildrenW += cw;
+            ++activeChildren;
+        }
+        if (activeChildren > 1) {
+            totalChildrenW += static_cast<float>(activeChildren - 1) * node->gap;
+        }
+        node->scrollContentSize = {totalChildrenW, fullH};
+
+        // 2. Check if overflow occurs
+        if (totalChildrenW <= fullW) {
+            // Fits within available width without scrolling
+            node->showLeftArrow = false;
+            node->showRightArrow = false;
+            node->leftArrowRect = Rect(0.0f, 0.0f, 0.0f, 0.0f);
+            node->rightArrowRect = Rect(0.0f, 0.0f, 0.0f, 0.0f);
+            node->carouselViewportRect = Rect(startX, startY, fullW, fullH);
+            node->scrollOffset.x = 0.0f;
+
+            // Arrange children in a standard row
+            float curX = startX;
+            for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+                float childW = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
+                float childH = (child->heightMode == SizeMode::Fixed) ? child->fixedHeight :
+                               (child->heightMode == SizeMode::Stretch ? fullH : child->intrinsicSize.y);
+                float childY = startY;
+                if (node->align == Alignment::Center) {
+                    childY += (fullH - childH) * 0.5f;
+                } else if (node->align == Alignment::End) {
+                    childY += (fullH - childH);
+                }
+                child->computedRect = Rect(curX, childY, childW, childH);
+                ArrangeNode(child, child->computedRect);
+                curX += childW + node->gap;
+            }
+            return;
+        }
+
+        // 3. Overflow detected: compute arrow dimensions
+        const ComponentMetrics m = GetComponentMetrics(node->uiSize);
+        const float arrowMargin = 4.0f;
+        const float arrowBtnH = std::min(fullH - 6.0f, 26.0f);
+        const float arrowBtnW = arrowBtnH; // Clean square pill button
+        const float arrowGap = 6.0f;
+        const float arrowY = startY + (fullH - arrowBtnH) * 0.5f;
+        const float btnGutter = arrowMargin + arrowBtnW + arrowGap;
+
+        // Dynamic gutters: only allocate gutter space when an arrow is active
+        bool canScrollLeft = (node->scrollOffset.x > 1.0f);
+        float leftGutter = canScrollLeft ? btnGutter : 0.0f;
+        bool canScrollRight = (node->scrollOffset.x < (totalChildrenW - (fullW - leftGutter)) - 1.0f);
+        float rightGutter = canScrollRight ? btnGutter : 0.0f;
+
+        float viewportX = startX + leftGutter;
+        float viewportW = std::max(0.0f, fullW - leftGutter - rightGutter);
+        float maxScrollX = std::max(0.0f, totalChildrenW - viewportW);
+
+        // Auto-scroll to active tab if requested
+        if (node->scrollToActiveTab) {
+            float relX = 0.0f;
+            for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+                const float cw = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
+                if (child->tabActive) {
+                    if (relX < node->scrollOffset.x) {
+                        node->scrollOffset.x = relX;
+                    } else if (relX + cw > node->scrollOffset.x + viewportW) {
+                        node->scrollOffset.x = (relX + cw) - viewportW;
+                    }
+                    break;
+                }
+                relX += cw + node->gap;
+            }
+
+            // Recompute gutters after auto-scroll updated scrollOffset
+            canScrollLeft = (node->scrollOffset.x > 1.0f);
+            leftGutter = canScrollLeft ? btnGutter : 0.0f;
+            canScrollRight = (node->scrollOffset.x < (totalChildrenW - (fullW - leftGutter)) - 1.0f);
+            rightGutter = canScrollRight ? btnGutter : 0.0f;
+
+            viewportX = startX + leftGutter;
+            viewportW = std::max(0.0f, fullW - leftGutter - rightGutter);
+            maxScrollX = std::max(0.0f, totalChildrenW - viewportW);
+        }
+
+        // Clamp scroll offset
+        node->scrollOffset.x = std::clamp(node->scrollOffset.x, 0.0f, maxScrollX);
+
+        node->showLeftArrow = canScrollLeft;
+        node->showRightArrow = canScrollRight;
+
+        node->leftArrowRect = canScrollLeft
+            ? Rect(startX + arrowMargin, arrowY, arrowBtnW, arrowBtnH)
+            : Rect(0.0f, 0.0f, 0.0f, 0.0f);
+        node->rightArrowRect = canScrollRight
+            ? Rect(startX + fullW - arrowBtnW - arrowMargin, arrowY, arrowBtnW, arrowBtnH)
+            : Rect(0.0f, 0.0f, 0.0f, 0.0f);
+        node->carouselViewportRect = Rect(viewportX, startY, viewportW, fullH);
+
+        // Arrange children within the scrollable viewport
+        float curX = viewportX - node->scrollOffset.x;
+        for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
+            float childW = (child->widthMode == SizeMode::Fixed) ? child->fixedWidth : child->intrinsicSize.x;
+            float childH = (child->heightMode == SizeMode::Fixed) ? child->fixedHeight :
+                           (child->heightMode == SizeMode::Stretch ? fullH : child->intrinsicSize.y);
+            float childY = startY;
+            if (node->align == Alignment::Center) {
+                childY += (fullH - childH) * 0.5f;
+            } else if (node->align == Alignment::End) {
+                childY += (fullH - childH);
+            }
+            child->computedRect = Rect(curX, childY, childW, childH);
+            ArrangeNode(child, child->computedRect);
+            curX += childW + node->gap;
         }
     }
 
@@ -721,6 +947,13 @@ private:
                 break;
             }
 
+            if (itemsInLine == 1 && lineEnd != nullptr) {
+                const float childW = availW;
+                lineMaxH = (lineStart->heightMode == SizeMode::Fixed)
+                    ? lineStart->fixedHeight
+                    : ResolveNodeHeight(lineStart, childW);
+            }
+
             if (hasLines) {
                 currentY += runGap;
             }
@@ -732,11 +965,8 @@ private:
 
                 int span = std::clamp(child->colSpan, 1, totalCols);
                 const float reqMinW = (child->minWidth > 0.0f) ? child->minWidth : ((node->minColWidth > 0.0f) ? node->minColWidth : child->intrinsicSize.x);
-                if (itemsInLine == 1 && reqMinW > 0.0f) {
-                    const float testW = (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap;
-                    if (testW < reqMinW) {
-                        span = totalCols;
-                    }
+                if (itemsInLine == 1 && (lineEnd != nullptr || (reqMinW > 0.0f && ((static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap) < reqMinW))) {
+                    span = totalCols;
                 }
 
                 const float childW = std::max(0.0f, (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap);

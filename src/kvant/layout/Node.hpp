@@ -7,6 +7,7 @@
 #include "kvant/core/Types.hpp"
 #include "kvant/layout/LayoutTypes.hpp"
 #include "kvant/widgets/Button.hpp"
+#include "kvant/widgets/Carousel.hpp"
 #include "kvant/widgets/Checkbox.hpp"
 #include "kvant/widgets/Heading.hpp"
 #include "kvant/widgets/InputField.hpp"
@@ -22,6 +23,7 @@ namespace kvant {
 enum class NodeType : uint8_t {
     Container,  ///< General flex layout container (Row, Column, Box)
     ScrollArea, ///< Viewport container providing scrollable view into overflowed children
+    Carousel,   ///< Horizontal ribbon container with automatic navigation arrows on overflow
     Text,       ///< Text label
     Button,     ///< Clickable button widget
     Switch,     ///< Sliding pill toggle switch
@@ -107,10 +109,21 @@ struct Node {
     TabBarOptions tabBarOpts{};
     TabItem tabItemOpts{};
     ToolButtonOptions toolButtonOpts{};
+    CarouselOptions carouselOpts{};
+    Rect leftArrowRect{0.0f, 0.0f, 0.0f, 0.0f};
+    Rect rightArrowRect{0.0f, 0.0f, 0.0f, 0.0f};
+    Rect carouselViewportRect{0.0f, 0.0f, 0.0f, 0.0f};
+    bool showLeftArrow{false};
+    bool showRightArrow{false};
+    bool leftArrowHovered{false};
+    bool rightArrowHovered{false};
+    bool leftArrowPressed{false};
+    bool rightArrowPressed{false};
     std::string_view displayText{};
     bool checked{false};
     bool focused{false};
     bool tabActive{false};
+    bool scrollToActiveTab{false};
     bool cursorVisible{true};
     float cursorWidth{1.5f};
     size_t cursor{0};

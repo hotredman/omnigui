@@ -155,6 +155,7 @@ set(KVANT_SOURCES
     src/kvant/backend/SdlCanvas.cpp
     src/kvant/graphics/Icon.cpp
     src/kvant/widgets/Button.cpp
+    src/kvant/widgets/Carousel.cpp
     src/kvant/widgets/Checkbox.cpp
     src/kvant/widgets/Heading.cpp
     src/kvant/widgets/InputField.cpp

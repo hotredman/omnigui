@@ -360,6 +360,71 @@ ScrollAreaScope Context::ScrollArea(ScrollAreaOptions opts, std::source_location
     return ScrollAreaScope(this, node);
 }
 
+CarouselScope Context::Carousel(CarouselOptions opts, std::source_location loc) {
+    const Id id = MakeChildId(loc);
+    const UiSize activeSize = opts.size.value_or(GetCurrentSize());
+    const bool activeDisabled = opts.disabled || IsDisabled();
+    const ComponentMetrics m = m_style.GetComponentMetrics(activeSize);
+
+    Node* node = CreateNode(NodeType::Carousel, id);
+    node->direction = FlexDirection::Row;
+    node->align = Alignment::Center;
+    node->clipChildren = true;
+    node->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
+    node->padding = opts.padding.has_value() ? m_style.GetPadding(*opts.padding) : Padding{};
+    node->widthMode = SizeMode::Stretch;
+    node->heightMode = SizeMode::Fit;
+    node->uiSize = activeSize;
+    node->disabled = activeDisabled;
+    node->carouselOpts = opts;
+
+    // Retrieve persistent scroll state
+    auto& state = m_scrollStates[id];
+
+    // Navigation arrow IDs
+    const Id leftArrowId = GetCarouselLeftArrowId(id);
+    const Id rightArrowId = GetCarouselRightArrowId(id);
+
+    Response leftRes = Interact(leftArrowId);
+    Response rightRes = Interact(rightArrowId);
+
+    node->leftArrowHovered = leftRes.hovered;
+    node->leftArrowPressed = leftRes.pressed;
+    node->rightArrowHovered = rightRes.hovered;
+    node->rightArrowPressed = rightRes.pressed;
+
+    const float step = m.defaultHeight * 3.0f;
+
+    if (leftRes.clicked && !activeDisabled) {
+        state.offset.x = std::max(0.0f, state.offset.x - step);
+        RequestRepaint(3);
+    }
+    if (rightRes.clicked && !activeDisabled) {
+        state.offset.x += step;
+        RequestRepaint(3);
+    }
+
+    // Handle horizontal mouse wheel scroll
+    if (opts.scrollWheel && !activeDisabled) {
+        auto itPrev = m_prevFrameBounds.find(id);
+        if (itPrev != m_prevFrameBounds.end() && itPrev->second.Contains(m_mousePos)) {
+            const float wheelDelta = (m_mouseWheel.x != 0.0f) ? m_mouseWheel.x : m_mouseWheel.y;
+            if (wheelDelta != 0.0f) {
+                state.offset.x -= wheelDelta * (m.defaultHeight * 0.8f);
+                if (state.offset.x < 0.0f) state.offset.x = 0.0f;
+                RequestRepaint(3);
+            }
+        }
+    }
+
+    node->scrollOffset = state.offset;
+
+    PushSize(activeSize);
+    PushDisabled(activeDisabled);
+    PushContainer(node);
+    return CarouselScope(this, node);
+}
+
 CardScope Context::Card(CardOptions opts, std::source_location loc) {
     const Id idOuter = MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
@@ -913,6 +978,8 @@ static void CollectBoundsRecursive(Node* node, std::unordered_map<Id, Rect>& out
                 std::max(0.0f, node->computedRect.h - node->padding.Vertical())
             );
             effectiveClip = parentClip.Intersect(viewRect);
+        } else if (node->type == NodeType::Carousel) {
+            effectiveClip = parentClip.Intersect(node->carouselViewportRect);
         } else {
             effectiveClip = parentClip.Intersect(node->computedRect);
         }
@@ -923,6 +990,22 @@ static void CollectBoundsRecursive(Node* node, std::unordered_map<Id, Rect>& out
         if (clipped.w > 0.0f && clipped.h > 0.0f) {
             outBounds[node->id] = clipped;
         }
+
+        // Register interactive arrow button bounds for Carousel
+        if (node->type == NodeType::Carousel) {
+            if (node->showLeftArrow && node->leftArrowRect.w > 0.0f) {
+                const Rect clippedLeft = node->leftArrowRect.Intersect(parentClip);
+                if (clippedLeft.w > 0.0f && clippedLeft.h > 0.0f) {
+                    outBounds[GetCarouselLeftArrowId(node->id)] = clippedLeft;
+                }
+            }
+            if (node->showRightArrow && node->rightArrowRect.w > 0.0f) {
+                const Rect clippedRight = node->rightArrowRect.Intersect(parentClip);
+                if (clippedRight.w > 0.0f && clippedRight.h > 0.0f) {
+                    outBounds[GetCarouselRightArrowId(node->id)] = clippedRight;
+                }
+            }
+        }
     }
 
     for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
@@ -932,6 +1015,11 @@ static void CollectBoundsRecursive(Node* node, std::unordered_map<Id, Rect>& out
 
 void Context::UpdateScrollAreasRecursive(Node* node) {
     if (!node) return;
+
+    if (node->type == NodeType::Carousel && node->id.IsValid()) {
+        auto& state = m_scrollStates[node->id];
+        state.offset.x = node->scrollOffset.x;
+    }
 
     if (node->type == NodeType::ScrollArea && node->id.IsValid()) {
         auto& state = m_scrollStates[node->id];
@@ -1038,6 +1126,21 @@ void Context::ScrollToId(Id id) {
                 state.offset.y += (targetBottom - viewBottom);
             }
             if (state.offset.y < 0.0f) state.offset.y = 0.0f;
+            p->scrollOffset = state.offset;
+            break;
+        } else if (p->type == NodeType::Carousel && p->id.IsValid()) {
+            auto& state = m_scrollStates[p->id];
+            const float targetLeft = target->computedRect.x;
+            const float targetRight = target->computedRect.Right();
+            const float viewLeft = p->carouselViewportRect.x;
+            const float viewRight = p->carouselViewportRect.Right();
+
+            if (targetLeft < viewLeft) {
+                state.offset.x -= (viewLeft - targetLeft);
+            } else if (targetRight > viewRight) {
+                state.offset.x += (targetRight - viewRight);
+            }
+            if (state.offset.x < 0.0f) state.offset.x = 0.0f;
             p->scrollOffset = state.offset;
             break;
         }
@@ -1189,6 +1292,16 @@ void Context::EndFrame(ICanvas& canvas) {
                     hashVal(static_cast<uint8_t>(n->headingOpts.variant));
                     break;
                 }
+                case NodeType::Carousel: {
+                    hashVal(static_cast<uint8_t>(n->showLeftArrow));
+                    hashVal(static_cast<uint8_t>(n->showRightArrow));
+                    hashVal(static_cast<uint8_t>(n->leftArrowHovered));
+                    hashVal(static_cast<uint8_t>(n->rightArrowHovered));
+                    hashVal(static_cast<uint8_t>(n->leftArrowPressed));
+                    hashVal(static_cast<uint8_t>(n->rightArrowPressed));
+                    hashVal(n->scrollOffset.x);
+                    break;
+                }
                 default: break;
             }
 
@@ -1304,6 +1417,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
                 std::max(0.0f, node->computedRect.h - node->padding.Vertical())
             );
             canvas.PushClip(clipRect);
+        } else if (node->type == NodeType::Carousel) {
+            canvas.PushClip(node->carouselViewportRect);
         } else {
             canvas.PushClip(node->computedRect);
         }
@@ -1444,6 +1559,10 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
 
     if (node->clipChildren) {
         canvas.PopClip();
+    }
+
+    if (node->type == NodeType::Carousel) {
+        Carousel::RenderArrows(canvas, node, node->uiSize, node->themeMode);
     }
 
     // Render scrollbar for ScrollArea

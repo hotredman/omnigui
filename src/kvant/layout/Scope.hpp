@@ -189,5 +189,6 @@ using BoxScope = ContainerScope;
 using WrapScope = ContainerScope;
 using CardScope = ContainerScope;
 using ScrollAreaScope = ContainerScope;
+using CarouselScope = ContainerScope;
 
 } // namespace kvant

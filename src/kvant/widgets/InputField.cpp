@@ -141,14 +141,14 @@ Vec2 InputField::Measure(
     const InputFieldMetrics m = GetInputFieldMetrics(size);
     const std::string_view effectiveLabel = !label.empty() ? label : opts.label;
 
-    float boxW = 160.0f;
+    float boxW = 120.0f;
     switch (size) {
         case UiSize::None:
-        case UiSize::Md: boxW = 160.0f; break;
-        case UiSize::Xs: boxW = 100.0f; break;
-        case UiSize::Sm: boxW = 120.0f; break;
-        case UiSize::Lg: boxW = 200.0f; break;
-        case UiSize::Xl: boxW = 240.0f; break;
+        case UiSize::Md: boxW = 120.0f; break;
+        case UiSize::Xs: boxW = 80.0f; break;
+        case UiSize::Sm: boxW = 100.0f; break;
+        case UiSize::Lg: boxW = 160.0f; break;
+        case UiSize::Xl: boxW = 200.0f; break;
     }
 
     Vec2 labelDims = {0.0f, 0.0f};

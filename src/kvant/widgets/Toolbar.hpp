@@ -29,15 +29,12 @@ struct ToolButtonOptions {
 
 /// Configuration options for Toolbar container.
 struct ToolbarOptions {
-    std::optional<UiSize> size{};
-    float fixedHeight{0.0f};
-    std::optional<Padding> padding{std::nullopt};
-    std::optional<UiSize> gap{std::nullopt};
+    std::optional<UiSize> size{std::nullopt};       ///< Size token determining height, icon scale, and density
+    std::optional<UiSize> gap{std::nullopt};        ///< Gap between toolbar items (nullopt = inherit size)
+    std::optional<UiSize> padding{std::nullopt};    ///< Internal toolbar padding token (nullopt = standard symmetric padding)
+    std::optional<UiSize> radius{std::nullopt};     ///< Corner radius token (nullopt = inherit size)
     Color backgroundColor{Color::Transparent()};
     Color borderColor{Color::Transparent()};
-    float borderWidth{1.0f};
-    std::optional<UiSize> radius{std::nullopt};
-    float cornerRadius{0.0f};
     bool disabled{false};
 };
 

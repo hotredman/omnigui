@@ -16,25 +16,48 @@ Response TabBar::Run(
     Response res;
     if (tabs.empty()) return res;
 
-    const Id barId = ctx.MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(ctx.GetCurrentSize());
     const ComponentMetrics m = ctx.GetStyle().GetComponentMetrics(activeSize);
 
-    Node* barNode = ctx.CreateNode(NodeType::Container, barId);
-    barNode->direction = FlexDirection::Row;
-    barNode->align = Alignment::Center;
-    barNode->gap = (activeSize <= UiSize::Sm) ? ctx.GetStyle().GetGap(UiSize::Xs) : ctx.GetStyle().GetGap(UiSize::Sm);
-    barNode->uiSize = activeSize;
-    barNode->widthMode = opts.fullWidth ? SizeMode::Stretch : SizeMode::Fit;
-    barNode->heightMode = SizeMode::Fixed;
-    barNode->fixedHeight = m.defaultHeight;
-    barNode->tabBarOpts = opts;
+    std::optional<CarouselScope> carouselScope;
+    Node* barNode = nullptr;
 
-    ctx.PushContainer(barNode);
+    if (opts.scrollable && !opts.fullWidth) {
+        CarouselOptions cOpts;
+        cOpts.size = activeSize;
+        cOpts.gap = (activeSize <= UiSize::Sm) ? UiSize::Xs : UiSize::Sm;
+        cOpts.scrollWheel = true;
+        cOpts.disabled = ctx.IsDisabled();
+
+        carouselScope.emplace(ctx.Carousel(cOpts, loc));
+        barNode = carouselScope->GetNode();
+        barNode->heightMode = SizeMode::Fixed;
+        barNode->fixedHeight = m.defaultHeight;
+        barNode->tabBarOpts = opts;
+    } else {
+        const Id barId = ctx.MakeChildId(loc);
+        barNode = ctx.CreateNode(NodeType::Container, barId);
+        barNode->direction = FlexDirection::Row;
+        barNode->align = Alignment::Center;
+        barNode->gap = (activeSize <= UiSize::Sm) ? ctx.GetStyle().GetGap(UiSize::Xs) : ctx.GetStyle().GetGap(UiSize::Sm);
+        barNode->uiSize = activeSize;
+        barNode->widthMode = opts.fullWidth ? SizeMode::Stretch : SizeMode::Fit;
+        barNode->heightMode = SizeMode::Fixed;
+        barNode->fixedHeight = m.defaultHeight;
+        barNode->tabBarOpts = opts;
+        ctx.PushContainer(barNode);
+    }
+
+    // Auto-scroll to active tab when activeIndex changes or on initial display
+    auto itLast = ctx.m_lastActiveTabs.find(barNode->id);
+    if (itLast == ctx.m_lastActiveTabs.end() || itLast->second != activeIndex) {
+        ctx.m_lastActiveTabs[barNode->id] = activeIndex;
+        barNode->scrollToActiveTab = true;
+    }
 
     for (size_t i = 0; i < tabs.size(); ++i) {
         const TabItem& item = tabs[i];
-        const Id tabId = MakeId(static_cast<uint32_t>(i), loc, barId);
+        const Id tabId = MakeId(static_cast<uint32_t>(i), loc, barNode->id);
         const bool effectiveDisabled = item.disabled || ctx.IsDisabled();
 
         Response tabRes = ctx.Interact(tabId);
@@ -48,6 +71,8 @@ Response TabBar::Run(
             activeIndex = static_cast<int>(i);
             res.changed = true;
             res.clicked = true;
+            ctx.m_lastActiveTabs[barNode->id] = activeIndex;
+            barNode->scrollToActiveTab = true;
             ctx.RequestRepaint(3);
         }
 
@@ -65,8 +90,10 @@ Response TabBar::Run(
         tabNode->heightMode = SizeMode::Stretch;
     }
 
-    ctx.PopContainer(barNode);
-    ctx.AdaptChildToContainer(barNode);
+    if (!carouselScope) {
+        ctx.PopContainer(barNode);
+        ctx.AdaptChildToContainer(barNode);
+    }
 
     return res;
 }
