@@ -148,31 +148,6 @@ if (WIN32 AND NOT EMSCRIPTEN)
     target_link_libraries(omnigui PUBLIC ws2_32 crypt32)
 endif()
 
-# --- Kvant Autonomous Vector GUI Engine ---
-set(KVANT_SOURCES
-    src/kvant/Context.cpp
-    src/kvant/backend/ThorCanvas.cpp
-    src/kvant/backend/SdlCanvas.cpp
-    src/kvant/graphics/Icon.cpp
-    src/kvant/widgets/Button.cpp
-    src/kvant/widgets/Carousel.cpp
-    src/kvant/widgets/Checkbox.cpp
-    src/kvant/widgets/Heading.cpp
-    src/kvant/widgets/InputField.cpp
-    src/kvant/widgets/Select.cpp
-    src/kvant/widgets/Switch.cpp
-    src/kvant/widgets/TabBar.cpp
-    src/kvant/widgets/Text.cpp
-    src/kvant/widgets/Toolbar.cpp
-)
-add_library(kvant STATIC ${KVANT_SOURCES})
-target_compile_features(kvant PUBLIC cxx_std_20)
-target_include_directories(kvant PUBLIC src)
-target_link_libraries(kvant PUBLIC thorvg SDL3::SDL3-static)
-if (NOT EMSCRIPTEN)
-    target_link_libraries(kvant PUBLIC Threads::Threads)
-endif()
-
 # ========================================================
 #  Desktop vs WebAssembly (Emscripten) Target Matrix
 # ========================================================
@@ -183,11 +158,6 @@ if (NOT EMSCRIPTEN)
         ${DEMO_APP_SOURCES}
     )
     target_link_libraries(demo PRIVATE imthorgui)
-
-    add_executable(kvant_demo
-        examples/kvant_demo/main.cpp
-    )
-    target_link_libraries(kvant_demo PRIVATE kvant SDL3::SDL3-static)
 
     # --- Tests ---
     add_executable(test_text_metrics
@@ -235,21 +205,6 @@ if (NOT EMSCRIPTEN)
     )
     target_link_libraries(test_dom PRIVATE imthorgui)
 
-    add_executable(test_kvant_core
-        tests/test_kvant_core.cpp
-    )
-    target_link_libraries(test_kvant_core PRIVATE kvant imthorgui)
-
-    add_executable(test_kvant_layout
-        tests/test_kvant_layout.cpp
-    )
-    target_link_libraries(test_kvant_layout PRIVATE kvant imthorgui)
-
-    add_executable(test_kvant_context
-        tests/test_kvant_context.cpp
-    )
-    target_link_libraries(test_kvant_context PRIVATE kvant)
-
     # --- ctest: same validation suites as scripts/windows/run_tests.cmd ---
     enable_testing()
     add_test(NAME frame_dedup COMMAND test_frame_dedup)
@@ -258,9 +213,7 @@ if (NOT EMSCRIPTEN)
     add_test(NAME lttb COMMAND test_lttb)
     add_test(NAME modal COMMAND test_modal)
     add_test(NAME components COMMAND test_components)
-    add_test(NAME kvant_core COMMAND test_kvant_core)
-    add_test(NAME kvant_layout COMMAND test_kvant_layout)
-    add_test(NAME kvant_context COMMAND test_kvant_context)
+
 
 else()
     # ========================================================
