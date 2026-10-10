@@ -113,6 +113,28 @@ struct Rect {
     [[nodiscard]] constexpr Rect Inset(float dx, float dy) const noexcept {
         return {x + dx, y + dy, std::max(0.0f, w - 2.0f * dx), std::max(0.0f, h - 2.0f * dy)};
     }
+
+    [[nodiscard]] constexpr float Area() const noexcept {
+        return (w > 0.0f && h > 0.0f) ? (w * h) : 0.0f;
+    }
+
+    [[nodiscard]] constexpr Rect Union(const Rect& other) const noexcept {
+        if (w <= 0.0f || h <= 0.0f) return other;
+        if (other.w <= 0.0f || other.h <= 0.0f) return *this;
+        const float nx = std::min(x, other.x);
+        const float ny = std::min(y, other.y);
+        const float nr = std::max(Right(), other.Right());
+        const float nb = std::max(Bottom(), other.Bottom());
+        return {nx, ny, nr - nx, nb - ny};
+    }
+
+    [[nodiscard]] constexpr bool operator==(const Rect& other) const noexcept {
+        return x == other.x && y == other.y && w == other.w && h == other.h;
+    }
+
+    [[nodiscard]] constexpr bool operator!=(const Rect& other) const noexcept {
+        return !(*this == other);
+    }
 };
 
 /// 32-bit RGBA color with linear blending utilities.
@@ -125,6 +147,22 @@ struct Color {
     constexpr Color() noexcept = default;
     constexpr Color(uint8_t inR, uint8_t inG, uint8_t inB, uint8_t inA = 255) noexcept
         : r(inR), g(inG), b(inB), a(inA) {}
+
+    /// Pack as little-endian 32-bit integer (ABGR in memory / 0xAABBGGRR).
+    [[nodiscard]] constexpr uint32_t ToUint32() const noexcept {
+        return (static_cast<uint32_t>(a) << 24) |
+               (static_cast<uint32_t>(b) << 16) |
+               (static_cast<uint32_t>(g) << 8) |
+               static_cast<uint32_t>(r);
+    }
+
+    [[nodiscard]] constexpr bool operator==(const Color& other) const noexcept {
+        return r == other.r && g == other.g && b == other.b && a == other.a;
+    }
+
+    [[nodiscard]] constexpr bool operator!=(const Color& other) const noexcept {
+        return !(*this == other);
+    }
 
     /// Construct from hexadecimal value (0xRRGGBBAA or 0xRRGGBB).
     [[nodiscard]] static constexpr Color Hex(uint32_t hex, bool hasAlpha = true) noexcept {

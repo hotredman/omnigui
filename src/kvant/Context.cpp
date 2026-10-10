@@ -12,6 +12,9 @@ Context::Context() {
 }
 
 void Context::BeginFrame(Vec2 viewportSize, float dpiScale) {
+    if (m_viewportSize != viewportSize || m_dpiScale != dpiScale) {
+        InvalidateAll();
+    }
     m_viewportSize = viewportSize;
     m_dpiScale = dpiScale;
 
@@ -770,11 +773,25 @@ void Context::OnKeyDown(Key key, KeyModifiers mods) {
 void Context::OpenPopup(Id id, Rect bounds) {
     m_openPopupId = id;
     m_openPopupRect = bounds;
+    InvalidateAll();
 }
 
 void Context::ClosePopup() {
     m_openPopupId = Id::Null();
     m_openPopupRect = Rect{};
+    InvalidateAll();
+}
+
+void Context::InvalidateAll() noexcept {
+    m_forceFullRepaint = true;
+    RequestRepaint(2);
+}
+
+void Context::InvalidateRect(Rect rect) noexcept {
+    if (rect.w > 0.0f && rect.h > 0.0f) {
+        m_explicitDamageRects.push_back(rect);
+        RequestRepaint(2);
+    }
 }
 
 void Context::RegisterOverlay(std::function<void(ICanvas&)> drawFn) {
@@ -1077,18 +1094,131 @@ void Context::EndFrame(ICanvas& canvas) {
     m_mouseReleased = false;
     m_mouseWheel = {0.0f, 0.0f};
 
-    // Render entire frame graph
-    canvas.Begin(static_cast<uint32_t>(m_viewportSize.x), static_cast<uint32_t>(m_viewportSize.y));
-    canvas.PushClip(Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y));
-    RenderNodeRecursive(m_root, canvas);
+    // Calculate dirty damage regions by snapshot diffing
+    std::unordered_map<Id, WidgetSnapshot> currSnapshots;
+    currSnapshots.reserve(m_prevSnapshots.size() + 16);
+    std::vector<Rect> damageRects = std::move(m_explicitDamageRects);
+    m_explicitDamageRects.clear();
 
-    // Render floating overlay passes (e.g. dropdown popups, tooltips)
-    for (const auto& overlayFn : m_overlayPasses) {
-        overlayFn(canvas);
+    auto addDamage = [&](Rect r) {
+        if (r.w > 0.0f && r.h > 0.0f) {
+            damageRects.push_back(r);
+        }
+    };
+
+    const bool cursorVis = IsCursorVisible();
+
+    std::function<void(Node*)> collectSnapshots = [&](Node* n) {
+        if (!n) return;
+        if (n->id.IsValid()) {
+            WidgetSnapshot snap;
+            snap.rect = n->computedRect;
+            snap.flags = (n->hovered ? 1u : 0u) |
+                         (n->pressed ? 2u : 0u) |
+                         (n->disabled ? 4u : 0u) |
+                         (n->checked ? 8u : 0u);
+            snap.bgColor = n->backgroundColor.ToUint32();
+            snap.borderColor = n->borderColor.ToUint32();
+
+            if (m_editState.id.IsValid() && n->id == m_editState.id) {
+                snap.flags |= (cursorVis ? 16u : 0u) | 32u;
+                snap.cursor = m_editState.cursor;
+                uint64_t h = 14695981039346656037ULL;
+                for (char c : m_editState.text) {
+                    h = (h ^ static_cast<uint8_t>(c)) * 1099511628211ULL;
+                }
+                snap.textHash = h;
+            } else {
+                uint64_t h = 14695981039346656037ULL;
+                for (char c : n->text) {
+                    h = (h ^ static_cast<uint8_t>(c)) * 1099511628211ULL;
+                }
+                snap.textHash = h;
+            }
+
+            auto it = m_prevSnapshots.find(n->id);
+            if (it != m_prevSnapshots.end()) {
+                if (it->second != snap) {
+                    addDamage(snap.rect.Union(it->second.rect));
+                }
+            } else {
+                addDamage(snap.rect);
+            }
+
+            currSnapshots.emplace(n->id, snap);
+        }
+
+        for (Node* c = n->firstChild; c != nullptr; c = c->nextSibling) {
+            collectSnapshots(c);
+        }
+    };
+
+    collectSnapshots(m_root);
+
+    // Detect removed widgets
+    for (const auto& [id, prevSnap] : m_prevSnapshots) {
+        if (!currSnapshots.contains(id)) {
+            addDamage(prevSnap.rect);
+        }
     }
 
-    canvas.PopClip();
-    canvas.End();
+    // Determine whether full repaint or partial dirty rect is required
+    const float totalViewportArea = m_viewportSize.x * m_viewportSize.y;
+    if (!m_dirtyRectEnabled || m_forceFullRepaint || m_prevSnapshots.empty() || m_openPopupId.IsValid()) {
+        m_isFullRepaint = true;
+        m_hasDirtyDamage = true;
+        m_dirtyRect = Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y);
+    } else if (damageRects.empty()) {
+        m_isFullRepaint = false;
+        m_hasDirtyDamage = false;
+        m_dirtyRect = Rect{0.0f, 0.0f, 0.0f, 0.0f};
+    } else {
+        Rect unionRect = damageRects[0];
+        for (size_t i = 1; i < damageRects.size(); ++i) {
+            unionRect = unionRect.Union(damageRects[i]);
+        }
+        // Expand by 2.0px margin to cover anti-aliasing edges and clamp to viewport
+        const float pad = 2.0f;
+        const float x1 = std::max(0.0f, std::floor(unionRect.x - pad));
+        const float y1 = std::max(0.0f, std::floor(unionRect.y - pad));
+        const float x2 = std::min(m_viewportSize.x, std::ceil(unionRect.Right() + pad));
+        const float y2 = std::min(m_viewportSize.y, std::ceil(unionRect.Bottom() + pad));
+        unionRect = Rect(x1, y1, std::max(0.0f, x2 - x1), std::max(0.0f, y2 - y1));
+
+        if (unionRect.Area() >= 0.5f * totalViewportArea) {
+            m_isFullRepaint = true;
+            m_dirtyRect = Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y);
+        } else {
+            m_isFullRepaint = false;
+            m_dirtyRect = unionRect;
+        }
+        m_hasDirtyDamage = true;
+    }
+
+    m_forceFullRepaint = false;
+    m_prevSnapshots = std::move(currSnapshots);
+
+    // If damage exists, clear target buffer and rasterize scene graph
+    if (m_hasDirtyDamage) {
+        canvas.Begin(static_cast<uint32_t>(m_viewportSize.x), static_cast<uint32_t>(m_viewportSize.y));
+        canvas.PushClip(m_dirtyRect);
+
+        if (m_isFullRepaint) {
+            canvas.Clear(m_clearColor);
+        } else {
+            canvas.Clear(m_clearColor, m_dirtyRect);
+        }
+
+        RenderNodeRecursive(m_root, canvas, m_dirtyRect);
+
+        // Render floating overlay passes (e.g. dropdown popups, tooltips)
+        for (const auto& overlayFn : m_overlayPasses) {
+            overlayFn(canvas);
+        }
+
+        canvas.PopClip();
+        canvas.End();
+    }
 
     m_pendingKeyEvents.clear();
     m_pendingTextInput.clear();
@@ -1098,9 +1228,10 @@ void Context::EndFrame(ICanvas& canvas) {
     }
 }
 
-void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
+void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirtyRect) {
     if (!node) return;
     if (node->computedRect.w <= 0.0f || node->computedRect.h <= 0.0f) return;
+    if (!node->computedRect.Intersects(dirtyRect)) return;
 
     if (node->clipChildren) {
         if (node->type == NodeType::ScrollArea) {
@@ -1214,7 +1345,7 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {
 
     // Recurse on children
     for (Node* child = node->firstChild; child != nullptr; child = child->nextSibling) {
-        RenderNodeRecursive(child, canvas);
+        RenderNodeRecursive(child, canvas, dirtyRect);
     }
 
     if (node->clipChildren) {

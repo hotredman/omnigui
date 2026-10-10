@@ -1632,6 +1632,117 @@ void TestReactiveEventLoop() {
     ui.SetIdleHeartbeatMs(500); // Restore default
 }
 
+void TestDirtyRectDamageTracking() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    auto renderUI = [&](std::string* editVal = nullptr) {
+        if (auto row = ui.Row({.gap = 10.0f})) {
+            if (auto b = ui.Box({.fixedWidth = 120.0f})) {
+                ui.Button("Test Button");
+            }
+            if (editVal) {
+                if (auto b = ui.Box({.fixedWidth = 200.0f})) {
+                    auto res = ui.InputField(*editVal);
+                    if (res.clicked) {
+                        res.Focus();
+                    }
+                }
+            }
+        }
+    };
+
+    // Frame 1: Initial layout establishment must trigger a full repaint
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(ui.IsFullRepaint());
+    CHECK(ui.HasDirtyDamage());
+    CHECK(ui.GetDirtyRect().w == static_cast<float>(width));
+    CHECK(ui.GetDirtyRect().h == static_cast<float>(height));
+
+    // Frame 2: Identical state with zero input produces zero damage
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(!ui.HasDirtyDamage());
+    CHECK(!ui.IsFullRepaint());
+
+    // Frame 3: Hover over the button marks only the button bounds as dirty
+    ui.OnMouseMove({20.0f, 15.0f});
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(ui.HasDirtyDamage());
+    CHECK(!ui.IsFullRepaint());
+    CHECK(ui.GetDirtyRect().w < 200.0f);
+    CHECK(ui.GetDirtyRect().h < 100.0f);
+
+    // Frame 4: Caret blink toggles in an InputField
+    std::string text = "Editable";
+    bool shouldFocus = true;
+    auto renderInput = [&]() {
+        if (auto row = ui.Row({.gap = 10.0f})) {
+            if (auto b = ui.Box({.fixedWidth = 200.0f})) {
+                auto res = ui.InputField(text);
+                if (shouldFocus) {
+                    res.Focus();
+                    shouldFocus = false;
+                }
+            }
+        }
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderInput();
+    ui.EndFrame(canvas);
+
+    // Settle edit state
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderInput();
+    ui.EndFrame(canvas);
+
+    // Advance time past solid phase (0.5s) and first half of blink cycle to cause cursor to hide
+    ui.AdvanceTime(1.1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderInput();
+    ui.EndFrame(canvas);
+
+    CHECK(ui.HasDirtyDamage());
+    CHECK(!ui.IsFullRepaint());
+    CHECK(ui.GetDirtyRect().w < 300.0f);
+    CHECK(ui.GetDirtyRect().h < 100.0f);
+
+    // Frame 5: InvalidateAll forces full repaint
+    ui.InvalidateAll();
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI(&text);
+    ui.EndFrame(canvas);
+
+    CHECK(ui.IsFullRepaint());
+    CHECK(ui.HasDirtyDamage());
+    CHECK(ui.GetDirtyRect().w == static_cast<float>(width));
+
+    // Frame 6: Disabling dirty rect optimization forces full repaint
+    ui.SetDirtyRectEnabled(false);
+    CHECK(!ui.IsDirtyRectEnabled());
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI(&text);
+    ui.EndFrame(canvas);
+
+    CHECK(ui.IsFullRepaint());
+    ui.SetDirtyRectEnabled(true);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -1655,6 +1766,7 @@ int main() {
     TestGridAndCardLayout();
     TestScrollAreaImmediateMode();
     TestReactiveEventLoop();
+    TestDirtyRectDamageTracking();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

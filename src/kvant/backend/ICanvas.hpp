@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include "kvant/core/Types.hpp"
 
@@ -16,6 +17,9 @@ public:
 
     /// Finalizes and commits all recorded rendering commands.
     virtual void End() = 0;
+
+    /// Clears the entire canvas surface or a targeted sub-rectangle to a specified background color.
+    virtual void Clear(Color color, std::optional<Rect> rect = std::nullopt) = 0;
 
     /// Pushes a rectangular clipping boundary.
     virtual void PushClip(Rect clipRect) = 0;

@@ -33,6 +33,7 @@ public:
     // ICanvas implementation
     void Begin(uint32_t width, uint32_t height) override;
     void End() override;
+    void Clear(Color color, std::optional<Rect> rect = std::nullopt) override;
 
     void PushClip(Rect clipRect) override;
     void PopClip() override;

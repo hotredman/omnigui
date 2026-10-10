@@ -69,6 +69,34 @@ public:
     /// Recommended timeout in milliseconds for SDL_WaitEventTimeout in reactive mode.
     [[nodiscard]] int GetRecommendedSleepTimeoutMs() const noexcept;
 
+    // --- Dirty Rect & Damage Tracking ---
+    /// Enables or disables dirty damage rect tracking (enabled by default).
+    void SetDirtyRectEnabled(bool enabled) noexcept { m_dirtyRectEnabled = enabled; }
+
+    /// Returns whether dirty damage rect tracking is currently enabled.
+    [[nodiscard]] bool IsDirtyRectEnabled() const noexcept { return m_dirtyRectEnabled; }
+
+    /// Sets the clear color used by EndFrame when clearing dirty damage regions.
+    void SetClearColor(Color color) noexcept { m_clearColor = color; }
+
+    /// Returns the current clear color.
+    [[nodiscard]] Color GetClearColor() const noexcept { return m_clearColor; }
+
+    /// Returns true if this frame produced any visual damage requiring rasterization / blitting.
+    [[nodiscard]] bool HasDirtyDamage() const noexcept { return m_hasDirtyDamage; }
+
+    /// Returns true if the entire frame required a full repaint (e.g. window resize or tab switch).
+    [[nodiscard]] bool IsFullRepaint() const noexcept { return m_isFullRepaint; }
+
+    /// Returns the active bounding rectangle of the dirty damage region for this frame.
+    [[nodiscard]] Rect GetDirtyRect() const noexcept { return m_dirtyRect; }
+
+    /// Explicitly forces the next frame to perform a full screen redraw.
+    void InvalidateAll() noexcept;
+
+    /// Explicitly invalidates a rectangular region to be repainted in the next frame.
+    void InvalidateRect(Rect rect) noexcept;
+
     // --- Container Scopes ---
     RowScope Row(
         RowOptions opts = {},
@@ -535,8 +563,40 @@ public:
     void ScrollToId(Id id);
 
 private:
-    void RenderNodeRecursive(Node* node, ICanvas& canvas);
+    void RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirtyRect);
     void UpdateScrollAreasRecursive(Node* node);
+
+    // Widget snapshot for frame-to-frame change detection
+    struct WidgetSnapshot {
+        Rect rect{};
+        uint64_t textHash{0};
+        uint32_t flags{0}; // bits: 0=hovered, 1=pressed, 2=disabled, 3=checked, 4=cursorVisible, 5=activeEdit
+        size_t cursor{0};
+        uint32_t bgColor{0};
+        uint32_t borderColor{0};
+
+        bool operator==(const WidgetSnapshot& o) const noexcept {
+            return rect == o.rect &&
+                   textHash == o.textHash &&
+                   flags == o.flags &&
+                   cursor == o.cursor &&
+                   bgColor == o.bgColor &&
+                   borderColor == o.borderColor;
+        }
+
+        bool operator!=(const WidgetSnapshot& o) const noexcept {
+            return !(*this == o);
+        }
+    };
+
+    std::unordered_map<Id, WidgetSnapshot> m_prevSnapshots;
+    std::vector<Rect> m_explicitDamageRects;
+    Rect m_dirtyRect{0.0f, 0.0f, 0.0f, 0.0f};
+    Color m_clearColor{11, 15, 25, 255}; // Tailwind Slate-950 #0B0F19
+    bool m_hasDirtyDamage{true};
+    bool m_isFullRepaint{true};
+    bool m_forceFullRepaint{true};
+    bool m_dirtyRectEnabled{true};
 
     BumpAllocator m_arena;
     std::vector<Node*> m_containerStack;
@@ -555,7 +615,7 @@ private:
     bool m_manualTime{false};
 
     // Input state
-    Vec2 m_mousePos{0.0f, 0.0f};
+    Vec2 m_mousePos{-10000.0f, -10000.0f};
     bool m_mouseDown{false};
     bool m_mouseClicked{false};
     bool m_mouseReleased{false};

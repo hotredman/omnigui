@@ -1,5 +1,6 @@
 #include "kvant/backend/ThorCanvas.hpp"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <thread>
 #include "thorvg.h"
@@ -82,6 +83,29 @@ void ThorCanvas::End() {
     }
 }
 
+void ThorCanvas::Clear(Color color, std::optional<Rect> rect) {
+    if (!m_targetBuffer || m_width == 0 || m_height == 0) return;
+
+    const uint32_t rawColor = color.ToUint32();
+
+    if (!rect.has_value()) {
+        for (uint32_t y = 0; y < m_height; ++y) {
+            std::fill_n(m_targetBuffer + y * m_stride, m_width, rawColor);
+        }
+    } else {
+        const int startX = std::max(0, static_cast<int>(std::floor(rect->x)));
+        const int startY = std::max(0, static_cast<int>(std::floor(rect->y)));
+        const int endX = std::min(static_cast<int>(m_width), static_cast<int>(std::ceil(rect->Right())));
+        const int endY = std::min(static_cast<int>(m_height), static_cast<int>(std::ceil(rect->Bottom())));
+        const int w = endX - startX;
+        if (w > 0 && endY > startY) {
+            for (int y = startY; y < endY; ++y) {
+                std::fill_n(m_targetBuffer + y * m_stride + startX, w, rawColor);
+            }
+        }
+    }
+}
+
 void ThorCanvas::PushClip(Rect clipRect) {
     if (!m_clipStack.empty()) {
         const Rect& parent = m_clipStack.back();
@@ -121,7 +145,10 @@ void ThorCanvas::ApplyClip(tvg::Paint* paint) {
 
 void ThorCanvas::DrawRect(Rect rect, Color fill) {
     if (fill.a == 0 || rect.w <= 0.0f || rect.h <= 0.0f || !m_canvas) return;
-    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
+    if (!m_clipStack.empty()) {
+        const Rect& cr = m_clipStack.back();
+        if (cr.w <= 0.0f || cr.h <= 0.0f || !rect.Intersects(cr)) return;
+    }
 
     auto shape = tvg::Shape::gen();
     shape->appendRect(rect.x, rect.y, rect.w, rect.h);
@@ -139,7 +166,10 @@ void ThorCanvas::DrawRoundRect(
     float strokeWidth
 ) {
     if (rect.w <= 0.0f || rect.h <= 0.0f || !m_canvas) return;
-    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
+    if (!m_clipStack.empty()) {
+        const Rect& cr = m_clipStack.back();
+        if (cr.w <= 0.0f || cr.h <= 0.0f || !rect.Intersects(cr)) return;
+    }
 
     auto shape = tvg::Shape::gen();
     shape->appendRect(rect.x, rect.y, rect.w, rect.h, radius, radius);
@@ -243,7 +273,10 @@ void ThorCanvas::DrawTextBox(
     float alignY
 ) {
     if (text.empty() || color.a == 0 || bounds.w <= 0.0f || bounds.h <= 0.0f || !m_canvas) return;
-    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
+    if (!m_clipStack.empty()) {
+        const Rect& cr = m_clipStack.back();
+        if (cr.w <= 0.0f || cr.h <= 0.0f || !bounds.Intersects(cr)) return;
+    }
 
     auto txt = tvg::Text::gen();
     std::string textStr(text);
@@ -268,7 +301,17 @@ void ThorCanvas::DrawTextBox(
 
 void ThorCanvas::DrawLine(Vec2 p1, Vec2 p2, Color color, float strokeWidth) {
     if (color.a == 0 || strokeWidth <= 0.0f || !m_canvas) return;
-    if (!m_clipStack.empty() && (m_clipStack.back().w <= 0.0f || m_clipStack.back().h <= 0.0f)) return;
+    if (!m_clipStack.empty()) {
+        const Rect& cr = m_clipStack.back();
+        if (cr.w <= 0.0f || cr.h <= 0.0f) return;
+        const Rect lineBounds(
+            std::min(p1.x, p2.x) - strokeWidth * 0.5f,
+            std::min(p1.y, p2.y) - strokeWidth * 0.5f,
+            std::abs(p2.x - p1.x) + strokeWidth,
+            std::abs(p2.y - p1.y) + strokeWidth
+        );
+        if (!lineBounds.Intersects(cr)) return;
+    }
 
     auto shape = tvg::Shape::gen();
     shape->moveTo(p1.x, p1.y);

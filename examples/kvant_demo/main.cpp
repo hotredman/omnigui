@@ -171,9 +171,6 @@ int main(int argc, char* argv[]) {
 
         metrics.BeginFrame();
 
-        // Clear CPU pixel buffer to dark background (Tailwind Slate-950 #0B0F19)
-        std::fill(pixelBuffer.begin(), pixelBuffer.end(), 0xFF190F0B);
-
         // --- Begin Immediate Mode Kvant Frame ---
         ui.BeginFrame({static_cast<float>(winWidth), static_cast<float>(winHeight)});
         {
@@ -193,6 +190,7 @@ int main(int argc, char* argv[]) {
                         .variant = (activeTabIndex == 0) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
                     })) {
                         activeTabIndex = 0;
+                        ui.InvalidateAll();
                     }
 
                     if (ui.Button("Flexbox Demo", {
@@ -200,6 +198,7 @@ int main(int argc, char* argv[]) {
                         .variant = (activeTabIndex == 1) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
                     })) {
                         activeTabIndex = 1;
+                        ui.InvalidateAll();
                     }
 
                     if (ui.Button("Industrial Dashboard", {
@@ -207,6 +206,7 @@ int main(int argc, char* argv[]) {
                         .variant = (activeTabIndex == 2) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
                     })) {
                         activeTabIndex = 2;
+                        ui.InvalidateAll();
                     }
                 }
 
@@ -319,7 +319,9 @@ int main(int argc, char* argv[]) {
                             }
 
                             if (auto togglesRow = ui.Wrap({.gap = 20.0f, .runGap = 16.0f, .align = kvant::Alignment::Center})) {
-                                ui.Switch("Dark Theme", &darkMode);
+                                if (ui.Switch("Dark Theme", &darkMode).changed) {
+                                    ui.InvalidateAll();
+                                }
                                 if (ui.Switch("VSync (60 FPS)", &vsyncEnabled, {
                                     .description = "Locks rendering rate to display refresh to eliminate tearing",
                                     .variant = kvant::UiVariant::Success
@@ -330,11 +332,23 @@ int main(int argc, char* argv[]) {
                                     .description = "Zero-CPU idle: sleeps when inactive, wakes up on input events",
                                     .variant = kvant::UiVariant::Primary
                                 });
+                                bool dirtyRectEnabled = ui.IsDirtyRectEnabled();
+                                if (ui.Switch("Dirty Rect", &dirtyRectEnabled, {
+                                    .description = "Redraw & upload only changed damage regions instead of full 1080p frame",
+                                    .variant = kvant::UiVariant::Success
+                                }).changed) {
+                                    ui.SetDirtyRectEnabled(dirtyRectEnabled);
+                                    if (!dirtyRectEnabled) {
+                                        ui.InvalidateAll();
+                                    }
+                                }
                                 ui.Checkbox("Show Telemetry", &showTelemetry, {.variant = kvant::UiVariant::Info});
-                                ui.Switch("Form Mode", &formMode, {
+                                if (ui.Switch("Form Mode", &formMode, {
                                     .description = "Stacked label & description layout",
                                     .labelPlacement = kvant::Placement::Stacked
-                                });
+                                }).changed) {
+                                    ui.InvalidateAll();
+                                }
                                 ui.Checkbox("Auto-Scale", true, {.disabled = true});
                             }
 
@@ -421,14 +435,27 @@ int main(int argc, char* argv[]) {
         ui.EndFrame(canvas);
         metrics.MarkCpuDone();
 
-        metrics.MarkGpuStart();
-        // Blit pixel buffer to SDL3 streaming texture
-        SDL_UpdateTexture(screenTexture, nullptr, pixelBuffer.data(), winWidth * sizeof(uint32_t));
-        SDL_RenderClear(renderer);
-        SDL_RenderTexture(renderer, screenTexture, nullptr, nullptr);
-        metrics.MarkGpuDone();
+        if (ui.HasDirtyDamage()) {
+            metrics.MarkGpuStart();
+            if (ui.IsFullRepaint()) {
+                SDL_UpdateTexture(screenTexture, nullptr, pixelBuffer.data(), winWidth * sizeof(uint32_t));
+            } else {
+                const kvant::Rect r = ui.GetDirtyRect();
+                const SDL_Rect sdlR = {
+                    static_cast<int>(r.x),
+                    static_cast<int>(r.y),
+                    static_cast<int>(r.w),
+                    static_cast<int>(r.h)
+                };
+                const uint32_t* src = pixelBuffer.data() + sdlR.y * winWidth + sdlR.x;
+                SDL_UpdateTexture(screenTexture, &sdlR, src, winWidth * sizeof(uint32_t));
+            }
+            SDL_RenderClear(renderer);
+            SDL_RenderTexture(renderer, screenTexture, nullptr, nullptr);
+            metrics.MarkGpuDone();
 
-        SDL_RenderPresent(renderer);
+            SDL_RenderPresent(renderer);
+        }
 
         // In continuous mode, yield CPU slightly to cap frame rate when no events are pending
         if (!reactiveMode) {

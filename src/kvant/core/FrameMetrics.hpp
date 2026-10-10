@@ -122,18 +122,32 @@ public:
                 std::snprintf(
                     buf,
                     sizeof(buf),
-                    "0 FPS (Idle) | CPU: %.1f%% (0.0 ms) | GPU: 0.0 ms (0%% budget)",
+                    "0 FPS (Idle) | CPU: %.1f%% (0.00 ms) | GPU: 0.00 ms (0%% budget)",
                     m_displayCpuPercent
                 );
             } else {
+                char cpuTimeBuf[16];
+                if (m_displayCpuTimeMs < 1.0f) {
+                    std::snprintf(cpuTimeBuf, sizeof(cpuTimeBuf), "%.2f ms", m_displayCpuTimeMs);
+                } else {
+                    std::snprintf(cpuTimeBuf, sizeof(cpuTimeBuf), "%.1f ms", m_displayCpuTimeMs);
+                }
+
+                char gpuTimeBuf[16];
+                if (m_displayGpuTimeMs < 1.0f) {
+                    std::snprintf(gpuTimeBuf, sizeof(gpuTimeBuf), "%.2f ms", m_displayGpuTimeMs);
+                } else {
+                    std::snprintf(gpuTimeBuf, sizeof(gpuTimeBuf), "%.1f ms", m_displayGpuTimeMs);
+                }
+
                 std::snprintf(
                     buf,
                     sizeof(buf),
-                    "%.0f FPS | CPU: %.1f%% (%.1f ms) | GPU: %.1f ms (%.0f%% budget)",
+                    "%.0f FPS | CPU: %.1f%% (%s) | GPU: %s (%.0f%% budget)",
                     m_displayFps,
                     m_displayCpuPercent,
-                    m_displayCpuTimeMs,
-                    m_displayGpuTimeMs,
+                    cpuTimeBuf,
+                    gpuTimeBuf,
                     m_displayGpuBudgetPercent
                 );
             }
