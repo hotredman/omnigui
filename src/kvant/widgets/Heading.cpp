@@ -55,9 +55,6 @@ Response Heading::Run(
     if (!opts.subtitle.empty()) {
         node->headingOpts.subtitle = ctx.InternString(opts.subtitle);
     }
-    if (!opts.description.empty()) {
-        node->headingOpts.description = ctx.InternString(opts.description);
-    }
     if (!opts.badge.empty()) {
         node->headingOpts.badge = ctx.InternString(opts.badge);
     }
@@ -76,7 +73,7 @@ Response Heading::Run(
 
 Vec2 Heading::Measure(const HeadingOptions& opts, UiSize size, ICanvas* canvas) {
     const HeadingMetrics m = GetHeadingMetrics(size);
-    const std::string_view sub = opts.GetSubtitle();
+    const std::string_view sub = opts.subtitle;
 
     float titleLineW = 0.0f;
     float titleLineH = 0.0f;
@@ -141,7 +138,7 @@ void Heading::Render(
 
     const HeadingMetrics m = GetHeadingMetrics(size);
     const auto pal = GetThemePalette(theme);
-    const std::string_view sub = opts.GetSubtitle();
+    const std::string_view sub = opts.subtitle;
 
     const Color titleColor = (opts.variant != UiVariant::Default)
         ? GetVariantColors(opts.variant, theme).text

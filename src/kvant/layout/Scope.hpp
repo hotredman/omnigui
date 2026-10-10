@@ -83,7 +83,6 @@ using GridOptions = CellGridOptions;
 
 /// Options for configuring an individual grid cell slot.
 struct CellOptions {
-    int span{12};                                   ///< Number of columns occupied by this cell (1..12)
     float minWidth{0.0f};                           ///< Minimum width constraint (0 = auto content intrinsic)
     std::optional<UiSize> gap{std::nullopt};        ///< Gap between stacked children inside this cell
     Padding padding{};                              ///< Internal cell padding
@@ -169,7 +168,11 @@ class CellGridScope : public ContainerScope {
 public:
     using ContainerScope::ContainerScope;
 
-    CellScope Cell(int span = 12, CellOptions opts = {}, std::source_location loc = std::source_location::current());
+    /// Full-width 12-column cell slot
+    CellScope Cell(CellOptions opts = {}, std::source_location loc = std::source_location::current()) {
+        return Cell12(opts, loc);
+    }
+
     CellScope Cell12(CellOptions opts = {}, std::source_location loc = std::source_location::current());
     CellScope Cell8(CellOptions opts = {}, std::source_location loc = std::source_location::current());
     CellScope Cell6(CellOptions opts = {}, std::source_location loc = std::source_location::current());

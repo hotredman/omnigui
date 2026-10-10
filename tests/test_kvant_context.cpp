@@ -1393,7 +1393,7 @@ void TestGridAndCardLayout() {
 
         // 2. High-level Card surface containing an explicit CellGrid layout
         if (auto card = ui.Card()) {
-            ui.Heading("Motion Controller", "Direct axis tuning");
+            ui.Heading({.title = "Motion Controller", .subtitle = "Direct axis tuning"});
             if (auto grid = ui.CellGrid()) {
                 if (auto c1 = grid.Cell6()) {
                     inp2Res = ui.InputField("Device Name", nameVal);
@@ -2330,7 +2330,7 @@ void TestHeadingWidgetWorkflow() {
     std::string dynamicSubtitle = "Initial Subtitle";
     auto renderUI = [&]() {
         if (auto col = ui.Column({.gap = UiSize::Md, .padding = Padding::All(16.0f)})) {
-            head1 = ui.Heading("System Overview", dynamicSubtitle);
+            head1 = ui.Heading({.title = "System Overview", .subtitle = dynamicSubtitle});
             head2 = ui.Heading({
                 .title = "Telemetry Stream",
                 .subtitle = "1000 samples/sec",

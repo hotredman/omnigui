@@ -17,15 +17,10 @@ class ICanvas;
 struct HeadingOptions {
     std::string_view title{};
     std::string_view subtitle{};
-    std::string_view description{};                ///< Friendly alias for subtitle
     Icon icon{};                                   ///< Optional vector icon before title
     std::string_view badge{};                      ///< Optional pill badge after title
     UiVariant variant{UiVariant::Default};         ///< Accent color variant
     std::optional<UiSize> size{std::nullopt};      ///< Local size override (nullopt = inherit container size)
-
-    [[nodiscard]] constexpr std::string_view GetSubtitle() const noexcept {
-        return !subtitle.empty() ? subtitle : description;
-    }
 };
 
 /// Autonomous Heading widget logic (execution, measuring, and rendering).

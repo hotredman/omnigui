@@ -168,25 +168,6 @@ public:
         std::source_location loc = std::source_location::current()
     );
 
-    CellScope Cell(
-        int span = 12,
-        CellOptions opts = {},
-        std::source_location loc = std::source_location::current()
-    );
-
-    CellScope Cell(
-        CellOptions opts,
-        std::source_location loc = std::source_location::current()
-    );
-
-    CellScope Cell12(CellOptions opts = {}, std::source_location loc = std::source_location::current());
-    CellScope Cell8(CellOptions opts = {}, std::source_location loc = std::source_location::current());
-    CellScope Cell6(CellOptions opts = {}, std::source_location loc = std::source_location::current());
-    CellScope Cell4(CellOptions opts = {}, std::source_location loc = std::source_location::current());
-    CellScope Cell3(CellOptions opts = {}, std::source_location loc = std::source_location::current());
-    CellScope Cell2(CellOptions opts = {}, std::source_location loc = std::source_location::current());
-    CellScope Cell1(CellOptions opts = {}, std::source_location loc = std::source_location::current());
-
     void Spacer(
         float flex = 1.0f,
         std::source_location loc = std::source_location::current()
@@ -246,13 +227,6 @@ public:
     // --- Heading Widget ---
     Response Heading(
         HeadingOptions opts,
-        std::source_location loc = std::source_location::current()
-    );
-
-    Response Heading(
-        std::string_view title,
-        std::string_view subtitle = {},
-        HeadingOptions opts = {},
         std::source_location loc = std::source_location::current()
     );
 
@@ -793,6 +767,9 @@ private:
     Rect m_openPopupRect{0.0f, 0.0f, 0.0f, 0.0f};
     std::vector<std::function<void(ICanvas&)>> m_overlayPasses;
     Vec2 m_mouseWheel{0.0f, 0.0f};
+
+    friend class CellGridScope;
+    CellScope CreateCell(int span, CellOptions opts, std::source_location loc = std::source_location::current());
 };
 
 // Inline implementations of Response imperative actions
@@ -817,37 +794,27 @@ inline ContainerScope::~ContainerScope() {
     }
 }
 
-// Inline implementations of CellGridScope helper methods
-inline CellScope CellGridScope::Cell(int span, CellOptions opts, std::source_location loc) {
-    return m_ctx ? m_ctx->Cell(span, opts, loc) : CellScope(nullptr, nullptr);
-}
-
+// Inline implementations of CellGridScope slot helpers
 inline CellScope CellGridScope::Cell12(CellOptions opts, std::source_location loc) {
-    return m_ctx ? m_ctx->Cell12(opts, loc) : CellScope(nullptr, nullptr);
+    return m_ctx ? m_ctx->CreateCell(12, opts, loc) : CellScope(nullptr, nullptr);
 }
-
 inline CellScope CellGridScope::Cell8(CellOptions opts, std::source_location loc) {
-    return m_ctx ? m_ctx->Cell8(opts, loc) : CellScope(nullptr, nullptr);
+    return m_ctx ? m_ctx->CreateCell(8, opts, loc) : CellScope(nullptr, nullptr);
 }
-
 inline CellScope CellGridScope::Cell6(CellOptions opts, std::source_location loc) {
-    return m_ctx ? m_ctx->Cell6(opts, loc) : CellScope(nullptr, nullptr);
+    return m_ctx ? m_ctx->CreateCell(6, opts, loc) : CellScope(nullptr, nullptr);
 }
-
 inline CellScope CellGridScope::Cell4(CellOptions opts, std::source_location loc) {
-    return m_ctx ? m_ctx->Cell4(opts, loc) : CellScope(nullptr, nullptr);
+    return m_ctx ? m_ctx->CreateCell(4, opts, loc) : CellScope(nullptr, nullptr);
 }
-
 inline CellScope CellGridScope::Cell3(CellOptions opts, std::source_location loc) {
-    return m_ctx ? m_ctx->Cell3(opts, loc) : CellScope(nullptr, nullptr);
+    return m_ctx ? m_ctx->CreateCell(3, opts, loc) : CellScope(nullptr, nullptr);
 }
-
 inline CellScope CellGridScope::Cell2(CellOptions opts, std::source_location loc) {
-    return m_ctx ? m_ctx->Cell2(opts, loc) : CellScope(nullptr, nullptr);
+    return m_ctx ? m_ctx->CreateCell(2, opts, loc) : CellScope(nullptr, nullptr);
 }
-
 inline CellScope CellGridScope::Cell1(CellOptions opts, std::source_location loc) {
-    return m_ctx ? m_ctx->Cell1(opts, loc) : CellScope(nullptr, nullptr);
+    return m_ctx ? m_ctx->CreateCell(1, opts, loc) : CellScope(nullptr, nullptr);
 }
 
 } // namespace kvant

@@ -306,7 +306,7 @@ int main(int argc, char* argv[]) {
                             // Left Column: wraps to full width when narrow
                             if (auto colLeft = dashboardGrid.Cell6()) {
                                 if (auto card1 = ui.Card()) {
-                                    ui.Heading("Primary Stop Conditions", "Sensory tripwire thresholds & limits");
+                                    ui.Heading({.title = "Primary Stop Conditions", .subtitle = "Sensory tripwire thresholds & limits"});
                                     if (auto grid1 = ui.CellGrid()) {
                                         if (auto c = grid1.Cell12()) {
                                             ui.Switch("Enable Sensor Drop Limits", &enableSensors, {
@@ -333,7 +333,7 @@ int main(int argc, char* argv[]) {
                                 }
 
                                 if (auto card2 = ui.Card()) {
-                                    ui.Heading("Emergency Interlocks", "Hardware line supervision & failsafes", {.variant = kvant::UiVariant::Danger});
+                                    ui.Heading({.title = "Emergency Interlocks", .subtitle = "Hardware line supervision & failsafes", .variant = kvant::UiVariant::Danger});
                                     if (auto grid2 = ui.CellGrid()) {
                                         if (auto c = grid2.Cell12()) {
                                             ui.Switch("Hardware E-Stop Line", &hwEstop, {
@@ -358,7 +358,7 @@ int main(int argc, char* argv[]) {
                             // Right Column: wraps to full width when narrow
                             if (auto colRight = dashboardGrid.Cell6()) {
                                 if (auto card3 = ui.Card()) {
-                                    ui.Heading("Secondary Criteria & PID", "Dynamic closed-loop feedback parameters");
+                                    ui.Heading({.title = "Secondary Criteria & PID", .subtitle = "Dynamic closed-loop feedback parameters"});
                                     if (auto grid3 = ui.CellGrid()) {
                                         if (auto c = grid3.Cell6()) {
                                             ui.InputNumber("Force Drop Limit", forceLimit, "%", {.format = "%.1f"});
@@ -390,7 +390,7 @@ int main(int argc, char* argv[]) {
                     if (auto card = ui.Card()) {
                         if (activeTabIndex == 0) {
                             // Overview Tab: Interactive Counter
-                            ui.Heading("Interactive Reactive State", "Pure immediate mode with zero external widget IDs and instant response.");
+                            ui.Heading({.title = "Interactive Reactive State", .subtitle = "Pure immediate mode with zero external widget IDs and instant response."});
 
                             if (auto actionRow = ui.Wrap({.align = kvant::Alignment::Center})) {
                                 if (ui.Button("Increment (+1)", {.icon = kvant::Icon::Plus(), .variant = kvant::UiVariant::Success})) {
@@ -460,7 +460,7 @@ int main(int argc, char* argv[]) {
                             }
                         } else {
                             // Flexbox Demo Tab: Equal Stretch & Alignment
-                            ui.Heading("Dynamic 3-Way Equal Stretch Layout", "Each button automatically receives exactly 33.3% available width via stretch = true.");
+                            ui.Heading({.title = "Dynamic 3-Way Equal Stretch Layout", .subtitle = "Each button automatically receives exactly 33.3% available width via stretch = true."});
 
                             if (auto stretchRow = ui.Row()) {
                                 ui.Button("Col 1 (Stretch)", {.stretch = true});

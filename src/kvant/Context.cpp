@@ -386,7 +386,7 @@ CardScope Context::Card(CardOptions opts, std::source_location loc) {
     return CardScope(this, outerNode);
 }
 
-CellScope Context::Cell(int span, CellOptions opts, std::source_location loc) {
+CellScope Context::CreateCell(int span, CellOptions opts, std::source_location loc) {
     const Id id = MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
     const bool activeDisabled = opts.disabled || IsDisabled();
@@ -409,38 +409,6 @@ CellScope Context::Cell(int span, CellOptions opts, std::source_location loc) {
     PushDisabled(activeDisabled);
     PushContainer(node);
     return CellScope(this, node);
-}
-
-CellScope Context::Cell(CellOptions opts, std::source_location loc) {
-    return Cell(opts.span, opts, loc);
-}
-
-CellScope Context::Cell12(CellOptions opts, std::source_location loc) {
-    return Cell(12, opts, loc);
-}
-
-CellScope Context::Cell8(CellOptions opts, std::source_location loc) {
-    return Cell(8, opts, loc);
-}
-
-CellScope Context::Cell6(CellOptions opts, std::source_location loc) {
-    return Cell(6, opts, loc);
-}
-
-CellScope Context::Cell4(CellOptions opts, std::source_location loc) {
-    return Cell(4, opts, loc);
-}
-
-CellScope Context::Cell3(CellOptions opts, std::source_location loc) {
-    return Cell(3, opts, loc);
-}
-
-CellScope Context::Cell2(CellOptions opts, std::source_location loc) {
-    return Cell(2, opts, loc);
-}
-
-CellScope Context::Cell1(CellOptions opts, std::source_location loc) {
-    return Cell(1, opts, loc);
 }
 
 void Context::Spacer(float flex, std::source_location loc) {
@@ -506,14 +474,6 @@ Response Context::Code(std::string_view label, UiVariant variant, std::source_lo
 }
 
 Response Context::Heading(HeadingOptions opts, std::source_location loc) {
-    return Heading::Run(*this, opts, loc);
-}
-
-Response Context::Heading(std::string_view title, std::string_view subtitle, HeadingOptions opts, std::source_location loc) {
-    opts.title = title;
-    if (!subtitle.empty()) {
-        opts.subtitle = subtitle;
-    }
     return Heading::Run(*this, opts, loc);
 }
 
@@ -1217,7 +1177,7 @@ void Context::EndFrame(ICanvas& canvas) {
                 }
                 case NodeType::Heading: {
                     hashStr(n->headingOpts.title);
-                    hashStr(n->headingOpts.GetSubtitle());
+                    hashStr(n->headingOpts.subtitle);
                     hashStr(n->headingOpts.badge);
                     hashIcon(n->headingOpts.icon);
                     hashVal(static_cast<uint8_t>(n->headingOpts.variant));
