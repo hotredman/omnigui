@@ -8,6 +8,7 @@
 #include "kvant/layout/LayoutTypes.hpp"
 #include "kvant/widgets/Button.hpp"
 #include "kvant/widgets/Checkbox.hpp"
+#include "kvant/widgets/Heading.hpp"
 #include "kvant/widgets/InputField.hpp"
 #include "kvant/widgets/Select.hpp"
 #include "kvant/widgets/Switch.hpp"
@@ -27,6 +28,7 @@ enum class NodeType : uint8_t {
     Checkbox,   ///< Box toggle with checkmark
     InputField, ///< Text or numeric editable field
     Select,     ///< Dropdown combo box widget
+    Heading,    ///< Structured title and subtitle/description header widget
     Spacer,     ///< Elastic spacer expanding to fill remaining room
     Custom,     ///< User or custom renderer node
     TabItem,    ///< Individual tab item in a TabBar
@@ -101,6 +103,7 @@ struct Node {
     CheckboxOptions checkboxOpts{};
     InputFieldOptions inputOpts{};
     SelectOptions selectOpts{};
+    HeadingOptions headingOpts{};
     TabBarOptions tabBarOpts{};
     TabItem tabItemOpts{};
     ToolButtonOptions toolButtonOpts{};

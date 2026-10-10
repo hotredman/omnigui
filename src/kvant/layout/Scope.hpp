@@ -96,10 +96,9 @@ struct CellOptions {
 
 /// Options for configuring a visual Card surface container.
 struct CardOptions {
-    std::string_view subtitle{};
     UiVariant variant{UiVariant::Default};
     float minWidth{0.0f};                           ///< Minimum card width constraint (0 = auto content intrinsic)
-    std::optional<UiSize> gap{std::nullopt};        ///< Gap between header and content
+    std::optional<UiSize> gap{std::nullopt};        ///< Gap between child elements inside card
     std::optional<Padding> padding{std::nullopt};   ///< Card padding (nullopt = auto from style density)
     Color backgroundColor{Color::Transparent()};
     Color borderColor{Color::Transparent()};

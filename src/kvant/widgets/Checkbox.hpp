@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <source_location>
 #include <string_view>
 #include "kvant/core/Response.hpp"
@@ -19,6 +20,7 @@ struct CheckboxOptions {
     Placement labelPlacement{Placement::Trailing}; ///< Placement of label relative to the checkbox square
     bool disabled{false};                          ///< Interaction suppression
     bool indeterminate{false};                     ///< Tri-state / partial check (horizontal dash)
+    std::optional<UiSize> size{std::nullopt};      ///< Local size override (nullopt = inherit container size)
 };
 static_assert(sizeof(CheckboxOptions) <= 40, "CheckboxOptions must stay compact");
 

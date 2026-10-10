@@ -9,7 +9,7 @@ namespace kvant {
 Response Button::Run(Context& ctx, const ButtonOptions& opts, std::source_location loc) {
     const Id id = ctx.MakeChildId(loc);
     const bool effectiveDisabled = opts.disabled || ctx.IsDisabled();
-    const UiSize activeSize = ctx.GetCurrentSize();
+    const UiSize activeSize = opts.size.value_or(ctx.GetCurrentSize());
 
     Response res = ctx.Interact(id);
     if (effectiveDisabled) {

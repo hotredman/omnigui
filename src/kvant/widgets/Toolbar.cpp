@@ -111,7 +111,7 @@ Response Toolbar::ToolButton(
 ) {
     const Id id = ctx.MakeChildId(loc);
     const bool effectiveDisabled = opts.disabled || ctx.IsDisabled();
-    const UiSize activeSize = ctx.GetCurrentSize();
+    const UiSize activeSize = opts.size.value_or(ctx.GetCurrentSize());
 
     Response res = ctx.Interact(id);
     if (effectiveDisabled) {
@@ -132,6 +132,7 @@ Response Toolbar::ToolButton(
     bOpts.stretch = opts.stretch;
     bOpts.disabled = effectiveDisabled;
     bOpts.active = opts.active;
+    bOpts.size = activeSize;
 
     node->buttonOpts = bOpts;
     node->uiSize = activeSize;

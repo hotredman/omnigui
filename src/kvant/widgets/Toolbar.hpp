@@ -24,6 +24,7 @@ struct ToolButtonOptions {
     bool stretch{false};        ///< Expand to fill available horizontal space in flex containers
     bool disabled{false};
     bool active{false};         ///< Toggle active/selected highlight state
+    std::optional<UiSize> size{std::nullopt}; ///< Local size override (nullopt = inherit toolbar size)
 };
 
 /// Configuration options for Toolbar container.

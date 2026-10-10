@@ -1392,7 +1392,8 @@ void TestGridAndCardLayout() {
         }
 
         // 2. High-level Card surface containing an explicit CellGrid layout
-        if (auto card = ui.Card("Motion Controller", {.subtitle = "Direct axis tuning"})) {
+        if (auto card = ui.Card()) {
+            ui.Heading("Motion Controller", "Direct axis tuning");
             if (auto grid = ui.CellGrid()) {
                 if (auto c1 = grid.Cell6()) {
                     inp2Res = ui.InputField("Device Name", nameVal);
@@ -1744,6 +1745,35 @@ void TestDirtyRectDamageTracking() {
 
     CHECK(ui.IsFullRepaint());
     ui.SetDirtyRectEnabled(true);
+
+    // Frame 7: Verify that toggling TabBarStyle (Underline -> Pill) produces dirty damage without any mouse input
+    int tabIdx = 0;
+    TabBarStyle currentTabStyle = TabBarStyle::Underline;
+    auto renderTabTest = [&]() {
+        if (auto col = ui.Column()) {
+            ui.TabBar(tabIdx, {"Tab1", "Tab2"}, {.style = currentTabStyle});
+        }
+    };
+
+    // Settle layout completely
+    for (int i = 0; i < 3; ++i) {
+        ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+        renderTabTest();
+        ui.EndFrame(canvas);
+    }
+    CHECK(!ui.HasDirtyDamage());
+
+    // Switch style to Pill with ZERO mouse input
+    currentTabStyle = TabBarStyle::Pill;
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderTabTest();
+    ui.EndFrame(canvas);
+
+    // Must produce dirty damage covering the tab bar immediately!
+    CHECK(ui.HasDirtyDamage());
+    CHECK(!ui.IsFullRepaint());
+    CHECK(ui.GetDirtyRect().w > 0.0f);
+    CHECK(ui.GetDirtyRect().h > 0.0f);
 }
 
 void TestTabBarWidgetWorkflow() {
@@ -1830,6 +1860,14 @@ void TestTabBarWidgetWorkflow() {
     ui.EndFrame(canvas);
 
     CHECK(pillIdx == 0);
+
+    // Verify identical tab geometry between Underline and Pill styles
+    for (const auto& tab : tabs) {
+        const Vec2 underDims = TabBar::MeasureTab(tab, {.style = TabBarStyle::Underline}, UiSize::Md);
+        const Vec2 pillDims = TabBar::MeasureTab(tab, {.style = TabBarStyle::Pill}, UiSize::Md);
+        CHECK_NEAR(underDims.x, pillDims.x, 0.001f);
+        CHECK_NEAR(underDims.y, pillDims.y, 0.001f);
+    }
 }
 
 void TestToolbarWidgetWorkflow() {
@@ -2126,6 +2164,223 @@ void TestUiStyleAndDensityScaling() {
     CHECK_NEAR(b2.rect.y, b1.rect.Bottom() + 25.0f, 0.01f);
 }
 
+void TestLeafWidgetSizeOverrides() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 1200;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    WidgetResponse btnInherit, btnXl, btnXs;
+    WidgetResponse swInherit, swXl, swXs;
+    WidgetResponse cbInherit, cbXl, cbXs;
+    WidgetResponse inInherit, inXl, inXs;
+    WidgetResponse selInherit, selXl, selXs;
+    WidgetResponse toolInherit, toolXl, toolXs;
+
+    bool swVal = true;
+    bool cbVal = true;
+    std::string inVal = "Test";
+    size_t selIdx = 0;
+    const std::vector<std::string_view> selItems = {"Option 1", "Option 2"};
+
+    auto render = [&]() {
+        // Container has default ambient size (UiSize::Md)
+        if (auto col = ui.Column()) {
+            // Buttons: Inherited (Md), Local override Xl, Local override Xs
+            if (auto r1 = ui.Row()) {
+                btnInherit = ui.Button("Inherit");
+                btnXl = ui.Button("Large", {.size = UiSize::Xl});
+                btnXs = ui.Button("Small", {.size = UiSize::Xs});
+            }
+
+            // Switches: Inherited (Md), Local override Xl, Local override Xs
+            if (auto r2 = ui.Row()) {
+                swInherit = ui.Switch("Inherit", &swVal);
+                swXl = ui.Switch("Large", &swVal, {.size = UiSize::Xl});
+                swXs = ui.Switch("Small", &swVal, {.size = UiSize::Xs});
+            }
+
+            // Checkboxes: Inherited (Md), Local override Xl, Local override Xs
+            if (auto r3 = ui.Row()) {
+                cbInherit = ui.Checkbox("Inherit", &cbVal);
+                cbXl = ui.Checkbox("Large", &cbVal, {.size = UiSize::Xl});
+                cbXs = ui.Checkbox("Small", &cbVal, {.size = UiSize::Xs});
+            }
+
+            // InputFields: Inherited (Md), Local override Xl, Local override Xs
+            if (auto r4 = ui.Row()) {
+                inInherit = ui.InputField("Inherit", inVal);
+                inXl = ui.InputField("Large", inVal, {.size = UiSize::Xl});
+                inXs = ui.InputField("Small", inVal, {.size = UiSize::Xs});
+            }
+
+            // Selects: Inherited (Md), Local override Xl, Local override Xs
+            if (auto r5 = ui.Row()) {
+                selInherit = ui.Select("Inherit", selIdx, selItems);
+                selXl = ui.Select("Large", selIdx, selItems, {.size = UiSize::Xl});
+                selXs = ui.Select("Small", selIdx, selItems, {.size = UiSize::Xs});
+            }
+
+            // Toolbar ToolButtons: Inherited (Md), Local override Xl, Local override Xs
+            if (auto tb = ui.Toolbar()) {
+                toolInherit = tb.ToolButton("Inherit", {.icon = Icon::Play()});
+                toolXl = tb.ToolButton("Large", {.icon = Icon::Play(), .size = UiSize::Xl});
+                toolXs = tb.ToolButton("Small", {.icon = Icon::Play(), .size = UiSize::Xs});
+            }
+        }
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    const Rect rBtnDef = ui.GetPrevFrameBounds(btnInherit.id);
+    const Rect rBtnXl = ui.GetPrevFrameBounds(btnXl.id);
+    const Rect rBtnXs = ui.GetPrevFrameBounds(btnXs.id);
+
+    CHECK(rBtnXl.h > rBtnDef.h);
+    CHECK(rBtnDef.h > rBtnXs.h);
+
+    const Rect rSwDef = ui.GetPrevFrameBounds(swInherit.id);
+    const Rect rSwXl = ui.GetPrevFrameBounds(swXl.id);
+    const Rect rSwXs = ui.GetPrevFrameBounds(swXs.id);
+
+    CHECK(rSwXl.h > rSwDef.h);
+    CHECK(rSwDef.h > rSwXs.h);
+
+    const Rect rCbDef = ui.GetPrevFrameBounds(cbInherit.id);
+    const Rect rCbXl = ui.GetPrevFrameBounds(cbXl.id);
+    const Rect rCbXs = ui.GetPrevFrameBounds(cbXs.id);
+
+    CHECK(rCbXl.h > rCbDef.h);
+    CHECK(rCbDef.h > rCbXs.h);
+
+    const Rect rInDef = ui.GetPrevFrameBounds(inInherit.id);
+    const Rect rInXl = ui.GetPrevFrameBounds(inXl.id);
+    const Rect rInXs = ui.GetPrevFrameBounds(inXs.id);
+
+    CHECK(rInXl.h > rInDef.h);
+    CHECK(rInDef.h > rInXs.h);
+
+    const Rect rSelDef = ui.GetPrevFrameBounds(selInherit.id);
+    const Rect rSelXl = ui.GetPrevFrameBounds(selXl.id);
+    const Rect rSelXs = ui.GetPrevFrameBounds(selXs.id);
+
+    CHECK(rSelXl.h > rSelDef.h);
+    CHECK(rSelDef.h > rSelXs.h);
+
+    const Rect rToolDef = ui.GetPrevFrameBounds(toolInherit.id);
+    const Rect rToolXl = ui.GetPrevFrameBounds(toolXl.id);
+    const Rect rToolXs = ui.GetPrevFrameBounds(toolXs.id);
+
+    CHECK(rToolXl.h > rToolDef.h);
+    CHECK(rToolDef.h > rToolXs.h);
+}
+
+void TestHeadingWidgetWorkflow() {
+    using namespace kvant;
+
+    // 1. Standalone Heading::Measure tests
+    HeadingOptions optsTitleOnly{.title = "System Configuration"};
+    Vec2 sizeTitleOnly = Heading::Measure(optsTitleOnly, UiSize::Md);
+    CHECK(sizeTitleOnly.x > 0.0f);
+    CHECK(sizeTitleOnly.y > 0.0f);
+
+    HeadingOptions optsWithSub{.title = "System Configuration", .subtitle = "Hardware line supervision & failsafes"};
+    Vec2 sizeWithSub = Heading::Measure(optsWithSub, UiSize::Md);
+    CHECK(sizeWithSub.x >= sizeTitleOnly.x);
+    // Heading with subtitle must be taller than title-only
+    CHECK(sizeWithSub.y > sizeTitleOnly.y);
+
+    HeadingOptions optsWithBadgeIcon{
+        .title = "Telemetry Stream",
+        .subtitle = "1000 samples/sec",
+        .icon = Icon::Check(),
+        .badge = "ACTIVE"
+    };
+    Vec2 sizeWithBadgeIcon = Heading::Measure(optsWithBadgeIcon, UiSize::Md);
+    CHECK(sizeWithBadgeIcon.x > sizeTitleOnly.x);
+
+    // UiSize scaling for Measure
+    Vec2 sizeXs = Heading::Measure(optsWithBadgeIcon, UiSize::Xs);
+    Vec2 sizeMd = Heading::Measure(optsWithBadgeIcon, UiSize::Md);
+    Vec2 sizeXl = Heading::Measure(optsWithBadgeIcon, UiSize::Xl);
+    CHECK(sizeXl.y > sizeMd.y);
+    CHECK(sizeMd.y > sizeXs.y);
+    CHECK(sizeXl.x > sizeMd.x);
+    CHECK(sizeMd.x > sizeXs.x);
+
+    // 2. Immediate mode layout & bounds
+    Context ui;
+    const int width = 800;
+    const int height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    ThorCanvas canvas;
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    Response head1, head2;
+    std::string dynamicSubtitle = "Initial Subtitle";
+    auto renderUI = [&]() {
+        if (auto col = ui.Column({.gap = UiSize::Md, .padding = Padding::All(16.0f)})) {
+            head1 = ui.Heading("System Overview", dynamicSubtitle);
+            head2 = ui.Heading({
+                .title = "Telemetry Stream",
+                .subtitle = "1000 samples/sec",
+                .icon = Icon::Check(),
+                .badge = "ACTIVE",
+                .variant = UiVariant::Success
+            });
+        }
+    };
+
+    // Settle 2 frames
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(head1.id.IsValid());
+    CHECK(head2.id.IsValid());
+
+    const Rect r1 = ui.GetPrevFrameBounds(head1.id);
+    const Rect r2 = ui.GetPrevFrameBounds(head2.id);
+
+    // Width should stretch across container (800 - 32 padding = 768)
+    CHECK_NEAR(r1.w, 768.0f, 1.0f);
+    CHECK_NEAR(r2.w, 768.0f, 1.0f);
+    CHECK(r1.h > 0.0f);
+    CHECK(r2.h > 0.0f);
+    CHECK(r2.y >= r1.Bottom());
+
+    // 3. Dirty rect damage tracking when heading text changes
+    // Frame 3: no changes -> no dirty damage
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(!ui.HasDirtyDamage());
+
+    // Frame 4: change dynamic subtitle -> dirty damage must trigger and cover r1
+    dynamicSubtitle = "Updated Subtitle with Alert";
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(ui.HasDirtyDamage());
+    CHECK(!ui.IsFullRepaint());
+    CHECK(ui.GetDirtyRect().Intersects(r1));
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -2155,6 +2410,8 @@ int main() {
     TestLabelVariantsStableSizing();
     TestContainerSizeInheritanceAndWidgetStretch();
     TestUiStyleAndDensityScaling();
+    TestLeafWidgetSizeOverrides();
+    TestHeadingWidgetWorkflow();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <source_location>
 #include <string_view>
 #include "kvant/core/Response.hpp"
@@ -18,6 +19,7 @@ struct SwitchOptions {
     UiVariant variant{UiVariant::Primary};          ///< Accent fill color when switched ON
     Placement labelPlacement{Placement::Trailing}; ///< Placement of label relative to the switch track
     bool disabled{false};                          ///< Interaction suppression
+    std::optional<UiSize> size{std::nullopt};      ///< Local size override (nullopt = inherit container size)
 };
 static_assert(sizeof(SwitchOptions) <= 40, "SwitchOptions must stay compact");
 

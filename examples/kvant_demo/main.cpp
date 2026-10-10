@@ -305,7 +305,8 @@ int main(int argc, char* argv[]) {
                         if (auto dashboardGrid = ui.CellGrid()) {
                             // Left Column: wraps to full width when narrow
                             if (auto colLeft = dashboardGrid.Cell6()) {
-                                if (auto card1 = ui.Card("Primary Stop Conditions", {.subtitle = "Sensory tripwire thresholds & limits"})) {
+                                if (auto card1 = ui.Card()) {
+                                    ui.Heading("Primary Stop Conditions", "Sensory tripwire thresholds & limits");
                                     if (auto grid1 = ui.CellGrid()) {
                                         if (auto c = grid1.Cell12()) {
                                             ui.Switch("Enable Sensor Drop Limits", &enableSensors, {
@@ -331,7 +332,8 @@ int main(int argc, char* argv[]) {
                                     }
                                 }
 
-                                if (auto card2 = ui.Card("Emergency Interlocks", {.subtitle = "Hardware line supervision & failsafes"})) {
+                                if (auto card2 = ui.Card()) {
+                                    ui.Heading("Emergency Interlocks", "Hardware line supervision & failsafes", {.variant = kvant::UiVariant::Danger});
                                     if (auto grid2 = ui.CellGrid()) {
                                         if (auto c = grid2.Cell12()) {
                                             ui.Switch("Hardware E-Stop Line", &hwEstop, {
@@ -355,7 +357,8 @@ int main(int argc, char* argv[]) {
 
                             // Right Column: wraps to full width when narrow
                             if (auto colRight = dashboardGrid.Cell6()) {
-                                if (auto card3 = ui.Card("Secondary Criteria & PID", {.subtitle = "Dynamic closed-loop feedback parameters"})) {
+                                if (auto card3 = ui.Card()) {
+                                    ui.Heading("Secondary Criteria & PID", "Dynamic closed-loop feedback parameters");
                                     if (auto grid3 = ui.CellGrid()) {
                                         if (auto c = grid3.Cell6()) {
                                             ui.InputNumber("Force Drop Limit", forceLimit, "%", {.format = "%.1f"});
@@ -387,9 +390,7 @@ int main(int argc, char* argv[]) {
                     if (auto card = ui.Card()) {
                         if (activeTabIndex == 0) {
                             // Overview Tab: Interactive Counter
-                            ui.Headline("Interactive Reactive State");
-                            ui.Body("Pure immediate mode with zero external widget IDs and instant response.",
-                                    kvant::UiVariant::Muted);
+                            ui.Heading("Interactive Reactive State", "Pure immediate mode with zero external widget IDs and instant response.");
 
                             if (auto actionRow = ui.Wrap({.align = kvant::Alignment::Center})) {
                                 if (ui.Button("Increment (+1)", {.icon = kvant::Icon::Plus(), .variant = kvant::UiVariant::Success})) {
@@ -410,17 +411,20 @@ int main(int argc, char* argv[]) {
                                 if (ui.Switch("Form Mode", &formMode, {
                                     .description = "Toggle stacked vs default label layout",
                                     .labelPlacement = kvant::Placement::Stacked
-                                }).changed) {
+                                    }).changed) {
                                     ui.InvalidateAll();
                                 }
                                 ui.Checkbox("Auto-Scale", true, {.disabled = true});
                             }
 
                             if (showTelemetry) {
-                                if (auto teleRow = ui.Row({.align = kvant::Alignment::Center})) {
-                                    ui.Text("Telemetry Stream: ACTIVE", {.role = kvant::TextRole::LabelMedium, .variant = kvant::UiVariant::Success});
-                                    ui.Caption("1000 samples/sec | Jitter < 0.2ms | Hardware loop nominal", kvant::UiVariant::Muted);
-                                }
+                                ui.Heading({
+                                    .title = "Telemetry Stream",
+                                    .subtitle = "1000 samples/sec | Jitter < 0.2ms | Hardware loop nominal",
+                                    .icon = kvant::Icon::Check(),
+                                    .badge = "ACTIVE",
+                                    .variant = kvant::UiVariant::Success
+                                });
                             }
 
                             const kvant::Placement activePlacement = formMode ? kvant::Placement::Stacked : kvant::Placement::Leading;
@@ -456,9 +460,7 @@ int main(int argc, char* argv[]) {
                             }
                         } else {
                             // Flexbox Demo Tab: Equal Stretch & Alignment
-                            ui.Headline("Dynamic 3-Way Equal Stretch Layout");
-                            ui.Body("Each button automatically receives exactly 33.3% available width via stretch = true.",
-                                    kvant::UiVariant::Muted);
+                            ui.Heading("Dynamic 3-Way Equal Stretch Layout", "Each button automatically receives exactly 33.3% available width via stretch = true.");
 
                             if (auto stretchRow = ui.Row()) {
                                 ui.Button("Col 1 (Stretch)", {.stretch = true});

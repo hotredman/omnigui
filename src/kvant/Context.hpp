@@ -23,6 +23,7 @@
 #include "kvant/layout/Scope.hpp"
 #include "kvant/widgets/Button.hpp"
 #include "kvant/widgets/Checkbox.hpp"
+#include "kvant/widgets/Heading.hpp"
 #include "kvant/widgets/InputField.hpp"
 #include "kvant/widgets/Select.hpp"
 #include "kvant/widgets/Switch.hpp"
@@ -163,13 +164,7 @@ public:
     );
 
     CardScope Card(
-        std::string_view title = {},
         CardOptions opts = {},
-        std::source_location loc = std::source_location::current()
-    );
-
-    CardScope Card(
-        CardOptions opts,
         std::source_location loc = std::source_location::current()
     );
 
@@ -247,6 +242,19 @@ public:
     Response Body(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
     Response Caption(std::string_view label, UiVariant variant = UiVariant::Muted, std::source_location loc = std::source_location::current());
     Response Code(std::string_view label, UiVariant variant = UiVariant::Default, std::source_location loc = std::source_location::current());
+
+    // --- Heading Widget ---
+    Response Heading(
+        HeadingOptions opts,
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response Heading(
+        std::string_view title,
+        std::string_view subtitle = {},
+        HeadingOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
 
     // --- Switch Widget ---
     Response Switch(
@@ -690,15 +698,15 @@ private:
     // Widget snapshot for frame-to-frame change detection
     struct WidgetSnapshot {
         Rect rect{};
-        uint64_t textHash{0};
-        uint32_t flags{0}; // bits: 0=hovered, 1=pressed, 2=disabled, 3=checked, 4=cursorVisible, 5=activeEdit
+        uint64_t visualHash{0};
+        uint32_t flags{0}; // bits: 0=hovered, 1=pressed, 2=disabled, 3=checked, 4=cursorVisible, 5=activeEdit, 6=tabActive
         size_t cursor{0};
         uint32_t bgColor{0};
         uint32_t borderColor{0};
 
         bool operator==(const WidgetSnapshot& o) const noexcept {
             return rect == o.rect &&
-                   textHash == o.textHash &&
+                   visualHash == o.visualHash &&
                    flags == o.flags &&
                    cursor == o.cursor &&
                    bgColor == o.bgColor &&

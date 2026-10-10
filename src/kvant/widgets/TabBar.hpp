@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <optional>
 #include <span>
 #include <source_location>
 #include <string_view>
@@ -36,6 +37,7 @@ struct TabBarOptions {
     bool showSeparator{true};   ///< In Underline style: draws a 1px baseline line under tabs
     bool fullWidth{false};      ///< Stretch tabs equally to fill available container width
     Color activeColor{Color::Transparent()}; ///< Optional custom accent color override
+    std::optional<UiSize> size{std::nullopt}; ///< Local size override (nullopt = inherit container size)
 };
 
 /// Autonomous TabBar widget logic (execution, measuring, and rendering).

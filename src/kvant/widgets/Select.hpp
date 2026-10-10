@@ -25,6 +25,7 @@ struct SelectOptions {
     Placement labelPlacement{Placement::Stacked};  ///< Placement of label (Stacked by default for form inputs)
     Icon prefixIcon{};                             ///< Optional vector icon inside field on left
     std::optional<uint32_t> maxVisibleItems{std::nullopt}; ///< Optional limit on visible items count before scrolling
+    std::optional<UiSize> size{std::nullopt};      ///< Local size override (nullopt = inherit container size)
     bool disabled{false};                          ///< Interaction suppression
 };
 

@@ -17,7 +17,7 @@ Response TabBar::Run(
     if (tabs.empty()) return res;
 
     const Id barId = ctx.MakeChildId(loc);
-    const UiSize activeSize = ctx.GetCurrentSize();
+    const UiSize activeSize = opts.size.value_or(ctx.GetCurrentSize());
     const ComponentMetrics m = ctx.GetStyle().GetComponentMetrics(activeSize);
 
     Node* barNode = ctx.CreateNode(NodeType::Container, barId);
@@ -109,7 +109,7 @@ Vec2 TabBar::MeasureTab(
         contentW += badgeTextW + 12.0f; // Badge padding
     }
 
-    const float padX = (opts.style == TabBarStyle::Underline) ? m.paddingX : (m.paddingX * 0.85f);
+    const float padX = m.paddingX;
     const float totalW = contentW + padX * 2.0f;
 
     return {std::max(m.defaultHeight, totalW), m.defaultHeight};
@@ -144,7 +144,7 @@ void TabBar::RenderTab(
         // Hover backdrop highlight
         if (hovered && !active && !disabled) {
             const Rect hoverR(bounds.x, bounds.y + 4.0f, bounds.w, bounds.h - 8.0f);
-            canvas.DrawRoundRect(hoverR, 4.0f, theme == ThemeMode::Dark ? Color::Hex(0x33415540) : Color::Hex(0xE2E8F080));
+            canvas.DrawRoundRect(hoverR, m.cornerRadius, theme == ThemeMode::Dark ? Color::Hex(0x33415540) : Color::Hex(0xE2E8F080));
         }
 
         // Bottom active underline accent
@@ -163,9 +163,9 @@ void TabBar::RenderTab(
             const Color pillCol = (opts.activeColor.a > 0)
                 ? opts.activeColor
                 : (item.variant != UiVariant::Default ? GetVariantColors(item.variant, theme).bgActive : (theme == ThemeMode::Dark ? Color::Hex(0x334155FF) : Color::Hex(0xE2E8F0FF)));
-            canvas.DrawRoundRect(bounds, 6.0f, pillCol);
+            canvas.DrawRoundRect(bounds, m.cornerRadius, pillCol);
         } else if (hovered && !disabled) {
-            canvas.DrawRoundRect(bounds, 6.0f, theme == ThemeMode::Dark ? Color::Hex(0x1E293B80) : Color::Hex(0xF1F5F980));
+            canvas.DrawRoundRect(bounds, m.cornerRadius, theme == ThemeMode::Dark ? Color::Hex(0x1E293B80) : Color::Hex(0xF1F5F980));
         }
     }
 

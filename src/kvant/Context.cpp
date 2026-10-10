@@ -357,12 +357,12 @@ ScrollAreaScope Context::ScrollArea(ScrollAreaOptions opts, std::source_location
     return ScrollAreaScope(this, node);
 }
 
-CardScope Context::Card(std::string_view title, CardOptions opts, std::source_location loc) {
+CardScope Context::Card(CardOptions opts, std::source_location loc) {
     const Id idOuter = MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
     const bool activeDisabled = opts.disabled || IsDisabled();
 
-    // 1. Outer styled surface frame
+    // Outer styled surface frame
     Node* outerNode = CreateNode(NodeType::Container, idOuter);
     outerNode->direction = FlexDirection::Column;
     outerNode->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
@@ -383,36 +383,7 @@ CardScope Context::Card(std::string_view title, CardOptions opts, std::source_lo
     PushDisabled(activeDisabled);
     PushContainer(outerNode);
 
-    // 2. Optional Header block
-    if (!title.empty() || !opts.subtitle.empty()) {
-        const Id idHeader = Id{idOuter.value ^ 0x517CC1B727220A95ULL};
-        Node* headerNode = CreateNode(NodeType::Container, idHeader);
-        headerNode->direction = FlexDirection::Column;
-        headerNode->gap = 2.0f;
-        headerNode->widthMode = SizeMode::Stretch;
-        headerNode->heightMode = SizeMode::Fit;
-        headerNode->uiSize = activeSize;
-        headerNode->disabled = activeDisabled;
-
-        PushSize(activeSize);
-        PushDisabled(activeDisabled);
-        PushContainer(headerNode);
-
-        if (!title.empty()) {
-            Text(title, {.role = TextRole::TitleMedium, .variant = opts.variant});
-        }
-        if (!opts.subtitle.empty()) {
-            Caption(opts.subtitle, UiVariant::Muted);
-        }
-
-        PopContainer(headerNode);
-    }
-
     return CardScope(this, outerNode);
-}
-
-CardScope Context::Card(CardOptions opts, std::source_location loc) {
-    return Card({}, opts, loc);
 }
 
 CellScope Context::Cell(int span, CellOptions opts, std::source_location loc) {
@@ -532,6 +503,18 @@ Response Context::Caption(std::string_view label, UiVariant variant, std::source
 
 Response Context::Code(std::string_view label, UiVariant variant, std::source_location loc) {
     return Text(label, {.role = TextRole::CodeMedium, .variant = variant}, loc);
+}
+
+Response Context::Heading(HeadingOptions opts, std::source_location loc) {
+    return Heading::Run(*this, opts, loc);
+}
+
+Response Context::Heading(std::string_view title, std::string_view subtitle, HeadingOptions opts, std::source_location loc) {
+    opts.title = title;
+    if (!subtitle.empty()) {
+        opts.subtitle = subtitle;
+    }
+    return Heading::Run(*this, opts, loc);
 }
 
 Response Context::Switch(std::string_view label, bool* value, SwitchOptions opts, std::source_location loc) {
@@ -1146,21 +1129,104 @@ void Context::EndFrame(ICanvas& canvas) {
             snap.bgColor = n->backgroundColor.ToUint32();
             snap.borderColor = n->borderColor.ToUint32();
 
+            uint64_t h = 14695981039346656037ULL;
+            auto hashStr = [&](std::string_view sv) {
+                for (char c : sv) {
+                    h = (h ^ static_cast<uint8_t>(c)) * 1099511628211ULL;
+                }
+            };
+            auto hashBytes = [&](const void* data, size_t len) {
+                const uint8_t* p = static_cast<const uint8_t*>(data);
+                for (size_t i = 0; i < len; ++i) {
+                    h = (h ^ p[i]) * 1099511628211ULL;
+                }
+            };
+            auto hashVal = [&](auto val) {
+                hashBytes(&val, sizeof(val));
+            };
+            auto hashIcon = [&](const Icon& ic) {
+                hashVal(static_cast<uint8_t>(ic.GetType()));
+                hashVal(static_cast<uint8_t>(ic.GetId()));
+                if (!ic.GetPath().empty()) hashStr(ic.GetPath());
+            };
+
             if (m_editState.id.IsValid() && n->id == m_editState.id) {
                 snap.flags |= (cursorVis ? 16u : 0u) | 32u;
                 snap.cursor = m_editState.cursor;
-                uint64_t h = 14695981039346656037ULL;
-                for (char c : m_editState.text) {
-                    h = (h ^ static_cast<uint8_t>(c)) * 1099511628211ULL;
-                }
-                snap.textHash = h;
+                hashStr(m_editState.text);
             } else {
-                uint64_t h = 14695981039346656037ULL;
-                for (char c : n->text) {
-                    h = (h ^ static_cast<uint8_t>(c)) * 1099511628211ULL;
+                hashStr(n->text);
+                if (!n->displayText.empty()) {
+                    hashStr(n->displayText);
                 }
-                snap.textHash = h;
             }
+
+            hashVal(static_cast<uint8_t>(n->type));
+            hashVal(static_cast<uint8_t>(n->uiSize));
+            hashVal(static_cast<uint8_t>(n->themeMode));
+            hashVal(n->borderWidth);
+            hashVal(n->cornerRadius);
+
+            switch (n->type) {
+                case NodeType::TabItem: {
+                    hashVal(static_cast<uint8_t>(n->tabBarOpts.style));
+                    hashVal(static_cast<uint8_t>(n->tabBarOpts.showSeparator));
+                    hashVal(n->tabBarOpts.activeColor.ToUint32());
+                    hashVal(static_cast<uint8_t>(n->tabItemOpts.variant));
+                    hashStr(n->tabItemOpts.badge);
+                    hashIcon(n->tabItemOpts.icon);
+                    break;
+                }
+                case NodeType::Button: {
+                    hashVal(static_cast<uint8_t>(n->buttonOpts.variant));
+                    hashVal(static_cast<uint8_t>(n->buttonOpts.iconPlacement));
+                    hashVal(static_cast<uint8_t>(n->buttonOpts.active));
+                    hashIcon(n->buttonOpts.icon);
+                    break;
+                }
+                case NodeType::Switch: {
+                    hashVal(static_cast<uint8_t>(n->switchOpts.variant));
+                    hashVal(static_cast<uint8_t>(n->switchOpts.labelPlacement));
+                    break;
+                }
+                case NodeType::Checkbox: {
+                    hashVal(static_cast<uint8_t>(n->checkboxOpts.variant));
+                    hashVal(static_cast<uint8_t>(n->checkboxOpts.labelPlacement));
+                    hashVal(static_cast<uint8_t>(n->checkboxOpts.indeterminate));
+                    break;
+                }
+                case NodeType::InputField: {
+                    hashVal(static_cast<uint8_t>(n->inputOpts.variant));
+                    hashStr(n->inputOpts.prefix);
+                    hashStr(n->inputOpts.suffix);
+                    hashIcon(n->inputOpts.prefixIcon);
+                    hashIcon(n->inputOpts.suffixIcon);
+                    hashVal(static_cast<uint8_t>(n->inputOpts.readOnly));
+                    break;
+                }
+                case NodeType::Select: {
+                    hashVal(static_cast<uint8_t>(n->selectOpts.variant));
+                    hashIcon(n->selectOpts.prefixIcon);
+                    break;
+                }
+                case NodeType::Text: {
+                    hashVal(static_cast<uint8_t>(n->textOpts.role));
+                    hashVal(static_cast<uint8_t>(n->textOpts.variant));
+                    hashVal(static_cast<uint8_t>(n->textOpts.align));
+                    break;
+                }
+                case NodeType::Heading: {
+                    hashStr(n->headingOpts.title);
+                    hashStr(n->headingOpts.GetSubtitle());
+                    hashStr(n->headingOpts.badge);
+                    hashIcon(n->headingOpts.icon);
+                    hashVal(static_cast<uint8_t>(n->headingOpts.variant));
+                    break;
+                }
+                default: break;
+            }
+
+            snap.visualHash = h;
 
             auto it = m_prevSnapshots.find(n->id);
             if (it != m_prevSnapshots.end()) {
@@ -1281,7 +1347,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
     if (node->type != NodeType::Button && node->type != NodeType::Text &&
         node->type != NodeType::Switch && node->type != NodeType::Checkbox &&
         node->type != NodeType::InputField && node->type != NodeType::Select &&
-        node->type != NodeType::TabItem && node->type != NodeType::Separator) {
+        node->type != NodeType::TabItem && node->type != NodeType::Separator &&
+        node->type != NodeType::Heading) {
         if (node->backgroundColor.a > 0 || (node->borderColor.a > 0 && node->borderWidth > 0.0f)) {
             if (node->cornerRadius > 0.0f) {
                 canvas.DrawRoundRect(
@@ -1392,6 +1459,14 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             canvas,
             node->computedRect,
             node->borderColor,
+            node->themeMode
+        );
+    } else if (node->type == NodeType::Heading) {
+        Heading::Render(
+            canvas,
+            node->computedRect,
+            node->headingOpts,
+            node->uiSize,
             node->themeMode
         );
     }

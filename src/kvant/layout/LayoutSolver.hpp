@@ -56,6 +56,10 @@ private:
                     node->intrinsicSize = Select::Measure(node->text, node->selectOpts, node->uiSize, canvas);
                     break;
                 }
+                case NodeType::Heading: {
+                    node->intrinsicSize = Heading::Measure(node->headingOpts, node->uiSize, canvas);
+                    break;
+                }
                 case NodeType::Spacer: {
                     node->intrinsicSize = {0.0f, 0.0f};
                     break;

@@ -27,6 +27,7 @@ struct InputFieldOptions {
     Icon prefixIcon{};                             ///< Optional vector icon inside field on left
     Icon suffixIcon{};                             ///< Optional vector icon inside field on right
     std::optional<CursorBlinkMode> cursorMode{std::nullopt}; ///< Cursor blink override (inherits context config if nullopt)
+    std::optional<UiSize> size{std::nullopt};      ///< Local size override (nullopt = inherit container size)
     bool disabled{false};                          ///< Interaction suppression
     bool readOnly{false};                          ///< Non-editable display mode
 };
