@@ -50,6 +50,25 @@ public:
     void OnKeyDown(Key key, KeyModifiers mods = {});
     void OnMouseWheel(float x, float y);
 
+    // --- Reactive Repaint & Idle Management ---
+    /// Request the event loop to repaint a given number of frames (e.g. 3 frames to settle hover/click).
+    void RequestRepaint(int frames = 3) noexcept;
+
+    /// Returns the number of pending repaint frames left in the counter.
+    [[nodiscard]] int GetRepaintFramesLeft() const noexcept { return m_repaintFrames; }
+
+    /// Returns true if the UI requires a repaint (pending frames, mouse held down, or active edit/popup).
+    [[nodiscard]] bool NeedsRepaint() const noexcept;
+
+    /// Sets the idle heartbeat interval in milliseconds (e.g. 500ms). Set to -1 or 0 to disable periodic heartbeat (deep sleep).
+    void SetIdleHeartbeatMs(int timeoutMs) noexcept { m_idleHeartbeatMs = timeoutMs; }
+
+    /// Returns the configured idle heartbeat interval in milliseconds.
+    [[nodiscard]] int GetIdleHeartbeatMs() const noexcept { return m_idleHeartbeatMs; }
+
+    /// Recommended timeout in milliseconds for SDL_WaitEventTimeout in reactive mode.
+    [[nodiscard]] int GetRecommendedSleepTimeoutMs() const noexcept;
+
     // --- Container Scopes ---
     RowScope Row(
         RowOptions opts = {},
@@ -540,6 +559,8 @@ private:
     bool m_mouseDown{false};
     bool m_mouseClicked{false};
     bool m_mouseReleased{false};
+    int m_repaintFrames{3};
+    int m_idleHeartbeatMs{500};
 
     Id m_hoveredId{Id::Null()};
     Id m_activeId{Id::Null()};

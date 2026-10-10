@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
     int activeTabIndex = 0;
     bool running = true;
     bool vsyncEnabled = true;
+    bool reactiveMode = true;
     bool darkMode = true;
     bool showTelemetry = false;
     bool formMode = true;
@@ -59,6 +60,8 @@ int main(int argc, char* argv[]) {
     std::string sampleId = "Specimen-2026-X";
     size_t baudIndex = 1;
     std::string profileMode = "Standard Performance";
+    size_t heartbeatIndex = 2; // Default: 500 ms (2 Hz)
+    const std::vector<int> heartbeatMsValues = {-1, 250, 500, 1000, 2000};
     bool enableSensors = true;
     float maxTravel = 150.0f;
     float maxVelocity = 25.0f;
@@ -74,73 +77,99 @@ int main(int argc, char* argv[]) {
     bool diagLogging = true;
     kvant::FrameMetrics metrics;
 
-    while (running) {
-        metrics.BeginFrame();
+    auto handleEvent = [&](const SDL_Event& event) {
+        switch (event.type) {
+            case SDL_EVENT_QUIT:
+                running = false;
+                break;
+            case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+                winWidth = event.window.data1;
+                winHeight = event.window.data2;
+                pixelBuffer.resize(winWidth * winHeight, 0);
+                canvas.SetTarget(pixelBuffer.data(), winWidth, winHeight, winWidth);
+                if (screenTexture) {
+                    SDL_DestroyTexture(screenTexture);
+                }
+                screenTexture = SDL_CreateTexture(
+                    renderer,
+                    SDL_PIXELFORMAT_ABGR8888,
+                    SDL_TEXTUREACCESS_STREAMING,
+                    winWidth,
+                    winHeight
+                );
+                ui.RequestRepaint(3);
+                break;
+            }
+            case SDL_EVENT_MOUSE_MOTION:
+                ui.OnMouseMove({event.motion.x, event.motion.y});
+                break;
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                ui.OnMouseDown(event.button.button);
+                break;
+            case SDL_EVENT_MOUSE_BUTTON_UP:
+                ui.OnMouseUp(event.button.button);
+                break;
+            case SDL_EVENT_MOUSE_WHEEL:
+                ui.OnMouseWheel(event.wheel.x, event.wheel.y);
+                break;
+            case SDL_EVENT_TEXT_INPUT:
+                ui.OnTextInput(event.text.text);
+                break;
+            case SDL_EVENT_KEY_DOWN: {
+                kvant::Key key = kvant::Key::None;
+                switch (event.key.key) {
+                    case SDLK_BACKSPACE: key = kvant::Key::Backspace; break;
+                    case SDLK_DELETE:    key = kvant::Key::Delete; break;
+                    case SDLK_RETURN:    key = kvant::Key::Enter; break;
+                    case SDLK_ESCAPE:    key = kvant::Key::Escape; break;
+                    case SDLK_TAB:       key = kvant::Key::Tab; break;
+                    case SDLK_LEFT:      key = kvant::Key::Left; break;
+                    case SDLK_RIGHT:     key = kvant::Key::Right; break;
+                    case SDLK_UP:        key = kvant::Key::Up; break;
+                    case SDLK_DOWN:      key = kvant::Key::Down; break;
+                    case SDLK_HOME:      key = kvant::Key::Home; break;
+                    case SDLK_END:       key = kvant::Key::End; break;
+                    default: break;
+                }
+                if (key != kvant::Key::None) {
+                    ui.OnKeyDown(key);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    };
 
-        SDL_Event event;
-        // Wait up to 16ms for an event to maintain 60 FPS while conserving CPU at idle
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_EVENT_QUIT:
-                    running = false;
-                    break;
-                case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
-                    winWidth = event.window.data1;
-                    winHeight = event.window.data2;
-                    pixelBuffer.resize(winWidth * winHeight, 0);
-                    canvas.SetTarget(pixelBuffer.data(), winWidth, winHeight, winWidth);
-                    if (screenTexture) {
-                        SDL_DestroyTexture(screenTexture);
-                    }
-                    screenTexture = SDL_CreateTexture(
-                        renderer,
-                        SDL_PIXELFORMAT_ABGR8888,
-                        SDL_TEXTUREACCESS_STREAMING,
-                        winWidth,
-                        winHeight
-                    );
-                    break;
+    while (running) {
+        if (reactiveMode && !ui.NeedsRepaint()) {
+            const int timeoutMs = ui.GetRecommendedSleepTimeoutMs();
+            SDL_Event event;
+            if (SDL_WaitEventTimeout(&event, timeoutMs)) {
+                handleEvent(event);
+                while (SDL_PollEvent(&event)) {
+                    handleEvent(event);
                 }
-                case SDL_EVENT_MOUSE_MOTION:
-                    ui.OnMouseMove({event.motion.x, event.motion.y});
-                    break;
-                case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                    ui.OnMouseDown(event.button.button);
-                    break;
-                case SDL_EVENT_MOUSE_BUTTON_UP:
-                    ui.OnMouseUp(event.button.button);
-                    break;
-                case SDL_EVENT_MOUSE_WHEEL:
-                    ui.OnMouseWheel(event.wheel.x, event.wheel.y);
-                    break;
-                case SDL_EVENT_TEXT_INPUT:
-                    ui.OnTextInput(event.text.text);
-                    break;
-                case SDL_EVENT_KEY_DOWN: {
-                    kvant::Key key = kvant::Key::None;
-                    switch (event.key.key) {
-                        case SDLK_BACKSPACE: key = kvant::Key::Backspace; break;
-                        case SDLK_DELETE:    key = kvant::Key::Delete; break;
-                        case SDLK_RETURN:    key = kvant::Key::Enter; break;
-                        case SDLK_ESCAPE:    key = kvant::Key::Escape; break;
-                        case SDLK_TAB:       key = kvant::Key::Tab; break;
-                        case SDLK_LEFT:      key = kvant::Key::Left; break;
-                        case SDLK_RIGHT:     key = kvant::Key::Right; break;
-                        case SDLK_UP:        key = kvant::Key::Up; break;
-                        case SDLK_DOWN:      key = kvant::Key::Down; break;
-                        case SDLK_HOME:      key = kvant::Key::Home; break;
-                        case SDLK_END:       key = kvant::Key::End; break;
-                        default: break;
-                    }
-                    if (key != kvant::Key::None) {
-                        ui.OnKeyDown(key);
-                    }
-                    break;
+            } else {
+                // Timeout expired with no events.
+                // If timeoutMs <= 0 (disabled periodic heartbeat / deep sleep), continue waiting.
+                // If timeoutMs > 0, the periodic heartbeat fired: proceed to render 1 frame to refresh metrics.
+                if (timeoutMs <= 0 && !ui.NeedsRepaint()) {
+                    continue;
                 }
-                default:
-                    break;
+            }
+        } else {
+            SDL_Event event;
+            while (SDL_PollEvent(&event)) {
+                handleEvent(event);
             }
         }
+
+        if (!running) {
+            break;
+        }
+
+        metrics.BeginFrame();
 
         // Clear CPU pixel buffer to dark background (Tailwind Slate-950 #0B0F19)
         std::fill(pixelBuffer.begin(), pixelBuffer.end(), 0xFF190F0B);
@@ -297,6 +326,10 @@ int main(int argc, char* argv[]) {
                                 }).changed) {
                                     SDL_SetRenderVSync(renderer, vsyncEnabled ? 1 : 0);
                                 }
+                                ui.Switch("Reactive Mode", &reactiveMode, {
+                                    .description = "Zero-CPU idle: sleeps when inactive, wakes up on input events",
+                                    .variant = kvant::UiVariant::Primary
+                                });
                                 ui.Checkbox("Show Telemetry", &showTelemetry, {.variant = kvant::UiVariant::Info});
                                 ui.Switch("Form Mode", &formMode, {
                                     .description = "Stacked label & description layout",
@@ -330,6 +363,21 @@ int main(int argc, char* argv[]) {
                                         .description = "Active runtime sensor & compute profile",
                                         .labelPlacement = kvant::Placement::Stacked
                                     });
+                                }
+                                if (auto fHeartbeat = ui.Box({.fixedWidth = 260.0f})) {
+                                    if (ui.Select("Idle Heartbeat", heartbeatIndex, {
+                                        "Off (Deep Sleep)",
+                                        "250 ms (4 Hz)",
+                                        "500 ms (2 Hz - Default)",
+                                        "1000 ms (1 Hz)",
+                                        "2000 ms (0.5 Hz)"
+                                    }, {
+                                        .description = "Telemetry refresh rate in idle mode",
+                                        .labelPlacement = kvant::Placement::Stacked,
+                                        .disabled = !reactiveMode
+                                    }).changed) {
+                                        ui.SetIdleHeartbeatMs(heartbeatMsValues[heartbeatIndex]);
+                                    }
                                 }
                             }
                         } else {
@@ -382,11 +430,13 @@ int main(int argc, char* argv[]) {
 
         SDL_RenderPresent(renderer);
 
-        // Yield CPU slightly to cap frame rate when no events are pending
-        if (!vsyncEnabled) {
-            SDL_Delay(8);
-        } else {
-            SDL_Delay(1);
+        // In continuous mode, yield CPU slightly to cap frame rate when no events are pending
+        if (!reactiveMode) {
+            if (!vsyncEnabled) {
+                SDL_Delay(8);
+            } else {
+                SDL_Delay(1);
+            }
         }
 
         metrics.EndFrame(60.0f);

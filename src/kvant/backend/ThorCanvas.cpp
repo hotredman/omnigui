@@ -57,6 +57,7 @@ bool ThorCanvas::LoadFontFile(const std::string& path) {
     if (res == tvg::Result::Success) {
         m_defaultFontPath = path;
         m_fontLoaded = true;
+        m_textMeasureCache.clear();
         return true;
     }
     return false;
@@ -103,6 +104,12 @@ void ThorCanvas::PopClip() {
 void ThorCanvas::ApplyClip(tvg::Paint* paint) {
     if (!paint || m_clipStack.empty()) return;
     const Rect& cr = m_clipStack.back();
+    // If the active clip rect covers the entire canvas (or larger), no clipping shape is needed!
+    if (cr.x <= 0.0f && cr.y <= 0.0f &&
+        cr.w >= static_cast<float>(m_width) &&
+        cr.h >= static_cast<float>(m_height)) {
+        return;
+    }
     auto clipShape = tvg::Shape::gen();
     if (cr.w <= 0.0f || cr.h <= 0.0f) {
         clipShape->appendRect(0.0f, 0.0f, 0.0f, 0.0f);
@@ -154,6 +161,20 @@ Vec2 ThorCanvas::MeasureText(std::string_view text, float fontSize) {
     if (text.empty() || fontSize <= 0.0f) {
         return {0.0f, 0.0f};
     }
+
+    uint64_t h = 14695981039346656037ULL;
+    for (char c : text) {
+        h = (h ^ static_cast<uint8_t>(c)) * 1099511628211ULL;
+    }
+    uint32_t fsBits = 0;
+    std::memcpy(&fsBits, &fontSize, sizeof(float));
+    const TextMeasureKey key{h, fsBits};
+
+    auto it = m_textMeasureCache.find(key);
+    if (it != m_textMeasureCache.end()) {
+        return it->second;
+    }
+
     if (!m_measureText) {
         m_measureText = tvg::Text::gen();
     }
@@ -180,7 +201,13 @@ Vec2 ThorCanvas::MeasureText(std::string_view text, float fontSize) {
             cur++;
         }
     }
-    return {totalAdvance, fontSize * 1.35f};
+    const Vec2 result{totalAdvance, fontSize * 1.35f};
+
+    if (m_textMeasureCache.size() > 2048) {
+        m_textMeasureCache.clear();
+    }
+    m_textMeasureCache.emplace(key, result);
+    return result;
 }
 
 void ThorCanvas::DrawText(std::string_view text, Vec2 pos, float fontSize, Color color) {

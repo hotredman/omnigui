@@ -1543,6 +1543,95 @@ void TestScrollAreaImmediateMode() {
     CHECK_NEAR(bBtn1.y, 0.0f, 1.0f);
 }
 
+void TestReactiveEventLoop() {
+    using namespace kvant;
+    Context ui;
+    ThorCanvas canvas;
+    std::vector<uint32_t> pixels(100 * 100, 0);
+    canvas.SetTarget(pixels.data(), 100, 100, 100);
+
+    // Initial state: starts with 3 repaint frames to render initial scene
+    CHECK(ui.GetRepaintFramesLeft() == 3);
+    CHECK(ui.NeedsRepaint());
+    CHECK(ui.GetRecommendedSleepTimeoutMs() == 0);
+
+    // Drain initial 3 frames
+    ui.BeginFrame({100.0f, 100.0f}); ui.EndFrame(canvas);
+    CHECK(ui.GetRepaintFramesLeft() == 2);
+    CHECK(ui.NeedsRepaint());
+
+    ui.BeginFrame({100.0f, 100.0f}); ui.EndFrame(canvas);
+    CHECK(ui.GetRepaintFramesLeft() == 1);
+    CHECK(ui.NeedsRepaint());
+
+    ui.BeginFrame({100.0f, 100.0f}); ui.EndFrame(canvas);
+    CHECK(ui.GetRepaintFramesLeft() == 0);
+    CHECK(!ui.NeedsRepaint());
+    CHECK(ui.GetRecommendedSleepTimeoutMs() > 0);
+
+    // Mouse movement wakes up reactive loop
+    ui.OnMouseMove({25.0f, 25.0f});
+    CHECK(ui.GetRepaintFramesLeft() == 3);
+    CHECK(ui.NeedsRepaint());
+    CHECK(ui.GetRecommendedSleepTimeoutMs() == 0);
+
+    // Drain 3 frames
+    for (int i = 0; i < 3; ++i) {
+        ui.BeginFrame({100.0f, 100.0f});
+        ui.EndFrame(canvas);
+    }
+    CHECK(!ui.NeedsRepaint());
+
+    // Holding mouse button down prevents sleeping
+    ui.OnMouseDown(1);
+    CHECK(ui.IsMouseDown());
+    CHECK(ui.NeedsRepaint());
+
+    for (int i = 0; i < 5; ++i) {
+        ui.BeginFrame({100.0f, 100.0f});
+        ui.EndFrame(canvas);
+    }
+    // Still needs repaint because button is held down
+    CHECK(ui.NeedsRepaint());
+
+    // Releasing mouse button queues 3 settle frames
+    ui.OnMouseUp(1);
+    CHECK(!ui.IsMouseDown());
+    CHECK(ui.GetRepaintFramesLeft() == 3);
+
+    for (int i = 0; i < 3; ++i) {
+        ui.BeginFrame({100.0f, 100.0f});
+        ui.EndFrame(canvas);
+    }
+    CHECK(!ui.NeedsRepaint());
+
+    // Key event wakes up loop
+    ui.OnKeyDown(Key::Enter);
+    CHECK(ui.GetRepaintFramesLeft() == 3);
+    CHECK(ui.NeedsRepaint());
+
+    // Drain frames
+    for (int i = 0; i < 3; ++i) {
+        ui.BeginFrame({100.0f, 100.0f});
+        ui.EndFrame(canvas);
+    }
+    CHECK(!ui.NeedsRepaint());
+
+    // Configurable idle heartbeat
+    CHECK(ui.GetIdleHeartbeatMs() == 500);
+    CHECK(ui.GetRecommendedSleepTimeoutMs() == 500);
+
+    ui.SetIdleHeartbeatMs(1000);
+    CHECK(ui.GetIdleHeartbeatMs() == 1000);
+    CHECK(ui.GetRecommendedSleepTimeoutMs() == 1000);
+
+    ui.SetIdleHeartbeatMs(-1); // Deep sleep
+    CHECK(ui.GetIdleHeartbeatMs() == -1);
+    CHECK(ui.GetRecommendedSleepTimeoutMs() == -1);
+
+    ui.SetIdleHeartbeatMs(500); // Restore default
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -1565,6 +1654,7 @@ int main() {
     TestCursorBlinkModesAndPhaseReset();
     TestGridAndCardLayout();
     TestScrollAreaImmediateMode();
+    TestReactiveEventLoop();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

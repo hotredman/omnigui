@@ -649,8 +649,31 @@ void Context::RequestFocus(Id id) {
     ResetCursorBlink();
 }
 
+void Context::RequestRepaint(int frames) noexcept {
+    m_repaintFrames = std::max(m_repaintFrames, frames);
+}
+
+bool Context::NeedsRepaint() const noexcept {
+    if (m_repaintFrames > 0) return true;
+    if (m_mouseDown) return true;
+    if (m_activeId.IsValid()) return true;
+    if (m_openPopupId.IsValid()) return true;
+    return false;
+}
+
+int Context::GetRecommendedSleepTimeoutMs() const noexcept {
+    if (NeedsRepaint()) {
+        return 0;
+    }
+    if (m_editState.id.IsValid() && m_cursorConfig.mode == CursorBlinkMode::Blinking) {
+        return 120; // Periodically wake up for smooth cursor blinking
+    }
+    return m_idleHeartbeatMs; // User-configurable heartbeat interval (or <= 0 for deep sleep)
+}
+
 void Context::OnMouseMove(Vec2 pos) {
     m_mousePos = pos;
+    RequestRepaint(3);
 }
 
 void Context::OnMouseDown(int button) {
@@ -658,6 +681,7 @@ void Context::OnMouseDown(int button) {
         m_mouseDown = true;
         m_mouseClicked = true;
         ResetCursorBlink();
+        RequestRepaint(3);
     }
 }
 
@@ -665,15 +689,18 @@ void Context::OnMouseUp(int button) {
     if (button == 1) { // Left mouse button
         m_mouseDown = false;
         m_mouseReleased = true;
+        RequestRepaint(3);
     }
 }
 
 void Context::OnMouseWheel(float x, float y) {
     m_mouseWheel = {x, y};
+    RequestRepaint(3);
 }
 
 void Context::OnTextInput(std::string_view utf8Text) {
     ResetCursorBlink();
+    RequestRepaint(3);
     if (m_focusedId.IsValid() && m_editState.id == m_focusedId) {
         if (m_editState.cursor <= m_editState.text.size()) {
             m_editState.text.insert(m_editState.cursor, utf8Text);
@@ -687,6 +714,7 @@ void Context::OnTextInput(std::string_view utf8Text) {
 
 void Context::OnKeyDown(Key key, KeyModifiers mods) {
     ResetCursorBlink();
+    RequestRepaint(3);
 
     if (key == Key::Escape && m_openPopupId.IsValid()) {
         ClosePopup();
@@ -1064,6 +1092,10 @@ void Context::EndFrame(ICanvas& canvas) {
 
     m_pendingKeyEvents.clear();
     m_pendingTextInput.clear();
+
+    if (m_repaintFrames > 0) {
+        --m_repaintFrames;
+    }
 }
 
 void Context::RenderNodeRecursive(Node* node, ICanvas& canvas) {

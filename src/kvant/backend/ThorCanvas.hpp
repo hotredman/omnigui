@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include "kvant/backend/ICanvas.hpp"
 
@@ -69,6 +71,23 @@ private:
     std::vector<Rect> m_clipStack;
     std::string m_defaultFontPath;
     bool m_fontLoaded{false};
+
+    struct TextMeasureKey {
+        uint64_t hash;
+        uint32_t fontSizeBits;
+
+        bool operator==(const TextMeasureKey& other) const noexcept {
+            return hash == other.hash && fontSizeBits == other.fontSizeBits;
+        }
+    };
+
+    struct TextMeasureKeyHash {
+        size_t operator()(const TextMeasureKey& k) const noexcept {
+            return static_cast<size_t>(k.hash ^ (static_cast<uint64_t>(k.fontSizeBits) * 0x9e3779b97f4a7c15ULL));
+        }
+    };
+
+    std::unordered_map<TextMeasureKey, Vec2, TextMeasureKeyHash> m_textMeasureCache;
 };
 
 } // namespace kvant

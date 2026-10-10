@@ -43,12 +43,18 @@ public:
         if (m_hasPreviousFrame) {
             const float dtSec = std::chrono::duration<float>(now - m_lastFrameTime).count();
             if (dtSec > 0.0001f) {
-                const float instantFps = 1.0f / dtSec;
-                if (m_smoothedFps <= 0.0f) {
-                    m_smoothedFps = instantFps;
+                if (dtSec > 0.25f) {
+                    m_isIdle = true;
+                    m_smoothedFps = 0.0f;
                 } else {
-                    // Exponential moving average (alpha = 0.1)
-                    m_smoothedFps = m_smoothedFps * 0.90f + instantFps * 0.10f;
+                    m_isIdle = false;
+                    const float instantFps = 1.0f / dtSec;
+                    if (m_smoothedFps <= 0.0f) {
+                        m_smoothedFps = instantFps;
+                    } else {
+                        // Exponential moving average (alpha = 0.1)
+                        m_smoothedFps = m_smoothedFps * 0.90f + instantFps * 0.10f;
+                    }
                 }
             }
         }
@@ -102,26 +108,35 @@ public:
 
         // Update formatted status display string at ~0.3 second intervals to prevent visual jitter
         const double displayElapsed = std::chrono::duration<double>(now - m_lastDisplayUpdateTime).count();
-        if (displayElapsed >= 0.3 || m_displayFps <= 0.0f) {
-            m_displayFps = m_smoothedFps;
+        if (displayElapsed >= 0.3 || m_displayFps <= 0.0f || m_isIdle) {
+            m_displayFps = m_isIdle ? 0.0f : m_smoothedFps;
             m_displayCpuPercent = m_cpuPercent;
-            m_displayCpuTimeMs = m_smoothedCpuMs;
-            m_displayGpuTimeMs = m_smoothedGpuMs;
+            m_displayCpuTimeMs = m_isIdle ? 0.0f : m_smoothedCpuMs;
+            m_displayGpuTimeMs = m_isIdle ? 0.0f : m_smoothedGpuMs;
 
             const float targetFrameMs = (targetFps > 0.0f) ? (1000.0f / targetFps) : 16.67f;
             m_displayGpuBudgetPercent = std::clamp((m_displayGpuTimeMs / targetFrameMs) * 100.0f, 0.0f, 100.0f);
 
             char buf[128];
-            std::snprintf(
-                buf,
-                sizeof(buf),
-                "%.0f FPS | CPU: %.1f%% (%.1f ms) | GPU: %.1f ms (%.0f%% budget)",
-                m_displayFps,
-                m_displayCpuPercent,
-                m_displayCpuTimeMs,
-                m_displayGpuTimeMs,
-                m_displayGpuBudgetPercent
-            );
+            if (m_isIdle) {
+                std::snprintf(
+                    buf,
+                    sizeof(buf),
+                    "0 FPS (Idle) | CPU: %.1f%% (0.0 ms) | GPU: 0.0 ms (0%% budget)",
+                    m_displayCpuPercent
+                );
+            } else {
+                std::snprintf(
+                    buf,
+                    sizeof(buf),
+                    "%.0f FPS | CPU: %.1f%% (%.1f ms) | GPU: %.1f ms (%.0f%% budget)",
+                    m_displayFps,
+                    m_displayCpuPercent,
+                    m_displayCpuTimeMs,
+                    m_displayGpuTimeMs,
+                    m_displayGpuBudgetPercent
+                );
+            }
             m_statusString = buf;
             m_lastDisplayUpdateTime = now;
         }
@@ -132,6 +147,7 @@ public:
     [[nodiscard]] float GetCpuTimeMs() const noexcept { return m_displayCpuTimeMs; }
     [[nodiscard]] float GetGpuTimeMs() const noexcept { return m_displayGpuTimeMs; }
     [[nodiscard]] float GetGpuBudgetPercent() const noexcept { return m_displayGpuBudgetPercent; }
+    [[nodiscard]] bool IsIdle() const noexcept { return m_isIdle; }
 
     /// Returns human-readable status line, e.g. "60 FPS | CPU: 1.4% (1.8 ms) | GPU: 0.2 ms (2% budget)"
     [[nodiscard]] std::string_view GetStatusString() const noexcept {
@@ -171,6 +187,7 @@ private:
     double m_lastProcessCpuSec{-1.0};
     int m_numProcessors{1};
     bool m_hasPreviousFrame{false};
+    bool m_isIdle{false};
 
     float m_smoothedFps{0.0f};
     float m_smoothedCpuMs{0.0f};
