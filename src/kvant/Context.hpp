@@ -16,6 +16,7 @@
 #include "kvant/core/Tokens.hpp"
 #include "kvant/core/Types.hpp"
 #include "kvant/core/UiString.hpp"
+#include "kvant/core/UiStyle.hpp"
 #include "kvant/graphics/Icon.hpp"
 #include "kvant/layout/LayoutSolver.hpp"
 #include "kvant/layout/Node.hpp"
@@ -96,6 +97,20 @@ public:
     /// Returns the current clear color.
     [[nodiscard]] Color GetClearColor() const noexcept { return m_clearColor; }
 
+    // --- Style & Density ---
+    /// Sets the application UI style metrics and spacing scale.
+    void SetStyle(const UiStyle& style) noexcept { m_style = style; InvalidateAll(); }
+
+    /// Returns the current application UI style.
+    [[nodiscard]] const UiStyle& GetStyle() const noexcept { return m_style; }
+    [[nodiscard]] UiStyle& GetStyle() noexcept { return m_style; }
+
+    /// Sets the UI density preset (Standard, Compact, Touch).
+    void SetDensity(Density density) noexcept { m_style.SetDensity(density); InvalidateAll(); }
+
+    /// Returns the current UI density preset.
+    [[nodiscard]] Density GetDensity() const noexcept { return m_style.GetDensity(); }
+
     /// Returns true if this frame produced any visual damage requiring rasterization / blitting.
     [[nodiscard]] bool HasDirtyDamage() const noexcept { return m_hasDirtyDamage; }
 
@@ -132,8 +147,13 @@ public:
         std::source_location loc = std::source_location::current()
     );
 
-    GridScope Grid(
-        GridOptions opts = {},
+    CellGridScope CellGrid(
+        CellGridOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    CellGridScope Grid(
+        CellGridOptions opts = {},
         std::source_location loc = std::source_location::current()
     );
 
@@ -694,6 +714,7 @@ private:
     std::vector<Rect> m_explicitDamageRects;
     Rect m_dirtyRect{0.0f, 0.0f, 0.0f, 0.0f};
     ThemeMode m_themeMode{ThemeMode::Dark};
+    UiStyle m_style{UiStyle::Standard()};
     Color m_clearColor{11, 15, 25, 255}; // Tailwind Slate-950 #0B0F19
     bool m_hasDirtyDamage{true};
     bool m_isFullRepaint{true};
@@ -788,19 +809,37 @@ inline ContainerScope::~ContainerScope() {
     }
 }
 
-// Inline implementation of CardScope destructor
-inline CardScope::~CardScope() {
-    if (m_ctx) {
-        if (m_innerNode) {
-            m_ctx->PopContainer(m_innerNode);
-            m_innerNode = nullptr;
-        }
-        if (m_outerNode) {
-            m_ctx->PopContainer(m_outerNode);
-            m_outerNode = nullptr;
-        }
-        m_ctx = nullptr;
-    }
+// Inline implementations of CellGridScope helper methods
+inline CellScope CellGridScope::Cell(int span, CellOptions opts, std::source_location loc) {
+    return m_ctx ? m_ctx->Cell(span, opts, loc) : CellScope(nullptr, nullptr);
+}
+
+inline CellScope CellGridScope::Cell12(CellOptions opts, std::source_location loc) {
+    return m_ctx ? m_ctx->Cell12(opts, loc) : CellScope(nullptr, nullptr);
+}
+
+inline CellScope CellGridScope::Cell8(CellOptions opts, std::source_location loc) {
+    return m_ctx ? m_ctx->Cell8(opts, loc) : CellScope(nullptr, nullptr);
+}
+
+inline CellScope CellGridScope::Cell6(CellOptions opts, std::source_location loc) {
+    return m_ctx ? m_ctx->Cell6(opts, loc) : CellScope(nullptr, nullptr);
+}
+
+inline CellScope CellGridScope::Cell4(CellOptions opts, std::source_location loc) {
+    return m_ctx ? m_ctx->Cell4(opts, loc) : CellScope(nullptr, nullptr);
+}
+
+inline CellScope CellGridScope::Cell3(CellOptions opts, std::source_location loc) {
+    return m_ctx ? m_ctx->Cell3(opts, loc) : CellScope(nullptr, nullptr);
+}
+
+inline CellScope CellGridScope::Cell2(CellOptions opts, std::source_location loc) {
+    return m_ctx ? m_ctx->Cell2(opts, loc) : CellScope(nullptr, nullptr);
+}
+
+inline CellScope CellGridScope::Cell1(CellOptions opts, std::source_location loc) {
+    return m_ctx ? m_ctx->Cell1(opts, loc) : CellScope(nullptr, nullptr);
 }
 
 } // namespace kvant

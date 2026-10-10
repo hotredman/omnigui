@@ -260,7 +260,7 @@ private:
                     }
 
                     int span = std::clamp(lineEnd->colSpan, 1, totalCols);
-                    const float reqMinW = (lineEnd->minWidth > 0.0f) ? lineEnd->minWidth : node->minColWidth;
+                    const float reqMinW = (lineEnd->minWidth > 0.0f) ? lineEnd->minWidth : ((node->minColWidth > 0.0f) ? node->minColWidth : lineEnd->intrinsicSize.x);
 
                     if (itemsInLine > 0) {
                         if (currentLineSpan + span > totalCols) {
@@ -678,7 +678,7 @@ private:
                 }
 
                 int span = std::clamp(lineEnd->colSpan, 1, totalCols);
-                const float reqMinW = (lineEnd->minWidth > 0.0f) ? lineEnd->minWidth : node->minColWidth;
+                const float reqMinW = (lineEnd->minWidth > 0.0f) ? lineEnd->minWidth : ((node->minColWidth > 0.0f) ? node->minColWidth : lineEnd->intrinsicSize.x);
 
                 if (itemsInLine > 0) {
                     if (currentLineSpan + span > totalCols) {
@@ -727,7 +727,7 @@ private:
                 if (child->isSpacer) continue;
 
                 int span = std::clamp(child->colSpan, 1, totalCols);
-                const float reqMinW = (child->minWidth > 0.0f) ? child->minWidth : node->minColWidth;
+                const float reqMinW = (child->minWidth > 0.0f) ? child->minWidth : ((node->minColWidth > 0.0f) ? node->minColWidth : child->intrinsicSize.x);
                 if (itemsInLine == 1 && reqMinW > 0.0f) {
                     const float testW = (static_cast<float>(span) / static_cast<float>(totalCols)) * (availW + gap) - gap;
                     if (testW < reqMinW) {

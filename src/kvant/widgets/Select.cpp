@@ -80,9 +80,10 @@ Vec2 Select::Measure(
 
     float boxW = 160.0f;
     switch (size) {
+        case UiSize::None:
+        case UiSize::Md: boxW = 160.0f; break;
         case UiSize::Xs: boxW = 100.0f; break;
         case UiSize::Sm: boxW = 120.0f; break;
-        case UiSize::Md: boxW = 160.0f; break;
         case UiSize::Lg: boxW = 200.0f; break;
         case UiSize::Xl: boxW = 240.0f; break;
     }

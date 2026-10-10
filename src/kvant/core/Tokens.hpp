@@ -6,13 +6,14 @@
 
 namespace kvant {
 
-/// 5-level scale for density, typography, and component dimensions.
+/// Scale for density, typography, spacing, and component dimensions.
 enum class UiSize : uint8_t {
-    Xs,  ///< Extra Small (compact toolbars, inline badges, dense data tables)
-    Sm,  ///< Small (secondary panels, compact forms)
-    Md,  ///< Medium (standard default controls across the engine)
-    Lg,  ///< Large (prominent action bars, touch-friendly interfaces)
-    Xl   ///< Extra Large (hero actions, emergency stops, kiosk displays)
+    None = 0, ///< Zero / unpadded / no gap / square corners
+    Xs,       ///< Extra Small (compact toolbars, inline badges, dense data tables)
+    Sm,       ///< Small (secondary panels, compact forms)
+    Md,       ///< Medium (standard default controls across the engine)
+    Lg,       ///< Large (prominent action bars, touch-friendly interfaces)
+    Xl        ///< Extra Large (hero actions, emergency stops, kiosk displays)
 };
 
 /// Semantic visual variants for colors, states, and emphasis across all widgets.
@@ -149,11 +150,12 @@ struct ComponentMetrics {
 /// Returns standardized component metrics for a given UiSize.
 [[nodiscard]] constexpr ComponentMetrics GetComponentMetrics(UiSize size) noexcept {
     switch (size) {
-        case UiSize::Xs: return { 24.0f, 11.0f,  8.0f,  3.0f,  3.0f, 12.0f };
-        case UiSize::Sm: return { 32.0f, 13.0f, 12.0f,  5.0f,  4.0f, 15.0f };
-        case UiSize::Md: return { 40.0f, 15.0f, 16.0f,  8.0f,  6.0f, 18.0f };
-        case UiSize::Lg: return { 48.0f, 18.0f, 20.0f, 10.0f,  8.0f, 22.0f };
-        case UiSize::Xl: return { 56.0f, 22.0f, 24.0f, 12.0f, 10.0f, 26.0f };
+        case UiSize::None: return {  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f };
+        case UiSize::Xs:   return { 24.0f, 11.0f,  8.0f,  3.0f,  3.0f, 12.0f };
+        case UiSize::Sm:   return { 32.0f, 13.0f, 12.0f,  5.0f,  4.0f, 15.0f };
+        case UiSize::Md:   return { 40.0f, 15.0f, 16.0f,  8.0f,  6.0f, 18.0f };
+        case UiSize::Lg:   return { 48.0f, 18.0f, 20.0f, 10.0f,  8.0f, 22.0f };
+        case UiSize::Xl:   return { 56.0f, 22.0f, 24.0f, 12.0f, 10.0f, 26.0f };
     }
     return { 40.0f, 15.0f, 16.0f, 8.0f, 6.0f, 18.0f };
 }
@@ -171,11 +173,12 @@ struct ScrollbarMetrics {
 /// Returns standardized scrollbar metrics for a given UiSize token.
 [[nodiscard]] constexpr ScrollbarMetrics GetScrollbarMetrics(UiSize size) noexcept {
     switch (size) {
-        case UiSize::Xs: return {  4.0f, 16.0f, 2.0f, 24.0f, 2.0f,  8.0f };
-        case UiSize::Sm: return {  6.0f, 20.0f, 3.0f, 32.0f, 3.0f, 12.0f };
-        case UiSize::Md: return {  8.0f, 28.0f, 4.0f, 40.0f, 3.0f, 14.0f };
-        case UiSize::Lg: return { 10.0f, 36.0f, 5.0f, 48.0f, 4.0f, 18.0f };
-        case UiSize::Xl: return { 12.0f, 44.0f, 6.0f, 56.0f, 4.0f, 20.0f };
+        case UiSize::None: return {  0.0f,  0.0f,  0.0f,  0.0f, 0.0f,  0.0f };
+        case UiSize::Xs:   return {  4.0f, 16.0f,  2.0f, 24.0f, 2.0f,  8.0f };
+        case UiSize::Sm:   return {  6.0f, 20.0f,  3.0f, 32.0f, 3.0f, 12.0f };
+        case UiSize::Md:   return {  8.0f, 28.0f,  4.0f, 40.0f, 3.0f, 14.0f };
+        case UiSize::Lg:   return { 10.0f, 36.0f,  5.0f, 48.0f, 4.0f, 18.0f };
+        case UiSize::Xl:   return { 12.0f, 44.0f,  6.0f, 56.0f, 4.0f, 20.0f };
     }
     return { 8.0f, 28.0f, 4.0f, 40.0f, 3.0f, 14.0f };
 }

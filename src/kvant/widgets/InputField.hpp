@@ -23,7 +23,6 @@ struct InputFieldOptions {
     std::string_view suffix{};                     ///< Unit/symbol inside field on right (e.g. "%", "mm", "MB/s")
     std::string_view format{"%.2f"};               ///< Format string for floating-point values
     UiVariant variant{UiVariant::Default};         ///< Accent/border variant (Default, Warning, Danger, etc.)
-    UiSize size{UiSize::Md};                       ///< Scale metrics (Xs, Sm, Md, Lg, Xl)
     Placement labelPlacement{Placement::Stacked};  ///< Placement of label (Stacked by default for form inputs)
     Icon prefixIcon{};                             ///< Optional vector icon inside field on left
     Icon suffixIcon{};                             ///< Optional vector icon inside field on right
@@ -49,9 +48,10 @@ struct InputFieldMetrics {
 /// Returns standardized metrics for InputField according to UiSize.
 [[nodiscard]] constexpr InputFieldMetrics GetInputFieldMetrics(UiSize size) noexcept {
     switch (size) {
+        case UiSize::None:
+        case UiSize::Md: return { 36.0f, 6.0f, 12.0f, 14.0f, 13.0f, 12.0f, 4.0f, 3.0f, 1.0f, 16.0f };
         case UiSize::Xs: return { 24.0f, 4.0f,  8.0f, 11.0f, 10.0f,  9.0f, 3.0f, 2.0f, 1.0f, 12.0f };
         case UiSize::Sm: return { 28.0f, 5.0f, 10.0f, 13.0f, 12.0f, 11.0f, 3.0f, 2.0f, 1.0f, 14.0f };
-        case UiSize::Md: return { 36.0f, 6.0f, 12.0f, 14.0f, 13.0f, 12.0f, 4.0f, 3.0f, 1.0f, 16.0f };
         case UiSize::Lg: return { 44.0f, 8.0f, 16.0f, 16.0f, 15.0f, 13.0f, 5.0f, 3.0f, 1.5f, 18.0f };
         case UiSize::Xl: return { 52.0f, 10.0f, 20.0f, 18.0f, 16.0f, 14.0f, 6.0f, 4.0f, 1.5f, 22.0f };
     }

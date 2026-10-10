@@ -22,7 +22,6 @@ struct SelectOptions {
     std::string_view description{};                ///< Optional helper text below select box
     std::string_view placeholder{"Select..."};     ///< Placeholder text when no item is selected or items list is empty
     UiVariant variant{UiVariant::Default};         ///< Accent/border variant (Default, Warning, Danger, etc.)
-    UiSize size{UiSize::Md};                       ///< Scale metrics (Xs, Sm, Md, Lg, Xl)
     Placement labelPlacement{Placement::Stacked};  ///< Placement of label (Stacked by default for form inputs)
     Icon prefixIcon{};                             ///< Optional vector icon inside field on left
     std::optional<uint32_t> maxVisibleItems{std::nullopt}; ///< Optional limit on visible items count before scrolling
@@ -47,9 +46,10 @@ struct SelectMetrics {
 /// Returns standardized metrics for Select according to UiSize.
 [[nodiscard]] constexpr SelectMetrics GetSelectMetrics(UiSize size) noexcept {
     switch (size) {
+        case UiSize::None:
+        case UiSize::Md: return { 36.0f, 6.0f, 12.0f, 14.0f, 13.0f, 12.0f, 4.0f, 3.0f, 1.0f, 16.0f, 32.0f };
         case UiSize::Xs: return { 24.0f, 4.0f,  8.0f, 11.0f, 10.0f,  9.0f, 3.0f, 2.0f, 1.0f, 12.0f, 22.0f };
         case UiSize::Sm: return { 28.0f, 5.0f, 10.0f, 13.0f, 12.0f, 11.0f, 3.0f, 2.0f, 1.0f, 14.0f, 26.0f };
-        case UiSize::Md: return { 36.0f, 6.0f, 12.0f, 14.0f, 13.0f, 12.0f, 4.0f, 3.0f, 1.0f, 16.0f, 32.0f };
         case UiSize::Lg: return { 44.0f, 8.0f, 16.0f, 16.0f, 15.0f, 13.0f, 5.0f, 3.0f, 1.5f, 18.0f, 38.0f };
         case UiSize::Xl: return { 52.0f, 10.0f, 20.0f, 18.0f, 16.0f, 14.0f, 6.0f, 4.0f, 1.5f, 22.0f, 44.0f };
     }

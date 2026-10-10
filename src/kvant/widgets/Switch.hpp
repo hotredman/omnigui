@@ -16,7 +16,6 @@ struct SwitchOptions {
     std::string_view label{};                      ///< Primary caption text
     std::string_view description{};                ///< Optional explanation text below label
     UiVariant variant{UiVariant::Primary};          ///< Accent fill color when switched ON
-    UiSize size{UiSize::Md};                       ///< Scale metrics (Xs, Sm, Md, Lg, Xl)
     Placement labelPlacement{Placement::Trailing}; ///< Placement of label relative to the switch track
     bool disabled{false};                          ///< Interaction suppression
 };
@@ -36,9 +35,10 @@ struct SwitchMetrics {
 /// Returns standardized metrics for Switch according to UiSize.
 [[nodiscard]] constexpr SwitchMetrics GetSwitchMetrics(UiSize size) noexcept {
     switch (size) {
+        case UiSize::None:
+        case UiSize::Md: return { {36.0f, 20.0f}, 16.0f, 2.0f, 10.0f, 14.0f, 12.0f, 3.0f };
         case UiSize::Xs: return { {24.0f, 14.0f}, 10.0f, 2.0f,  6.0f, 11.0f,  9.0f, 2.0f };
         case UiSize::Sm: return { {28.0f, 16.0f}, 12.0f, 2.0f,  8.0f, 13.0f, 11.0f, 2.0f };
-        case UiSize::Md: return { {36.0f, 20.0f}, 16.0f, 2.0f, 10.0f, 14.0f, 12.0f, 3.0f };
         case UiSize::Lg: return { {44.0f, 24.0f}, 20.0f, 2.0f, 12.0f, 16.0f, 13.0f, 3.0f };
         case UiSize::Xl: return { {52.0f, 28.0f}, 24.0f, 2.0f, 14.0f, 18.0f, 14.0f, 4.0f };
     }

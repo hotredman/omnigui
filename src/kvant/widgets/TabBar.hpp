@@ -33,8 +33,6 @@ struct TabItem {
 /// Configuration options for TabBar widget.
 struct TabBarOptions {
     TabBarStyle style{TabBarStyle::Underline};
-    UiSize size{UiSize::Md};
-    float gap{6.0f};
     bool showSeparator{true};   ///< In Underline style: draws a 1px baseline line under tabs
     bool fullWidth{false};      ///< Stretch tabs equally to fill available container width
     Color activeColor{Color::Transparent()}; ///< Optional custom accent color override

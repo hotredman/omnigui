@@ -76,15 +76,15 @@ ToolbarScope Toolbar::Open(
 ) {
     const Id id = ctx.MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(ctx.GetCurrentSize());
-    const ComponentMetrics m = GetComponentMetrics(activeSize);
+    const ComponentMetrics m = ctx.GetStyle().GetComponentMetrics(activeSize);
     const float barH = (opts.fixedHeight > 0.0f) ? opts.fixedHeight : (m.defaultHeight + 8.0f);
     const bool effectiveDisabled = opts.disabled || ctx.IsDisabled();
 
     Node* node = ctx.CreateNode(NodeType::Container, id);
     node->direction = FlexDirection::Row;
     node->align = Alignment::Center;
-    node->gap = opts.gap;
-    node->padding = opts.padding;
+    node->gap = opts.gap.has_value() ? ctx.GetStyle().GetGap(*opts.gap) : ctx.GetStyle().GetGap(activeSize);
+    node->padding = opts.padding.value_or(Padding::Symmetric(ctx.GetStyle().GetGap(activeSize), ctx.GetStyle().GetGap(activeSize) * 0.5f));
     node->widthMode = SizeMode::Stretch;
     node->heightMode = SizeMode::Fixed;
     node->fixedHeight = barH;
@@ -92,7 +92,7 @@ ToolbarScope Toolbar::Open(
     node->backgroundColor = opts.backgroundColor.a > 0 ? opts.backgroundColor : pal.surface;
     node->borderColor = opts.borderColor.a > 0 ? opts.borderColor : pal.border;
     node->borderWidth = opts.borderWidth;
-    node->cornerRadius = opts.cornerRadius;
+    node->cornerRadius = opts.radius.has_value() ? ctx.GetStyle().GetRadius(*opts.radius) : (opts.cornerRadius > 0.0f ? opts.cornerRadius : ctx.GetStyle().GetRadius(activeSize));
     node->uiSize = activeSize;
     node->disabled = effectiveDisabled;
 
@@ -129,6 +129,7 @@ Response Toolbar::ToolButton(
     bOpts.variant = opts.variant;
     bOpts.iconPlacement = opts.iconPlacement;
     bOpts.labelVariants = opts.labelVariants;
+    bOpts.stretch = opts.stretch;
     bOpts.disabled = effectiveDisabled;
     bOpts.active = opts.active;
 
@@ -137,7 +138,7 @@ Response Toolbar::ToolButton(
     node->disabled = effectiveDisabled;
     node->hovered = res.hovered;
     node->pressed = res.pressed;
-    node->widthMode = SizeMode::Fit;
+    node->widthMode = opts.stretch ? SizeMode::Stretch : SizeMode::Fit;
     node->heightMode = SizeMode::Fit;
 
     ctx.AdaptChildToContainer(node);

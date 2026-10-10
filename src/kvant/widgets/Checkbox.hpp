@@ -16,7 +16,6 @@ struct CheckboxOptions {
     std::string_view label{};                      ///< Primary caption text
     std::string_view description{};                ///< Optional explanation text below label
     UiVariant variant{UiVariant::Primary};          ///< Accent fill color when checked
-    UiSize size{UiSize::Md};                       ///< Scale metrics (Xs, Sm, Md, Lg, Xl)
     Placement labelPlacement{Placement::Trailing}; ///< Placement of label relative to the checkbox square
     bool disabled{false};                          ///< Interaction suppression
     bool indeterminate{false};                     ///< Tri-state / partial check (horizontal dash)
@@ -37,9 +36,10 @@ struct CheckboxMetrics {
 /// Returns standardized metrics for Checkbox according to UiSize.
 [[nodiscard]] constexpr CheckboxMetrics GetCheckboxMetrics(UiSize size) noexcept {
     switch (size) {
+        case UiSize::None:
+        case UiSize::Md: return { 18.0f, 4.0f, 10.0f, 14.0f, 12.0f, 3.0f, 2.0f };
         case UiSize::Xs: return { 12.0f, 2.5f,  6.0f, 11.0f,  9.0f, 2.0f, 1.5f };
         case UiSize::Sm: return { 14.0f, 3.0f,  8.0f, 13.0f, 11.0f, 2.0f, 1.8f };
-        case UiSize::Md: return { 18.0f, 4.0f, 10.0f, 14.0f, 12.0f, 3.0f, 2.0f };
         case UiSize::Lg: return { 22.0f, 5.0f, 12.0f, 16.0f, 13.0f, 3.0f, 2.4f };
         case UiSize::Xl: return { 26.0f, 6.0f, 14.0f, 18.0f, 14.0f, 4.0f, 2.8f };
     }

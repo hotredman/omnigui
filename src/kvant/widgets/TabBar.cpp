@@ -17,13 +17,13 @@ Response TabBar::Run(
     if (tabs.empty()) return res;
 
     const Id barId = ctx.MakeChildId(loc);
-    const UiSize activeSize = opts.size;
-    const ComponentMetrics m = GetComponentMetrics(activeSize);
+    const UiSize activeSize = ctx.GetCurrentSize();
+    const ComponentMetrics m = ctx.GetStyle().GetComponentMetrics(activeSize);
 
     Node* barNode = ctx.CreateNode(NodeType::Container, barId);
     barNode->direction = FlexDirection::Row;
     barNode->align = Alignment::Center;
-    barNode->gap = opts.gap;
+    barNode->gap = (activeSize <= UiSize::Sm) ? ctx.GetStyle().GetGap(UiSize::Xs) : ctx.GetStyle().GetGap(UiSize::Sm);
     barNode->uiSize = activeSize;
     barNode->widthMode = opts.fullWidth ? SizeMode::Stretch : SizeMode::Fit;
     barNode->heightMode = SizeMode::Fixed;

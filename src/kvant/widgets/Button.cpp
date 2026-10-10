@@ -28,7 +28,7 @@ Response Button::Run(Context& ctx, const ButtonOptions& opts, std::source_locati
     node->disabled = effectiveDisabled;
     node->hovered = res.hovered;
     node->pressed = res.pressed;
-    node->widthMode = SizeMode::Fit;
+    node->widthMode = opts.stretch ? SizeMode::Stretch : SizeMode::Fit;
     node->heightMode = SizeMode::Fit;
 
     ctx.AdaptChildToContainer(node);

@@ -40,7 +40,7 @@ void TestImmediateApiWorkflow() {
     WidgetResponse b2;
 
     auto renderUI = [&]() {
-        if (auto row = ui.Row({.gap = 10.0f})) {
+        if (auto row = ui.Row()) {
             b1 = ui.Button({.label = "Button A"});
             ui.Spacer();
             b2 = ui.Button({.label = "Button B"});
@@ -153,7 +153,7 @@ void TestHeaderRowTextMetricsAndNoOverlap() {
     WidgetResponse bFlex;
 
     auto renderRow = [&]() {
-        if (auto row = ui.Row({.gap = 8.0f})) {
+        if (auto row = ui.Row({.gap = UiSize::Sm})) {
             if (auto b1 = ui.Box({.fixedWidth = 120.0f})) {
                 bOverview = ui.Button("Overview");
             }
@@ -191,9 +191,9 @@ void TestFooterExitButtonStaysVisibleInNarrowWindow() {
 
     WidgetResponse exitBtn;
     auto renderUI = [&]() {
-        if (auto col = ui.Column({.gap = 16.0f, .padding = Padding::All(24.0f)})) {
+        if (auto col = ui.Column({.gap = UiSize::Lg, .padding = Padding::All(24.0f)})) {
             // Wide header (requires ~600px+)
-            if (auto header = ui.Row({.gap = 12.0f})) {
+            if (auto header = ui.Row({.gap = UiSize::Md})) {
                 ui.Title("KVANT GUI");
                 ui.Caption("| Autonomous Vector GUI Engine");
                 ui.Spacer();
@@ -203,7 +203,7 @@ void TestFooterExitButtonStaysVisibleInNarrowWindow() {
             ui.Spacer();
 
             // Footer with Exit button pushed to right
-            if (auto footer = ui.Row({.gap = 12.0f})) {
+            if (auto footer = ui.Row({.gap = UiSize::Md})) {
                 ui.Caption("Zero heap allocations per frame | 0% idle CPU");
                 ui.Spacer();
                 if (auto b = ui.Box({.fixedWidth = 80.0f})) {
@@ -244,13 +244,14 @@ void TestWrapContainerInContextApi() {
     WidgetResponse b2;
     WidgetResponse b3;
 
+    ui.GetStyle().Spacing().md = 10.0f;
     auto renderUI = [&]() {
-        if (auto col = ui.Column({.gap = 10.0f, .padding = Padding::All(20.0f)})) {
+        if (auto col = ui.Column({.gap = UiSize::Md, .padding = Padding::All(20.0f)})) {
             // Available width inside padding = 300 - 40 = 260.
             // b1 (fixed 120), b2 (fixed 120), b3 (fixed 120)
             // b1 (120) + gap (10) + b2 (120) = 250 <= 260 (Line 1)
             // b3 wraps to Line 2! (y = 20 + 36 + 10 = 66)
-            if (auto wrap = ui.Wrap({.gap = 10.0f, .runGap = 10.0f})) {
+            if (auto wrap = ui.Wrap({.gap = UiSize::Md, .runGap = UiSize::Md})) {
                 if (auto box1 = ui.Box({.fixedWidth = 120.0f, .fixedHeight = 36.0f})) {
                     b1 = ui.Button("Button 1");
                 }
@@ -296,25 +297,25 @@ void TestFooterExitButtonPushedToBottomWithCardAndWrap() {
 
     WidgetResponse exitBtn;
     auto renderUI = [&]() {
-        if (auto mainCol = ui.Column({.gap = 16.0f, .padding = Padding::All(24.0f)})) {
-            if (auto header = ui.Row({.gap = 12.0f})) {
+        if (auto mainCol = ui.Column({.gap = UiSize::Lg, .padding = Padding::All(24.0f)})) {
+            if (auto header = ui.Row({.gap = UiSize::Md})) {
                 ui.Title("KVANT GUI");
                 ui.Spacer();
             }
-            if (auto navRow = ui.Row({.gap = 8.0f})) {
+            if (auto navRow = ui.Row({.gap = UiSize::Sm})) {
                 if (auto box = ui.Box({.fixedWidth = 120.0f})) {
                     ui.Button("Overview");
                 }
             }
-            if (auto card = ui.Box({.gap = 16.0f, .padding = Padding::All(20.0f)})) {
+            if (auto card = ui.Box({.gap = UiSize::Lg, .padding = Padding::All(20.0f)})) {
                 ui.Headline("Card title");
-                if (auto wrap = ui.Wrap({.gap = 12.0f, .runGap = 10.0f})) {
+                if (auto wrap = ui.Wrap({.gap = UiSize::Md, .runGap = UiSize::Sm})) {
                     ui.Button("Btn 1");
                     ui.Button("Btn 2");
                 }
             }
             ui.Spacer();
-            if (auto footer = ui.Row({.gap = 12.0f})) {
+            if (auto footer = ui.Row({.gap = UiSize::Md})) {
                 ui.Caption("Footer text");
                 ui.Spacer();
                 if (auto box = ui.Box({.fixedWidth = 80.0f})) {
@@ -391,7 +392,7 @@ void TestTwoLevelDisabledWorkflow() {
     WidgetResponse btnScopedDisabled;
 
     auto renderUI = [&]() {
-        if (auto row = ui.Row({.gap = 10.0f})) {
+        if (auto row = ui.Row()) {
             btnEnabled = ui.Button("Active");
             btnDirectDisabled = ui.Button("Local Disabled", {.disabled = true});
 
@@ -457,7 +458,7 @@ void TestBoxSlotWithUiSizeToken() {
     WidgetResponse btnSquareIcon;
 
     auto renderUI = [&]() {
-        if (auto col = ui.Column({.gap = 12.0f})) {
+        if (auto col = ui.Column({.gap = UiSize::Md})) {
             if (auto slotLg = ui.Box({.size = UiSize::Lg})) {
                 btnLarge = ui.Button("Large Action", {.variant = UiVariant::Primary});
             }
@@ -497,7 +498,7 @@ void TestButtonWidgetRunAndResponseChaining() {
     ButtonResponse btn2;
 
     auto renderUI = [&]() {
-        if (auto row = ui.Row({.gap = 8.0f})) {
+        if (auto row = ui.Row({.gap = UiSize::Sm})) {
             // Autonomous Button::Run via ui.Button
             btn1 = ui.Button({
                 .label = "Next",
@@ -566,14 +567,14 @@ void TestUiStringAndContextFormatting() {
     canvas.SetTarget(pixels.data(), width, height, width);
 
     ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
-    if (auto col = ui.Column({.gap = 8.0f})) {
+    if (auto col = ui.Column({.gap = UiSize::Sm})) {
         ui.Text(ui.Format("Value: {}", 99));
         ui.Button(ui.String("Action"));
     }
     ui.EndFrame(canvas);
 
     ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
-    if (auto col = ui.Column({.gap = 8.0f})) {
+    if (auto col = ui.Column({.gap = UiSize::Sm})) {
         ui.Text(ui.Format("Value: {}", 100));
         ui.Button(ui.String("Action"));
     }
@@ -593,7 +594,7 @@ void TestBoxContainerGapSpacing() {
     WidgetResponse b2;
 
     auto renderUI = [&]() {
-        if (auto card = ui.Box({.gap = 16.0f, .padding = Padding::All(10.0f)})) {
+        if (auto card = ui.Box({.gap = UiSize::Lg, .padding = Padding::All(10.0f)})) {
             b1 = ui.Button("First Item");
             b2 = ui.Button("Second Item");
         }
@@ -652,7 +653,7 @@ void TestAutonomousTextWidgetAndTypographyRoles() {
     Response rCustom;
 
     auto renderUI = [&]() {
-        if (auto col = ui.Column({.gap = 8.0f, .padding = Padding::All(16.0f)})) {
+        if (auto col = ui.Column({.gap = UiSize::Sm, .padding = Padding::All(16.0f)})) {
             rDisp = ui.Display("Display Title");
             rHead = ui.Headline("Headline Section", UiVariant::Primary);
             rTitle = ui.Title("Title Header");
@@ -759,7 +760,7 @@ void TestSwitchAndCheckboxWidgets() {
     Response rOptCheck;
 
     auto renderUI = [&]() {
-        if (auto col = ui.Column({.gap = 12.0f, .padding = Padding::All(16.0f)})) {
+        if (auto col = ui.Column({.gap = UiSize::Md, .padding = Padding::All(16.0f)})) {
             rSwitch = ui.Switch("Dark Mode", &switchState);
             rCheck = ui.Checkbox("VSync", &checkState);
             rToggle = ui.Toggle("Turbo Mode", &toggleState, {.labelPlacement = Placement::Leading});
@@ -926,7 +927,7 @@ void TestInputFieldWidget() {
     Response rOptInput;
 
     auto renderUI = [&]() {
-        if (auto col = ui.Column({.gap = 16.0f, .padding = Padding::All(20.0f)})) {
+        if (auto col = ui.Column({.gap = UiSize::Lg, .padding = Padding::All(20.0f)})) {
             // Numeric field with unit and description (as in user screenshot)
             rSpeed = ui.InputField("Speed Drop dF/dt", speedDrop, {
                 .description = "Automatic stop of testing on load drop",
@@ -1068,7 +1069,7 @@ void TestSelectWidget() {
     WidgetResponse rProfile;
 
     auto renderUI = [&]() {
-        if (auto col = ui.Column({.gap = 12.0f, .padding = Padding::All(20.0f)})) {
+        if (auto col = ui.Column({.gap = UiSize::Md, .padding = Padding::All(20.0f)})) {
             rBaud = ui.Select("Baud Rate", baudIndex, {"9600", "19200", "38400", "115200"}, {
                 .description = "Serial bus communication speed",
                 .labelPlacement = Placement::Stacked
@@ -1377,26 +1378,28 @@ void TestGridAndCardLayout() {
     WidgetResponse inp2Res;
 
     auto renderUI = [&]() {
-        // 1. Standalone Grid with 12-column slots
-        if (auto grid = ui.Grid({.gap = 10.0f, .runGap = 15.0f})) {
-            if (auto c1 = ui.Cell6()) {
+        // 1. Standalone CellGrid with 12-column slots
+        if (auto grid = ui.CellGrid({.gap = UiSize::Md})) {
+            if (auto c1 = grid.Cell6()) {
                 sw1Res = ui.Switch("Sensor A", &switchVal1);
             }
-            if (auto c2 = ui.Cell6()) {
+            if (auto c2 = grid.Cell6()) {
                 sw2Res = ui.Switch("Sensor B", &switchVal2);
             }
-            if (auto c3 = ui.Cell12()) {
+            if (auto c3 = grid.Cell12()) {
                 inp1Res = ui.InputField("Speed Target", speedVal);
             }
         }
 
-        // 2. High-level Card with inner Grid and title
+        // 2. High-level Card surface containing an explicit CellGrid layout
         if (auto card = ui.Card("Motion Controller", {.subtitle = "Direct axis tuning"})) {
-            if (auto c1 = ui.Cell6()) {
-                inp2Res = ui.InputField("Device Name", nameVal);
-            }
-            if (auto c2 = ui.Cell6()) {
-                ui.Button("Calibrate Zero");
+            if (auto grid = ui.CellGrid()) {
+                if (auto c1 = grid.Cell6()) {
+                    inp2Res = ui.InputField("Device Name", nameVal);
+                }
+                if (auto c2 = grid.Cell6()) {
+                    ui.Button("Calibrate Zero");
+                }
             }
         }
     };
@@ -1409,9 +1412,9 @@ void TestGridAndCardLayout() {
     // Frame 2: verify bounds and positioning
     // Viewport width = 800.
     // Standalone grid content width = 800.
-    // Gap = 10.
-    // Cell 1 (span 6): W(6) = (6/12) * (800 + 10) - 10 = 0.5 * 810 - 10 = 405 - 10 = 395.
-    // Cell 2 (span 6): starts at 395 + 10 = 405, width = 395, ends at 800.
+    // Gap = 12 (UiSize::Md).
+    // Cell 1 (span 6): W(6) = (6/12) * (800 + 12) - 12 = 0.5 * 812 - 12 = 406 - 12 = 394.
+    // Cell 2 (span 6): starts at 394 + 12 = 406, width = 394, ends at 800.
     Rect bSw1 = ui.GetPrevFrameBounds(sw1Res.id);
     Rect bSw2 = ui.GetPrevFrameBounds(sw2Res.id);
     Rect bInp1 = ui.GetPrevFrameBounds(inp1Res.id);
@@ -1419,12 +1422,12 @@ void TestGridAndCardLayout() {
 
     CHECK(bSw1.w > 0.0f);
     CHECK(bSw2.w > 0.0f);
-    // In Cell6, the switch should be contained within the left half [0, 395]
-    CHECK(bSw1.x < 395.0f);
-    CHECK(bSw1.Right() <= 395.0f + 1.0f);
+    // In Cell6, the switch should be contained within the left half [0, 394]
+    CHECK(bSw1.x < 394.0f);
+    CHECK(bSw1.Right() <= 394.0f + 1.0f);
 
-    // Sensor B switch should be in the right half [405, 800]
-    CHECK(bSw2.x >= 405.0f - 1.0f);
+    // Sensor B switch should be in the right half [406, 800]
+    CHECK(bSw2.x >= 406.0f - 1.0f);
     CHECK(bSw2.Right() <= 800.0f + 1.0f);
 
     // Input 1 was in Cell12, so it should be on line 2 (y > bSw1.Bottom())
@@ -1434,7 +1437,7 @@ void TestGridAndCardLayout() {
 
     // Inside Card:
     // Card has padding 16 on all sides. Content width = 800 - 32 = 768.
-    // Inner grid has gap 12.
+    // Inner grid has default gap 12.
     // Cell 1 (span 6): W(6) = (6/12)*(768 + 12) - 12 = 0.5 * 780 - 12 = 390 - 12 = 378.
     // Input 2 should start at 16, width 378!
     CHECK_NEAR(bInp2.x, 16.0f, 1.0f);
@@ -1643,7 +1646,7 @@ void TestDirtyRectDamageTracking() {
     canvas.SetTarget(pixels.data(), width, height, width);
 
     auto renderUI = [&](std::string* editVal = nullptr) {
-        if (auto row = ui.Row({.gap = 10.0f})) {
+        if (auto row = ui.Row()) {
             if (auto b = ui.Box({.fixedWidth = 120.0f})) {
                 ui.Button("Test Button");
             }
@@ -1691,7 +1694,7 @@ void TestDirtyRectDamageTracking() {
     std::string text = "Editable";
     bool shouldFocus = true;
     auto renderInput = [&]() {
-        if (auto row = ui.Row({.gap = 10.0f})) {
+        if (auto row = ui.Row()) {
             if (auto b = ui.Box({.fixedWidth = 200.0f})) {
                 auto res = ui.InputField(text);
                 if (shouldFocus) {
@@ -1762,7 +1765,7 @@ void TestTabBarWidgetWorkflow() {
 
     Response tabRes;
     auto renderUI = [&]() {
-        if (auto col = ui.Column({.gap = 10.0f, .padding = Padding::All(20.0f)})) {
+        if (auto col = ui.Column({.padding = Padding::All(20.0f)})) {
             tabRes = ui.TabBar(activeTab, tabs, {.style = TabBarStyle::Underline});
         }
     };
@@ -1817,7 +1820,7 @@ void TestTabBarWidgetWorkflow() {
     // Frame: Test Pill style and string_view initializer_list overload
     int pillIdx = 0;
     auto renderPill = [&]() {
-        if (auto col = ui.Column({.gap = 10.0f, .padding = Padding::All(10.0f)})) {
+        if (auto col = ui.Column({.padding = Padding::All(10.0f)})) {
             ui.TabBar(pillIdx, {"Alpha", "Beta", "Gamma"}, {.style = TabBarStyle::Pill});
         }
     };
@@ -1909,7 +1912,7 @@ void TestLabelVariantsStableSizing() {
     Response btn;
 
     auto render = [&]() {
-        if (auto row = ui.Row({.gap = 8.0f})) {
+        if (auto row = ui.Row({.gap = UiSize::Sm})) {
             btn = ui.Button(state ? "VSync: ON" : "VSync: OFF", {
                 .labelVariants = {"VSync: ON", "VSync: OFF"}
             });
@@ -1935,6 +1938,192 @@ void TestLabelVariantsStableSizing() {
     CHECK(boundsOn.w > 0.0f);
     CHECK_NEAR(boundsOff.w, boundsOn.w, 0.001f);
     CHECK_NEAR(boundsOff.h, boundsOn.h, 0.001f);
+}
+
+void TestContainerSizeInheritanceAndWidgetStretch() {
+    using namespace kvant;
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    // 1. Verify container UiSize inheritance across widgets
+    Response btnLg, btnSm;
+    bool switchVal = false;
+    bool checkVal = false;
+    std::string inputVal = "42";
+    int selectIdx = 0;
+    Response swLg, swSm, cbLg, cbSm, inLg, inSm, selLg, selSm;
+
+    auto renderSizeTest = [&](UiSize sz, bool isLarge) {
+        if (auto col = ui.Column({.size = sz})) {
+            if (isLarge) {
+                btnLg = ui.Button("Large Action");
+                swLg = ui.Switch("Large Switch", &switchVal);
+                cbLg = ui.Checkbox("Large Checkbox", &checkVal);
+                inLg = ui.InputField("Large Input", inputVal);
+                selLg = ui.Select("Large Select", selectIdx, {"One", "Two"});
+            } else {
+                btnSm = ui.Button("Small Action");
+                swSm = ui.Switch("Small Switch", &switchVal);
+                cbSm = ui.Checkbox("Small Checkbox", &checkVal);
+                inSm = ui.InputField("Small Input", inputVal);
+                selSm = ui.Select("Small Select", selectIdx, {"One", "Two"});
+            }
+        }
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderSizeTest(UiSize::Lg, true);
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderSizeTest(UiSize::Lg, true);
+    ui.EndFrame(canvas);
+
+    const Rect bLg = ui.GetPrevFrameBounds(btnLg.id);
+    const Rect sLg = ui.GetPrevFrameBounds(swLg.id);
+    const Rect cLg = ui.GetPrevFrameBounds(cbLg.id);
+    const Rect iLg = ui.GetPrevFrameBounds(inLg.id);
+    const Rect slLg = ui.GetPrevFrameBounds(selLg.id);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderSizeTest(UiSize::Sm, false);
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderSizeTest(UiSize::Sm, false);
+    ui.EndFrame(canvas);
+
+    const Rect bSm = ui.GetPrevFrameBounds(btnSm.id);
+    const Rect sSm = ui.GetPrevFrameBounds(swSm.id);
+    const Rect cSm = ui.GetPrevFrameBounds(cbSm.id);
+    const Rect iSm = ui.GetPrevFrameBounds(inSm.id);
+    const Rect slSm = ui.GetPrevFrameBounds(selSm.id);
+
+    // Large widgets must have strictly greater height than small widgets
+    CHECK(bLg.h > bSm.h);
+    CHECK(sLg.h > sSm.h);
+    CHECK(cLg.h > cSm.h);
+    CHECK(iLg.h > iSm.h);
+    CHECK(slLg.h > slSm.h);
+
+    // 2. Verify Button stretch = true vs stretch = false in horizontal Row
+    Response btnCompact, btnStretch1, btnStretch2;
+    auto renderStretchRow = [&]() {
+        if (auto row = ui.Row()) {
+            btnCompact = ui.Button("Compact", {.stretch = false});
+            btnStretch1 = ui.Button("Stretch", {.stretch = true});
+            btnStretch2 = ui.Button("Stretch", {.stretch = true});
+        }
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderStretchRow();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderStretchRow();
+    ui.EndFrame(canvas);
+
+    const Rect rCompact = ui.GetPrevFrameBounds(btnCompact.id);
+    const Rect rStr1 = ui.GetPrevFrameBounds(btnStretch1.id);
+    const Rect rStr2 = ui.GetPrevFrameBounds(btnStretch2.id);
+
+    CHECK(rCompact.w > 0.0f);
+    CHECK(rStr1.w > rCompact.w);
+    CHECK(rStr2.w > rCompact.w);
+    CHECK_NEAR(rStr1.w, rStr2.w, 0.001f);
+}
+
+void TestUiStyleAndDensityScaling() {
+    using namespace kvant;
+
+    // 1. SpacingScale and RadiusScale defaults and presets
+    const auto stdStyle = UiStyle::Standard();
+    CHECK(stdStyle.GetDensity() == Density::Standard);
+    CHECK(stdStyle.GetGap(UiSize::None) == 0.0f);
+    CHECK(stdStyle.GetGap(UiSize::Xs) == 4.0f);
+    CHECK(stdStyle.GetGap(UiSize::Sm) == 8.0f);
+    CHECK(stdStyle.GetGap(UiSize::Md) == 12.0f);
+    CHECK(stdStyle.GetGap(UiSize::Lg) == 16.0f);
+    CHECK(stdStyle.GetGap(UiSize::Xl) == 24.0f);
+
+    const auto compactStyle = UiStyle::Compact();
+    CHECK(compactStyle.GetDensity() == Density::Compact);
+    CHECK(compactStyle.GetGap(UiSize::Md) == 8.0f);
+    CHECK(compactStyle.GetRadius(UiSize::Md) == 4.0f);
+
+    const auto touchStyle = UiStyle::Touch();
+    CHECK(touchStyle.GetDensity() == Density::Touch);
+    CHECK(touchStyle.GetGap(UiSize::Md) == 16.0f);
+    CHECK(touchStyle.GetRadius(UiSize::Md) == 8.0f);
+
+    // 2. Context dynamic style switching
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 400;
+    const uint32_t height = 300;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    WidgetResponse b1, b2;
+
+    auto render = [&]() {
+        if (auto col = ui.Column()) {
+            b1 = ui.Button("First");
+            b2 = ui.Button("Second");
+        }
+    };
+
+    // Frame 1: Standard density (default Md gap = 12px)
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    CHECK_NEAR(b2.rect.y, b1.rect.Bottom() + 12.0f, 0.01f);
+
+    // Frame 2: Switch to Compact density (Md gap = 8px)
+    ui.SetDensity(Density::Compact);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    CHECK_NEAR(b2.rect.y, b1.rect.Bottom() + 8.0f, 0.01f);
+
+    // Frame 3: Switch to Touch density (Md gap = 16px)
+    ui.SetDensity(Density::Touch);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    CHECK_NEAR(b2.rect.y, b1.rect.Bottom() + 16.0f, 0.01f);
+
+    // Frame 4: Custom spacing scale override
+    ui.GetStyle().Spacing().md = 25.0f;
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+
+    CHECK_NEAR(b2.rect.y, b1.rect.Bottom() + 25.0f, 0.01f);
 }
 
 int main() {
@@ -1964,6 +2153,8 @@ int main() {
     TestTabBarWidgetWorkflow();
     TestToolbarWidgetWorkflow();
     TestLabelVariantsStableSizing();
+    TestContainerSizeInheritanceAndWidgetStretch();
+    TestUiStyleAndDensityScaling();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";
@@ -1973,3 +2164,4 @@ int main() {
         return 1;
     }
 }
+

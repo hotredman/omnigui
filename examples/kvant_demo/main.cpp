@@ -186,9 +186,9 @@ int main(int argc, char* argv[]) {
         // --- Begin Immediate Mode Kvant Frame ---
         ui.BeginFrame({static_cast<float>(winWidth), static_cast<float>(winHeight)});
         {
-            if (auto mainCol = ui.Column({.gap = 16.0f, .padding = kvant::Padding::All(24.0f)})) {
+            if (auto mainCol = ui.Column()) {
                 // Header Bar
-                if (auto header = ui.Row({.gap = 12.0f, .align = kvant::Alignment::Center})) {
+                if (auto header = ui.Row({.align = kvant::Alignment::Center})) {
                     ui.Title("KVANT GUI", kvant::UiVariant::Info);
                     ui.Caption("| Autonomous Vector GUI Engine");
                     ui.Spacer(); // Push build badge to right
@@ -197,6 +197,25 @@ int main(int argc, char* argv[]) {
 
                 // Engine HUD Toolbar
                 if (auto tb = ui.Toolbar({.fixedHeight = 42.0f})) {
+                    // Density Preset Toggle
+                    const char* densityLabel = (ui.GetDensity() == kvant::Density::Standard) ? "Density: Standard" :
+                                              ((ui.GetDensity() == kvant::Density::Compact) ? "Density: Compact" : "Density: Touch");
+                    if (tb.ToolButton(densityLabel, {
+                        .icon = kvant::Icon::Settings(),
+                        .labelVariants = {"Density: Standard", "Density: Compact", "Density: Touch"},
+                        .active = true
+                    })) {
+                        if (ui.GetDensity() == kvant::Density::Standard) {
+                            ui.SetDensity(kvant::Density::Compact);
+                        } else if (ui.GetDensity() == kvant::Density::Compact) {
+                            ui.SetDensity(kvant::Density::Touch);
+                        } else {
+                            ui.SetDensity(kvant::Density::Standard);
+                        }
+                    }
+
+                    tb.Separator();
+
                     // Theme Mode Toggle
                     if (tb.ToolButton(darkMode ? "Theme: Dark" : "Theme: Light", {
                         .icon = darkMode ? kvant::Icon::Eye() : kvant::Icon::EyeOff(),
@@ -283,75 +302,81 @@ int main(int argc, char* argv[]) {
                 if (activeTabIndex == 2) {
                     // Industrial Dashboard: responsive 2-column layout inside a dedicated ScrollArea
                     if (auto scroll = ui.ScrollArea()) {
-                        if (auto dashboardGrid = ui.Grid({.gap = 16.0f, .runGap = 16.0f})) {
-                            // Left Column: wraps to full width if < 360px
-                            if (auto colLeft = ui.Cell6({.minWidth = 360.0f, .gap = 16.0f})) {
+                        if (auto dashboardGrid = ui.CellGrid()) {
+                            // Left Column: wraps to full width when narrow
+                            if (auto colLeft = dashboardGrid.Cell6()) {
                                 if (auto card1 = ui.Card("Primary Stop Conditions", {.subtitle = "Sensory tripwire thresholds & limits"})) {
-                                    if (auto c = ui.Cell12()) {
-                                        ui.Switch("Enable Sensor Drop Limits", &enableSensors, {
-                                            .description = "Immediate stop on threshold breach"
-                                        });
-                                    }
-                                    if (auto c = ui.Cell6({.minWidth = 140.0f})) {
-                                        ui.InputNumber("Max Travel", maxTravel, "mm", {.format = "%.1f"});
-                                    }
-                                    if (auto c = ui.Cell6({.minWidth = 140.0f})) {
-                                        ui.InputNumber("Max Velocity", maxVelocity, "mm/s", {.format = "%.1f"});
-                                    }
-                                    if (auto c = ui.Cell12()) {
-                                        ui.Select("Primary Sensor Channel", sensorChannel, {
-                                            "Channel A (Load Cell 50kN)",
-                                            "Channel B (Optical Extensometer)",
-                                            "Channel C (Laser Interferometer)"
-                                        }, {
-                                            .description = "Active physical transducer bus",
-                                            .labelPlacement = kvant::Placement::Stacked
-                                        });
+                                    if (auto grid1 = ui.CellGrid()) {
+                                        if (auto c = grid1.Cell12()) {
+                                            ui.Switch("Enable Sensor Drop Limits", &enableSensors, {
+                                                .description = "Immediate stop on threshold breach"
+                                            });
+                                        }
+                                        if (auto c = grid1.Cell6()) {
+                                            ui.InputNumber("Max Travel", maxTravel, "mm", {.format = "%.1f"});
+                                        }
+                                        if (auto c = grid1.Cell6()) {
+                                            ui.InputNumber("Max Velocity", maxVelocity, "mm/s", {.format = "%.1f"});
+                                        }
+                                        if (auto c = grid1.Cell12()) {
+                                            ui.Select("Primary Sensor Channel", sensorChannel, {
+                                                "Channel A (Load Cell 50kN)",
+                                                "Channel B (Optical Extensometer)",
+                                                "Channel C (Laser Interferometer)"
+                                            }, {
+                                                .description = "Active physical transducer bus",
+                                                .labelPlacement = kvant::Placement::Stacked
+                                            });
+                                        }
                                     }
                                 }
 
                                 if (auto card2 = ui.Card("Emergency Interlocks", {.subtitle = "Hardware line supervision & failsafes"})) {
-                                    if (auto c = ui.Cell12()) {
-                                        ui.Switch("Hardware E-Stop Line", &hwEstop, {
-                                            .description = "Continuous 24V loop monitoring",
-                                            .variant = kvant::UiVariant::Danger
-                                        });
-                                    }
-                                    if (auto c = ui.Cell6({.minWidth = 140.0f})) {
-                                        ui.Select("Interlock Action", interlockMode, {
-                                            "Immediate Cutoff",
-                                            "Controlled Ramp-down",
-                                            "Hold Position"
-                                        });
-                                    }
-                                    if (auto c = ui.Cell6({.minWidth = 140.0f})) {
-                                        ui.InputNumber("Ramp Duration", rampDown, "ms", {.format = "%.0f"});
+                                    if (auto grid2 = ui.CellGrid()) {
+                                        if (auto c = grid2.Cell12()) {
+                                            ui.Switch("Hardware E-Stop Line", &hwEstop, {
+                                                .description = "Continuous 24V loop monitoring",
+                                                .variant = kvant::UiVariant::Danger
+                                            });
+                                        }
+                                        if (auto c = grid2.Cell6()) {
+                                            ui.Select("Interlock Action", interlockMode, {
+                                                "Immediate Cutoff",
+                                                "Controlled Ramp-down",
+                                                "Hold Position"
+                                            });
+                                        }
+                                        if (auto c = grid2.Cell6()) {
+                                            ui.InputNumber("Ramp Duration", rampDown, "ms", {.format = "%.0f"});
+                                        }
                                     }
                                 }
                             }
 
-                            // Right Column: wraps to full width if < 360px
-                            if (auto colRight = ui.Cell6({.minWidth = 360.0f, .gap = 16.0f})) {
+                            // Right Column: wraps to full width when narrow
+                            if (auto colRight = dashboardGrid.Cell6()) {
                                 if (auto card3 = ui.Card("Secondary Criteria & PID", {.subtitle = "Dynamic closed-loop feedback parameters"})) {
-                                    if (auto c = ui.Cell6({.minWidth = 140.0f})) {
-                                        ui.InputNumber("Force Drop Limit", forceLimit, "%", {.format = "%.1f"});
-                                    }
-                                    if (auto c = ui.Cell6({.minWidth = 140.0f})) {
-                                        ui.InputNumber("Yield Ratio", yieldRatio, "%", {.format = "%.2f"});
-                                    }
-                                    if (auto c = ui.Cell4({.minWidth = 90.0f})) {
-                                        ui.InputNumber("P-Gain", pGain, {}, {.format = "%.2f"});
-                                    }
-                                    if (auto c = ui.Cell4({.minWidth = 90.0f})) {
-                                        ui.InputNumber("I-Gain", iGain, {}, {.format = "%.3f"});
-                                    }
-                                    if (auto c = ui.Cell4({.minWidth = 90.0f})) {
-                                        ui.InputNumber("D-Gain", dGain, {}, {.format = "%.3f"});
-                                    }
-                                    if (auto c = ui.Cell12()) {
-                                        ui.Switch("Log High-Speed Telemetry", &diagLogging, {
-                                            .description = "Record 10 kHz buffer to internal flash"
-                                        });
+                                    if (auto grid3 = ui.CellGrid()) {
+                                        if (auto c = grid3.Cell6()) {
+                                            ui.InputNumber("Force Drop Limit", forceLimit, "%", {.format = "%.1f"});
+                                        }
+                                        if (auto c = grid3.Cell6()) {
+                                            ui.InputNumber("Yield Ratio", yieldRatio, "%", {.format = "%.2f"});
+                                        }
+                                        if (auto c = grid3.Cell4()) {
+                                            ui.InputNumber("P-Gain", pGain, {}, {.format = "%.2f"});
+                                        }
+                                        if (auto c = grid3.Cell4()) {
+                                            ui.InputNumber("I-Gain", iGain, {}, {.format = "%.3f"});
+                                        }
+                                        if (auto c = grid3.Cell4()) {
+                                            ui.InputNumber("D-Gain", dGain, {}, {.format = "%.3f"});
+                                        }
+                                        if (auto c = grid3.Cell12()) {
+                                            ui.Switch("Log High-Speed Telemetry", &diagLogging, {
+                                                .description = "Record 10 kHz buffer to internal flash"
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -366,7 +391,7 @@ int main(int argc, char* argv[]) {
                             ui.Body("Pure immediate mode with zero external widget IDs and instant response.",
                                     kvant::UiVariant::Muted);
 
-                            if (auto actionRow = ui.Wrap({.gap = 12.0f, .runGap = 10.0f, .align = kvant::Alignment::Center})) {
+                            if (auto actionRow = ui.Wrap({.align = kvant::Alignment::Center})) {
                                 if (ui.Button("Increment (+1)", {.icon = kvant::Icon::Plus(), .variant = kvant::UiVariant::Success})) {
                                     ++counter;
                                 }
@@ -380,7 +405,7 @@ int main(int argc, char* argv[]) {
                                 ui.Text(ui.Format("Value: {}", counter), {.role = kvant::TextRole::HeadlineMedium, .variant = kvant::UiVariant::Info});
                             }
 
-                            if (auto togglesRow = ui.Wrap({.gap = 20.0f, .runGap = 16.0f, .align = kvant::Alignment::Center})) {
+                            if (auto togglesRow = ui.Wrap({.gap = kvant::UiSize::Lg, .align = kvant::Alignment::Center})) {
                                 ui.Checkbox("Show Telemetry", &showTelemetry, {.variant = kvant::UiVariant::Info});
                                 if (ui.Switch("Form Mode", &formMode, {
                                     .description = "Toggle stacked vs default label layout",
@@ -392,7 +417,7 @@ int main(int argc, char* argv[]) {
                             }
 
                             if (showTelemetry) {
-                                if (auto teleRow = ui.Row({.gap = 16.0f, .align = kvant::Alignment::Center})) {
+                                if (auto teleRow = ui.Row({.align = kvant::Alignment::Center})) {
                                     ui.Text("Telemetry Stream: ACTIVE", {.role = kvant::TextRole::LabelMedium, .variant = kvant::UiVariant::Success});
                                     ui.Caption("1000 samples/sec | Jitter < 0.2ms | Hardware loop nominal", kvant::UiVariant::Muted);
                                 }
@@ -400,8 +425,8 @@ int main(int argc, char* argv[]) {
 
                             const kvant::Placement activePlacement = formMode ? kvant::Placement::Stacked : kvant::Placement::Leading;
 
-                            if (auto fieldsRow = ui.Wrap({.gap = 24.0f, .runGap = 16.0f})) {
-                                if (auto f1 = ui.Box({.fixedWidth = 260.0f})) {
+                            if (auto fieldsGrid = ui.CellGrid()) {
+                                if (auto c1 = fieldsGrid.Cell3()) {
                                     ui.InputField("Speed Drop dF/dt", speedDrop, {
                                         .description = "Automatic stop of testing on load drop",
                                         .suffix = "%",
@@ -409,20 +434,20 @@ int main(int argc, char* argv[]) {
                                         .labelPlacement = activePlacement
                                     });
                                 }
-                                if (auto f2 = ui.Box({.fixedWidth = 260.0f})) {
+                                if (auto c2 = fieldsGrid.Cell3()) {
                                     ui.InputField("Sample Identifier", sampleId, {
                                         .description = "Unique test specimen code",
                                         .placeholder = "Enter sample code...",
                                         .labelPlacement = activePlacement
                                     });
                                 }
-                                if (auto f3 = ui.Box({.fixedWidth = 260.0f})) {
+                                if (auto c3 = fieldsGrid.Cell3()) {
                                     ui.Select("Baud Rate", baudIndex, {"9600 bps", "19200 bps", "38400 bps", "115200 bps"}, {
                                         .description = "Serial communication bus rate",
                                         .labelPlacement = activePlacement
                                     });
                                 }
-                                if (auto f4 = ui.Box({.fixedWidth = 260.0f})) {
+                                if (auto c4 = fieldsGrid.Cell3()) {
                                     ui.Select("Operation Profile", profileMode, {"Eco Saver", "Standard Performance", "Industrial High-Speed", "Extreme Calibration"}, {
                                         .description = "Active runtime sensor & compute profile",
                                         .labelPlacement = activePlacement
@@ -432,19 +457,13 @@ int main(int argc, char* argv[]) {
                         } else {
                             // Flexbox Demo Tab: Equal Stretch & Alignment
                             ui.Headline("Dynamic 3-Way Equal Stretch Layout");
-                            ui.Body("Each button automatically receives exactly 33.3% available width.",
+                            ui.Body("Each button automatically receives exactly 33.3% available width via stretch = true.",
                                     kvant::UiVariant::Muted);
 
-                            if (auto stretchRow = ui.Row({.gap = 12.0f})) {
-                                if (auto col1 = ui.Box({.widthMode = kvant::SizeMode::Stretch})) {
-                                    ui.Button("Col 1 (Stretch)");
-                                }
-                                if (auto col2 = ui.Box({.widthMode = kvant::SizeMode::Stretch})) {
-                                    ui.Button("Col 2 (Stretch)");
-                                }
-                                if (auto col3 = ui.Box({.widthMode = kvant::SizeMode::Stretch})) {
-                                    ui.Button("Col 3 (Stretch)");
-                                }
+                            if (auto stretchRow = ui.Row()) {
+                                ui.Button("Col 1 (Stretch)", {.stretch = true});
+                                ui.Button("Col 2 (Stretch)", {.stretch = true});
+                                ui.Button("Col 3 (Stretch)", {.stretch = true});
                             }
                         }
                     }
@@ -456,13 +475,11 @@ int main(int argc, char* argv[]) {
                 }
 
                 // Sticky Footer Bar
-                if (auto footer = ui.Row({.gap = 12.0f, .align = kvant::Alignment::Center})) {
+                if (auto footer = ui.Row({.align = kvant::Alignment::Center})) {
                     ui.Caption(metrics.GetStatusString(), kvant::UiVariant::Muted);
                     ui.Spacer();
-                    if (auto exitBox = ui.Box({.fixedWidth = 80.0f})) {
-                        if (ui.Button("Exit", {.icon = kvant::Icon::Close(), .variant = kvant::UiVariant::Ghost})) {
-                            running = false;
-                        }
+                    if (ui.Button("Exit", {.icon = kvant::Icon::Close(), .variant = kvant::UiVariant::Ghost})) {
+                        running = false;
                     }
                 }
             }

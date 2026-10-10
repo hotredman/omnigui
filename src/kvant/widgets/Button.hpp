@@ -19,6 +19,7 @@ struct ButtonOptions {
     UiVariant variant{UiVariant::Secondary};
     Placement iconPlacement{Placement::Leading};
     LabelVariants labelVariants{};
+    bool stretch{false};           ///< Expand to fill available horizontal space in flex containers
     bool disabled{false};
     bool active{false};
 };

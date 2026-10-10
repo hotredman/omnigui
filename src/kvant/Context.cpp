@@ -187,7 +187,7 @@ RowScope Context::Row(RowOptions opts, std::source_location loc) {
 
     Node* node = CreateNode(NodeType::Container, id);
     node->direction = FlexDirection::Row;
-    node->gap = opts.gap;
+    node->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
     node->padding = opts.padding;
     node->align = opts.align;
     node->justify = opts.justify;
@@ -209,7 +209,7 @@ ColumnScope Context::Column(ColumnOptions opts, std::source_location loc) {
 
     Node* node = CreateNode(NodeType::Container, id);
     node->direction = FlexDirection::Column;
-    node->gap = opts.gap;
+    node->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
     node->padding = opts.padding;
     node->align = opts.align;
     node->justify = opts.justify;
@@ -231,7 +231,7 @@ BoxScope Context::Box(BoxOptions opts, std::source_location loc) {
 
     Node* node = CreateNode(NodeType::Container, id);
     node->direction = FlexDirection::Column;
-    node->gap = opts.gap;
+    node->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
     node->widthMode = opts.widthMode;
     node->heightMode = opts.heightMode;
 
@@ -246,7 +246,7 @@ BoxScope Context::Box(BoxOptions opts, std::source_location loc) {
 
     // If explicit size token is set and no fixedHeight was provided, use token height
     if (opts.size.has_value() && opts.fixedHeight <= 0.0f) {
-        node->fixedHeight = GetComponentMetrics(*opts.size).defaultHeight;
+        node->fixedHeight = m_style.GetComponentMetrics(*opts.size).defaultHeight;
         node->heightMode = SizeMode::Fixed;
     }
 
@@ -254,7 +254,7 @@ BoxScope Context::Box(BoxOptions opts, std::source_location loc) {
     node->backgroundColor = opts.backgroundColor;
     node->borderColor = opts.borderColor;
     node->borderWidth = opts.borderWidth;
-    node->cornerRadius = opts.cornerRadius;
+    node->cornerRadius = opts.radius.has_value() ? m_style.GetRadius(*opts.radius) : opts.cornerRadius;
     node->clipChildren = opts.clipChildren;
     node->uiSize = activeSize;
     node->disabled = activeDisabled;
@@ -272,8 +272,8 @@ WrapScope Context::Wrap(WrapOptions opts, std::source_location loc) {
 
     Node* node = CreateNode(NodeType::Container, id);
     node->direction = FlexDirection::Wrap;
-    node->gap = opts.gap;
-    node->runGap = (opts.runGap > 0.0f) ? opts.runGap : opts.gap;
+    node->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
+    node->runGap = opts.runGap.has_value() ? m_style.GetGap(*opts.runGap) : node->gap;
     node->padding = opts.padding;
     node->align = opts.align;
     node->justify = opts.justify;
@@ -288,7 +288,7 @@ WrapScope Context::Wrap(WrapOptions opts, std::source_location loc) {
     return WrapScope(this, node);
 }
 
-GridScope Context::Grid(GridOptions opts, std::source_location loc) {
+CellGridScope Context::CellGrid(CellGridOptions opts, std::source_location loc) {
     const Id id = MakeChildId(loc);
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
     const bool activeDisabled = opts.disabled || IsDisabled();
@@ -297,8 +297,8 @@ GridScope Context::Grid(GridOptions opts, std::source_location loc) {
     node->direction = FlexDirection::Grid;
     node->gridColumns = (opts.columns > 0) ? opts.columns : 12;
     node->minColWidth = opts.minColWidth;
-    node->gap = opts.gap;
-    node->runGap = (opts.runGap > 0.0f) ? opts.runGap : opts.gap;
+    node->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
+    node->runGap = opts.runGap.has_value() ? m_style.GetGap(*opts.runGap) : node->gap;
     node->padding = opts.padding;
     node->align = opts.align;
     node->justify = opts.justify;
@@ -310,7 +310,11 @@ GridScope Context::Grid(GridOptions opts, std::source_location loc) {
     PushSize(activeSize);
     PushDisabled(activeDisabled);
     PushContainer(node);
-    return GridScope(this, node);
+    return CellGridScope(this, node);
+}
+
+CellGridScope Context::Grid(CellGridOptions opts, std::source_location loc) {
+    return CellGrid(opts, loc);
 }
 
 ScrollAreaScope Context::ScrollArea(ScrollAreaOptions opts, std::source_location loc) {
@@ -358,19 +362,19 @@ CardScope Context::Card(std::string_view title, CardOptions opts, std::source_lo
     const UiSize activeSize = opts.size.value_or(GetCurrentSize());
     const bool activeDisabled = opts.disabled || IsDisabled();
 
-    // 1. Outer styled container frame
+    // 1. Outer styled surface frame
     Node* outerNode = CreateNode(NodeType::Container, idOuter);
     outerNode->direction = FlexDirection::Column;
-    outerNode->gap = 12.0f;
+    outerNode->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
     outerNode->minWidth = opts.minWidth;
     outerNode->widthMode = opts.widthMode;
     outerNode->heightMode = opts.heightMode;
-    outerNode->padding = opts.padding;
+    outerNode->padding = opts.padding.has_value() ? *opts.padding : m_style.GetPadding(activeSize);
     const auto pal = GetThemePalette();
     outerNode->backgroundColor = (opts.backgroundColor.a > 0) ? opts.backgroundColor : pal.surface;
     outerNode->borderColor = (opts.borderColor.a > 0) ? opts.borderColor : pal.border;
     outerNode->borderWidth = opts.borderWidth;
-    outerNode->cornerRadius = opts.cornerRadius;
+    outerNode->cornerRadius = opts.radius.has_value() ? m_style.GetRadius(*opts.radius) : (opts.cornerRadius > 0.0f ? opts.cornerRadius : m_style.GetRadius(activeSize));
     outerNode->clipChildren = opts.clipChildren;
     outerNode->uiSize = activeSize;
     outerNode->disabled = activeDisabled;
@@ -404,27 +408,7 @@ CardScope Context::Card(std::string_view title, CardOptions opts, std::source_lo
         PopContainer(headerNode);
     }
 
-    // 3. Inner layout container (Grid if gridLayout == true)
-    Node* innerNode = nullptr;
-    if (opts.gridLayout) {
-        const Id idInner = Id{idOuter.value ^ 0x9E3779B97F4A7C15ULL};
-        innerNode = CreateNode(NodeType::Container, idInner);
-        innerNode->direction = FlexDirection::Grid;
-        innerNode->gridColumns = (opts.gridColumns > 0) ? opts.gridColumns : 12;
-        innerNode->minColWidth = opts.minCellWidth;
-        innerNode->gap = opts.gap;
-        innerNode->runGap = (opts.runGap > 0.0f) ? opts.runGap : opts.gap;
-        innerNode->widthMode = SizeMode::Stretch;
-        innerNode->heightMode = SizeMode::Fit;
-        innerNode->uiSize = activeSize;
-        innerNode->disabled = activeDisabled;
-
-        PushSize(activeSize);
-        PushDisabled(activeDisabled);
-        PushContainer(innerNode);
-    }
-
-    return CardScope(this, outerNode, innerNode);
+    return CardScope(this, outerNode);
 }
 
 CardScope Context::Card(CardOptions opts, std::source_location loc) {
@@ -441,7 +425,7 @@ CellScope Context::Cell(int span, CellOptions opts, std::source_location loc) {
     node->colSpan = std::clamp(span, 1, 12);
     node->minWidth = opts.minWidth;
     node->clipChildren = true;
-    node->gap = opts.gap;
+    node->gap = opts.gap.has_value() ? m_style.GetGap(*opts.gap) : m_style.GetGap(activeSize);
     node->padding = opts.padding;
     node->align = opts.align;
     node->justify = opts.justify;
