@@ -1,15 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
-project(omnigui CXX C)
+project(imthorgui CXX C)
 
-# Demo application sources: shell and pages (common for desktop and WASM targets)
-set(DEMO_APP_SOURCES
-    examples/demo/OmniKitShowcase.cpp
-    examples/demo/pages/TestRunPage.cpp
-    examples/demo/pages/CardsPage.cpp
-    examples/demo/pages/ImageViewerPage.cpp
-)
-
-# Uniform C++20 standard across the project (designated initializers in component options)
+# Uniform C++20 standard across the project
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -32,7 +24,7 @@ set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 add_subdirectory(third_party/SDL)
 
-# --- ThorVG ---
+# --- ThorVG (submodule) ---
 add_subdirectory(third_party/thorvg)
 
 # --- ImGui (submodule) ---
@@ -66,68 +58,10 @@ if (NOT EMSCRIPTEN)
     find_package(Threads REQUIRED)
 endif()
 
-# --- OmniKit: Modern High-Level UI Component Library & Design System ---
-set(OMNIKIT_SOURCES
+# --- OmniGUI / imthorgui Library (Recorder + Renderer + DOM Backend) ---
+add_library(imthorgui STATIC
     src/core/Assets.cpp
     src/core/ProcessStats.cpp
-    src/core/units/Units.cpp
-    src/omnikit/Badge.cpp
-    src/omnikit/Button.cpp
-    src/omnikit/Card.cpp
-    src/omnikit/TextSuggest.cpp
-    src/omnikit/CardFields.cpp
-    src/omnikit/Carousel.cpp
-    src/omnikit/Combo.cpp
-    src/omnikit/ConfirmModal.cpp
-    src/omnikit/ContentArea.cpp
-    src/omnikit/ContextMenu.cpp
-    src/omnikit/DeviceStatus.cpp
-    src/omnikit/DisabledScope.cpp
-    src/omnikit/EditableLabel.cpp
-    src/omnikit/FilterBar.cpp
-    src/omnikit/ColumnLayout.cpp
-    src/omnikit/GridLayout.cpp
-    src/omnikit/Bar.cpp
-    src/omnikit/Header.cpp
-    src/omnikit/Icon.cpp
-    src/omnikit/Indicator.cpp
-    src/omnikit/InputField.cpp
-    src/omnikit/ItemRow.cpp
-    src/omnikit/Text.cpp
-    src/omnikit/List.cpp
-    src/omnikit/Panel.cpp
-    src/omnikit/PresetGrid.cpp
-    src/omnikit/SearchInput.cpp
-    src/omnikit/Sidebar.cpp
-    src/omnikit/SidePanel.cpp
-    src/omnikit/StatusBar.cpp
-    src/omnikit/TabBar.cpp
-    src/omnikit/Tag.cpp
-    src/omnikit/ThemePalette.cpp
-    src/omnikit/Toggle.cpp
-    src/omnikit/Toolbar.cpp
-    src/omnikit/ToolButton.cpp
-    src/omnikit/UiTheme.cpp
-    src/omnikit/ValueDisplay.cpp
-    src/omnikit/ImageViewerControls.cpp
-    src/omnikit/charts/AnalysisChart.cpp
-    src/omnikit/charts/ChartCore.cpp
-    src/omnikit/charts/Decimate.cpp
-    src/omnikit/charts/RealtimeChart.cpp
-    src/omnikit/image/ImageColormap.cpp
-    src/omnikit/image/WindowLevel.cpp
-    src/omnikit/image/ImageHistogram.cpp
-    src/omnikit/image/ImageViewer.cpp
-)
-
-add_library(omnikit STATIC ${OMNIKIT_SOURCES})
-# C++20 required for designated initializers in component options: Button({.label = "Save"});
-target_compile_features(omnikit PUBLIC cxx_std_20)
-target_include_directories(omnikit PUBLIC src)
-target_link_libraries(omnikit PUBLIC imgui)
-
-# --- OmniGUI Library (Recorder + Renderer + DOM Backend + OmniKit) ---
-add_library(omnigui STATIC
     src/imgui_ext/recorder.cpp
     src/imgui_ext/renderer_thorvg.cpp
     src/imgui_dom/dom_context.cpp
@@ -135,31 +69,31 @@ add_library(omnigui STATIC
     src/imgui_dom/dom_hook.cpp
     src/imgui_dom/dom_transport.cpp
 )
-add_library(imthorgui ALIAS omnigui)
-target_include_directories(omnigui PUBLIC
+add_library(omnigui ALIAS imthorgui)
+
+target_include_directories(imthorgui PUBLIC
     src
     third_party/httplib
 )
-target_link_libraries(omnigui PUBLIC imgui thorvg omnikit)
+target_link_libraries(imthorgui PUBLIC imgui thorvg)
 if (NOT EMSCRIPTEN)
-    target_link_libraries(omnigui PUBLIC Threads::Threads)
+    target_link_libraries(imthorgui PUBLIC Threads::Threads)
 endif()
 if (WIN32 AND NOT EMSCRIPTEN)
-    target_link_libraries(omnigui PUBLIC ws2_32 crypt32)
+    target_link_libraries(imthorgui PUBLIC ws2_32 crypt32)
 endif()
 
 # ========================================================
 #  Desktop vs WebAssembly (Emscripten) Target Matrix
 # ========================================================
 if (NOT EMSCRIPTEN)
-    # --- Desktop Demo Executables ---
+    # --- Desktop Demo Executable ---
     add_executable(demo
         examples/demo/main.cpp
-        ${DEMO_APP_SOURCES}
     )
     target_link_libraries(demo PRIVATE imthorgui)
 
-    # --- Tests ---
+    # --- Unit & Integration Tests ---
     add_executable(test_text_metrics
         tests/test_text_metrics.cpp
     )
@@ -190,11 +124,6 @@ if (NOT EMSCRIPTEN)
     )
     target_link_libraries(test_modal PRIVATE imthorgui)
 
-    add_executable(test_components
-        tests/test_components.cpp
-    )
-    target_link_libraries(test_components PRIVATE imthorgui)
-
     add_executable(test_httplib
         tests/test_httplib.cpp
     )
@@ -205,15 +134,13 @@ if (NOT EMSCRIPTEN)
     )
     target_link_libraries(test_dom PRIVATE imthorgui)
 
-    # --- ctest: same validation suites as scripts/windows/run_tests.cmd ---
+    # --- CTest Suites ---
     enable_testing()
     add_test(NAME frame_dedup COMMAND test_frame_dedup)
     add_test(NAME text_metrics COMMAND test_text_metrics)
     add_test(NAME visual_diff COMMAND visual_diff)
     add_test(NAME lttb COMMAND test_lttb)
     add_test(NAME modal COMMAND test_modal)
-    add_test(NAME components COMMAND test_components)
-
 
 else()
     # ========================================================
@@ -237,7 +164,6 @@ else()
     # 1. Target: demo_thorvg.html (ImGui + ThorVG Vector in WebGL Canvas)
     add_executable(demo_thorvg
         examples/demo/main.cpp
-        ${DEMO_APP_SOURCES}
     )
     target_compile_definitions(demo_thorvg PRIVATE OMNI_BUILD_WASM_THORVG=1)
     target_link_libraries(demo_thorvg PRIVATE imthorgui)
@@ -249,7 +175,6 @@ else()
     # 2. Target: demo_sdl.html (ImGui + Standard SDL3 in WebGL Canvas)
     add_executable(demo_sdl
         examples/demo/main.cpp
-        ${DEMO_APP_SOURCES}
     )
     target_compile_definitions(demo_sdl PRIVATE OMNI_BUILD_WASM_SDL=1)
     target_link_libraries(demo_sdl PRIVATE imthorgui)
@@ -265,7 +190,6 @@ else()
     )
     add_executable(demo_dom
         examples/demo/main.cpp
-        ${DEMO_APP_SOURCES}
     )
     target_compile_definitions(demo_dom PRIVATE OMNI_BUILD_WASM_DOM=1)
     target_link_libraries(demo_dom PRIVATE imthorgui)

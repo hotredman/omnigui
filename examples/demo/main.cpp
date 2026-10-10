@@ -26,10 +26,6 @@
 #include "imgui_ext/renderer.h"
 #include "imgui_ext/oscilloscope.h"
 #include "imgui_dom/imgui_dom.h"
-#include "OmniKitShowcase.hpp"
-#include "omnikit.hpp"
-
-using namespace OmniKit;
 
 struct PerformanceMetrics {
     double cpu_usage_percent = 0.0;
@@ -520,10 +516,6 @@ int main(int argc, char* argv[]) {
         font = io.Fonts->AddFontDefault();
     }
 
-    // Initialize design system theme scale and fonts
-    UiTheme::Get().SetScale(main_scale);
-    UiTheme::Get().LoadFonts();
-
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
@@ -691,11 +683,16 @@ int main(int argc, char* argv[]) {
         ImGui::NewFrame();
 
         // ====================================================================
-        // OmniKit Workstation Showcase
-        // Component-pure shell (Header, Toolbar, Sidebar, ContentArea, StatusBar)
-        // Self-docking borderless panels tile 100% of the viewport seamlessly.
+        // Dear ImGui Canonical Demo Window + Realtime Oscilloscope
         // ====================================================================
-        OmniKitShowcase::RenderUI(main_scale);
+        static bool show_demo_window = true;
+        ImGui::ShowDemoWindow(&show_demo_window);
+
+        ImGui::SetNextWindowSize(ImVec2(600, 360), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Realtime Signal & Vector Benchmark", nullptr)) {
+            oscilloscope.RenderUI();
+        }
+        ImGui::End();
 
         ImGui::Render();
         ImGuiDom::EndFrame();
@@ -725,7 +722,7 @@ int main(int argc, char* argv[]) {
 
         auto render_start = std::chrono::steady_clock::now();
 
-        ImVec4 clear_col = ImColor(UiTheme::Get().palette.bgApp).Value;
+        ImVec4 clear_col = ImVec4(0.12f, 0.12f, 0.14f, 1.0f);
         SDL_SetRenderDrawColor(renderer,
                                static_cast<Uint8>(clear_col.x * 255.0f),
                                static_cast<Uint8>(clear_col.y * 255.0f),
@@ -734,7 +731,7 @@ int main(int argc, char* argv[]) {
         SDL_RenderClear(renderer);
 
         if (use_vector_backend) {
-            vector_renderer->SetClearColor(ImGuiExt::Color::FromImU32(UiTheme::Get().palette.bgApp));
+            vector_renderer->SetClearColor(ImGuiExt::Color(31, 31, 36, 255));
             vector_renderer->Resize(display_w, display_h);
             vector_renderer->RenderDrawData(draw_data);
             const uint32_t* pixels = vector_renderer->GetPixelBuffer();
