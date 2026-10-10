@@ -169,6 +169,7 @@ int main(int argc, char* argv[]) {
             break;
         }
 
+        const auto frameWorkStart = std::chrono::steady_clock::now();
         metrics.BeginFrame();
 
         // --- Begin Immediate Mode Kvant Frame ---
@@ -435,34 +436,45 @@ int main(int argc, char* argv[]) {
         ui.EndFrame(canvas);
         metrics.MarkCpuDone();
 
-        if (ui.HasDirtyDamage()) {
+        const bool shouldPresent = ui.HasDirtyDamage() || !reactiveMode;
+        if (shouldPresent) {
             metrics.MarkGpuStart();
-            if (ui.IsFullRepaint()) {
-                SDL_UpdateTexture(screenTexture, nullptr, pixelBuffer.data(), winWidth * sizeof(uint32_t));
-            } else {
-                const kvant::Rect r = ui.GetDirtyRect();
-                const SDL_Rect sdlR = {
-                    static_cast<int>(r.x),
-                    static_cast<int>(r.y),
-                    static_cast<int>(r.w),
-                    static_cast<int>(r.h)
-                };
-                const uint32_t* src = pixelBuffer.data() + sdlR.y * winWidth + sdlR.x;
-                SDL_UpdateTexture(screenTexture, &sdlR, src, winWidth * sizeof(uint32_t));
+            if (ui.HasDirtyDamage()) {
+                if (ui.IsFullRepaint()) {
+                    SDL_UpdateTexture(screenTexture, nullptr, pixelBuffer.data(), winWidth * sizeof(uint32_t));
+                } else {
+                    const kvant::Rect r = ui.GetDirtyRect();
+                    const SDL_Rect sdlR = {
+                        static_cast<int>(r.x),
+                        static_cast<int>(r.y),
+                        static_cast<int>(r.w),
+                        static_cast<int>(r.h)
+                    };
+                    const uint32_t* src = pixelBuffer.data() + sdlR.y * winWidth + sdlR.x;
+                    SDL_UpdateTexture(screenTexture, &sdlR, src, winWidth * sizeof(uint32_t));
+                }
             }
             SDL_RenderClear(renderer);
             SDL_RenderTexture(renderer, screenTexture, nullptr, nullptr);
             metrics.MarkGpuDone();
 
             SDL_RenderPresent(renderer);
+            metrics.MarkFramePresented();
         }
 
-        // In continuous mode, yield CPU slightly to cap frame rate when no events are pending
-        if (!reactiveMode) {
-            if (!vsyncEnabled) {
-                SDL_Delay(8);
-            } else {
-                SDL_Delay(1);
+        // Frame rate limiter and pacing:
+        // Ensures smooth 60 FPS pacing and prevents unconstrained spinning when presenting is skipped or VSync is off
+        const auto frameEnd = std::chrono::steady_clock::now();
+        const double frameElapsedMs = std::chrono::duration<double, std::milli>(frameEnd - frameWorkStart).count();
+        const double targetFrameMs = 1000.0 / 60.0; // 16.67 ms (60 FPS)
+        if (frameElapsedMs < targetFrameMs) {
+            const double remainingMs = targetFrameMs - frameElapsedMs;
+            if (!reactiveMode && !vsyncEnabled) {
+                SDL_Delay(static_cast<uint32_t>(remainingMs));
+            } else if (!shouldPresent) {
+                if (remainingMs >= 1.0) {
+                    SDL_Delay(static_cast<uint32_t>(remainingMs));
+                }
             }
         }
 

@@ -33,33 +33,25 @@ public:
         m_lastProcessCpuSec = QueryProcessCpuSeconds();
         m_lastDisplayUpdateTime = m_lastCpuCheckTime;
         m_lastFrameTime = m_lastCpuCheckTime;
+        m_lastPresentedTime = m_lastCpuCheckTime;
+        m_fpsWindowStart = m_lastCpuCheckTime;
     }
 
-    /// Call at the very beginning of the frame loop (before event processing / UI logic).
+    /// Call at the very beginning of CPU frame work.
     void BeginFrame() noexcept {
         const auto now = std::chrono::steady_clock::now();
         m_frameStart = now;
-
-        if (m_hasPreviousFrame) {
-            const float dtSec = std::chrono::duration<float>(now - m_lastFrameTime).count();
-            if (dtSec > 0.0001f) {
-                if (dtSec > 0.25f) {
-                    m_isIdle = true;
-                    m_smoothedFps = 0.0f;
-                } else {
-                    m_isIdle = false;
-                    const float instantFps = 1.0f / dtSec;
-                    if (m_smoothedFps <= 0.0f) {
-                        m_smoothedFps = instantFps;
-                    } else {
-                        // Exponential moving average (alpha = 0.1)
-                        m_smoothedFps = m_smoothedFps * 0.90f + instantFps * 0.10f;
-                    }
-                }
-            }
-        }
         m_lastFrameTime = now;
         m_hasPreviousFrame = true;
+    }
+
+    /// Call immediately after presenting the frame buffer to the display (e.g. after SDL_RenderPresent).
+    void MarkFramePresented() noexcept {
+        const auto now = std::chrono::steady_clock::now();
+        m_lastPresentedTime = now;
+        m_hasPresentedFrames = true;
+        m_isIdle = false;
+        ++m_fpsFrameCount;
     }
 
     /// Call immediately after CPU work (UI layout, immediate mode execution, and software rasterization).
@@ -92,6 +84,35 @@ public:
     /// Call at the end of the frame (after present / delay).
     void EndFrame(float targetFps = 60.0f) noexcept {
         const auto now = std::chrono::steady_clock::now();
+
+        // Evaluate idle status based on time elapsed since the last physically presented frame
+        if (m_hasPresentedFrames) {
+            const float idleElapsed = std::chrono::duration<float>(now - m_lastPresentedTime).count();
+            if (idleElapsed > 0.25f) {
+                m_isIdle = true;
+                m_smoothedFps = 0.0f;
+                m_fpsFrameCount = 0;
+                m_fpsWindowStart = now;
+            } else {
+                m_isIdle = false;
+                const float fpsElapsed = std::chrono::duration<float>(now - m_fpsWindowStart).count();
+                const float windowThreshold = (m_smoothedFps <= 0.0f) ? 0.20f : 0.30f;
+                if (fpsElapsed >= windowThreshold && m_fpsFrameCount > 0) {
+                    const float measuredFps = static_cast<float>(m_fpsFrameCount) / fpsElapsed;
+                    if (m_smoothedFps <= 0.0f) {
+                        m_smoothedFps = measuredFps;
+                    } else {
+                        m_smoothedFps = m_smoothedFps * 0.70f + measuredFps * 0.30f;
+                    }
+                    m_fpsFrameCount = 0;
+                    m_fpsWindowStart = now;
+                }
+            }
+        } else {
+            m_isIdle = true;
+            m_smoothedFps = 0.0f;
+            m_fpsWindowStart = now;
+        }
 
         // Update process CPU utilization percentage at ~0.5 second intervals
         const double elapsedCpuSec = std::chrono::duration<double>(now - m_lastCpuCheckTime).count();
@@ -195,12 +216,16 @@ private:
     std::chrono::steady_clock::time_point m_gpuStart{};
     std::chrono::steady_clock::time_point m_gpuDone{};
     std::chrono::steady_clock::time_point m_lastFrameTime{};
+    std::chrono::steady_clock::time_point m_lastPresentedTime{};
     std::chrono::steady_clock::time_point m_lastCpuCheckTime{};
     std::chrono::steady_clock::time_point m_lastDisplayUpdateTime{};
+    std::chrono::steady_clock::time_point m_fpsWindowStart{};
 
     double m_lastProcessCpuSec{-1.0};
     int m_numProcessors{1};
+    uint32_t m_fpsFrameCount{0};
     bool m_hasPreviousFrame{false};
+    bool m_hasPresentedFrames{false};
     bool m_isIdle{false};
 
     float m_smoothedFps{0.0f};
