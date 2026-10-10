@@ -41,7 +41,8 @@ public:
         std::string_view label,
         const TextOptions& opts,
         bool hovered = false,
-        bool disabled = false
+        bool disabled = false,
+        ThemeMode theme = ThemeMode::Dark
     );
 };
 

@@ -18,7 +18,9 @@ struct ButtonOptions {
     Icon icon{};
     UiVariant variant{UiVariant::Secondary};
     Placement iconPlacement{Placement::Leading};
+    LabelVariants labelVariants{};
     bool disabled{false};
+    bool active{false};
 };
 
 /// Type alias for button response.
@@ -45,7 +47,8 @@ public:
         UiSize size,
         bool hovered,
         bool pressed,
-        bool disabled
+        bool disabled,
+        ThemeMode theme = ThemeMode::Dark
     );
 };
 

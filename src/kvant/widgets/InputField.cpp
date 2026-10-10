@@ -212,7 +212,8 @@ void InputField::Render(
     size_t cursor,
     bool disabled,
     bool cursorVisible,
-    float cursorWidth
+    float cursorWidth,
+    ThemeMode theme
 ) {
     if (bounds.w <= 0.0f || bounds.h <= 0.0f) {
         return;
@@ -286,24 +287,27 @@ void InputField::Render(
     }
 
     // Determine colors
-    Color boxBg = hovered && !disabled ? Color::Hex(0x1E293BFF) : Color::Hex(0x0F172AFF); // Slate-800 / Slate-900
+    const auto pal = GetThemePalette(theme);
+    Color boxBg = hovered && !disabled
+        ? (theme == ThemeMode::Dark ? Color::Hex(0x1E293BFF) : Color::Hex(0xFFFFFFFF))
+        : (theme == ThemeMode::Dark ? Color::Hex(0x0F172AFF) : Color::Hex(0xF8FAFCFF));
     Color boxBorder;
     float strokeW = m.strokeWidth;
 
     if (focused && !disabled) {
-        boxBorder = (opts.variant == UiVariant::Default) ? Color::Hex(0x38BDF8FF) : GetVariantColors(opts.variant).bg;
+        boxBorder = (opts.variant == UiVariant::Default) ? pal.accent : GetVariantColors(opts.variant, theme).bg;
         strokeW += 0.5f;
     } else if (hovered && !disabled) {
-        boxBorder = Color::Hex(0x64748BFF); // Slate-500
+        boxBorder = theme == ThemeMode::Dark ? Color::Hex(0x64748BFF) : Color::Hex(0x94A3B8FF);
     } else {
-        boxBorder = (opts.variant == UiVariant::Default) ? Color::Hex(0x334155FF) : GetVariantColors(opts.variant).border; // Slate-700
+        boxBorder = (opts.variant == UiVariant::Default) ? pal.inputBorder : GetVariantColors(opts.variant, theme).border;
     }
 
-    Color textCol = Color::Hex(0xF1F5F9FF);        // Slate-100
-    Color placeholderCol = Color::Hex(0x64748BFF); // Slate-500
-    Color unitCol = Color::Hex(0x94A3B8FF);        // Slate-400
-    Color labelCol = Color::Hex(0xCBD5E1FF);       // Slate-300
-    Color descCol = Color::Hex(0x94A3B8FF);        // Slate-400
+    Color textCol = pal.textPrimary;
+    Color placeholderCol = pal.textSecondary;
+    Color unitCol = pal.textSecondary;
+    Color labelCol = pal.textPrimary;
+    Color descCol = pal.textSecondary;
 
     if (disabled) {
         boxBg = boxBg.WithAlphaF(0.40f);

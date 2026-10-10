@@ -77,7 +77,8 @@ public:
         UiSize size,
         bool hovered = false,
         bool pressed = false,
-        bool disabled = false
+        bool disabled = false,
+        ThemeMode theme = ThemeMode::Dark
     );
 };
 

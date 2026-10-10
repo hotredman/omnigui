@@ -1,8 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
+#include <initializer_list>
+#include <span>
+#include <string_view>
+#include <vector>
 
 namespace kvant {
 
@@ -287,6 +292,97 @@ struct Dp {
     [[nodiscard]] inline float ToPixels(float scaleFactor) const noexcept {
         return std::round(value * scaleFactor);
     }
+};
+
+/// Non-allocating view wrapper for candidate text labels used in dynamic layout sizing.
+class LabelVariants {
+public:
+    constexpr LabelVariants() noexcept = default;
+
+    constexpr LabelVariants(std::initializer_list<std::string_view> list) noexcept {
+        const size_t n = std::min(list.size(), m_inline.size());
+        auto it = list.begin();
+        for (size_t i = 0; i < n; ++i, ++it) {
+            m_inline[i] = *it;
+        }
+        m_count = n;
+        m_span = std::span<const std::string_view>(m_inline.data(), m_count);
+    }
+
+    constexpr LabelVariants(std::span<const std::string_view> s) noexcept
+        : m_span(s)
+    {
+    }
+
+    template <size_t N>
+    constexpr LabelVariants(const std::array<std::string_view, N>& arr) noexcept
+        : m_span(arr.data(), arr.size())
+    {
+    }
+
+    LabelVariants(const std::vector<std::string_view>& vec) noexcept
+        : m_span(vec.data(), vec.size())
+    {
+    }
+
+    constexpr LabelVariants(const LabelVariants& other) noexcept
+        : m_inline(other.m_inline)
+        , m_count(other.m_count)
+    {
+        if (other.m_span.data() == other.m_inline.data()) {
+            m_span = std::span<const std::string_view>(m_inline.data(), m_count);
+        } else {
+            m_span = other.m_span;
+        }
+    }
+
+    constexpr LabelVariants& operator=(const LabelVariants& other) noexcept {
+        if (this != &other) {
+            m_inline = other.m_inline;
+            m_count = other.m_count;
+            if (other.m_span.data() == other.m_inline.data()) {
+                m_span = std::span<const std::string_view>(m_inline.data(), m_count);
+            } else {
+                m_span = other.m_span;
+            }
+        }
+        return *this;
+    }
+
+    constexpr LabelVariants(LabelVariants&& other) noexcept
+        : m_inline(other.m_inline)
+        , m_count(other.m_count)
+    {
+        if (other.m_span.data() == other.m_inline.data()) {
+            m_span = std::span<const std::string_view>(m_inline.data(), m_count);
+        } else {
+            m_span = other.m_span;
+        }
+    }
+
+    constexpr LabelVariants& operator=(LabelVariants&& other) noexcept {
+        if (this != &other) {
+            m_inline = other.m_inline;
+            m_count = other.m_count;
+            if (other.m_span.data() == other.m_inline.data()) {
+                m_span = std::span<const std::string_view>(m_inline.data(), m_count);
+            } else {
+                m_span = other.m_span;
+            }
+        }
+        return *this;
+    }
+
+    [[nodiscard]] constexpr auto begin() const noexcept { return m_span.begin(); }
+    [[nodiscard]] constexpr auto end() const noexcept { return m_span.end(); }
+    [[nodiscard]] constexpr bool empty() const noexcept { return m_span.empty(); }
+    [[nodiscard]] constexpr size_t size() const noexcept { return m_span.size(); }
+    [[nodiscard]] constexpr std::span<const std::string_view> span() const noexcept { return m_span; }
+
+private:
+    std::span<const std::string_view> m_span{};
+    std::array<std::string_view, 8> m_inline{};
+    size_t m_count{0};
 };
 
 namespace literals {

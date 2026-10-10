@@ -180,6 +180,57 @@ struct ScrollbarMetrics {
     return { 8.0f, 28.0f, 4.0f, 40.0f, 3.0f, 14.0f };
 }
 
+/// Universal color theme modes.
+enum class ThemeMode : uint8_t {
+    Dark,
+    Light
+};
+
+/// Color palette definition for an entire theme.
+struct ThemePalette {
+    Color background;       ///< Main viewport clear color (#0B0F19 dark / #F1F5F9 light)
+    Color surface;          ///< Card / container fill (#1E293B dark / #FFFFFF light)
+    Color surfaceElevated;  ///< Dropdowns, floating popups, toolbars (#1E293B dark / #FFFFFF light)
+    Color border;           ///< Card / container border (#334155 dark / #E2E8F0 light)
+    Color borderSubtle;     ///< Subtle separators and dividers (#33415580 dark / #E2E8F0FF light)
+    Color textPrimary;      ///< High-contrast primary text (#F8FAFC dark / #0F172A light)
+    Color textSecondary;    ///< Medium-contrast muted text (#94A3B8 dark / #64748B light)
+    Color inputBackground;  ///< Textbox / input slot fill (#0F172A dark / #F8FAFC light)
+    Color inputBorder;      ///< Textbox idle border (#334155 dark / #CBD5E1 light)
+    Color accent;           ///< Primary brand / highlight color (#38BDF8 Sky-400 / #0284C7 Sky-600)
+};
+
+/// Resolves complete color palette tokens for a theme mode.
+[[nodiscard]] constexpr ThemePalette GetThemePalette(ThemeMode mode) noexcept {
+    if (mode == ThemeMode::Light) {
+        return {
+            .background       = Color::Hex(0xF1F5F9FF), // Slate-100
+            .surface          = Color::Hex(0xFFFFFFFF), // Pure white
+            .surfaceElevated  = Color::Hex(0xFFFFFFFF), // Pure white
+            .border           = Color::Hex(0xE2E8F0FF), // Slate-200
+            .borderSubtle     = Color::Hex(0xE2E8F0FF), // Slate-200
+            .textPrimary      = Color::Hex(0x0F172AFF), // Slate-900 (crisp dark text)
+            .textSecondary    = Color::Hex(0x64748BFF), // Slate-500 (muted text)
+            .inputBackground  = Color::Hex(0xF8FAFCFF), // Slate-50
+            .inputBorder      = Color::Hex(0xCBD5E1FF), // Slate-300
+            .accent           = Color::Hex(0x0284C7FF)  // Sky-600
+        };
+    }
+    // Dark mode (default)
+    return {
+        .background       = Color::Hex(0x0B0F19FF), // Slate-950
+        .surface          = Color::Hex(0x1E293BFF), // Slate-800
+        .surfaceElevated  = Color::Hex(0x1E293BFF), // Slate-800
+        .border           = Color::Hex(0x334155FF), // Slate-700
+        .borderSubtle     = Color::Hex(0x33415580), // Slate-700 / 50%
+        .textPrimary      = Color::Hex(0xF8FAFCFF), // Slate-50 (crisp white text)
+        .textSecondary    = Color::Hex(0x94A3B8FF), // Slate-400 (muted text)
+        .inputBackground  = Color::Hex(0x0F172AFF), // Slate-900
+        .inputBorder      = Color::Hex(0x334155FF), // Slate-700
+        .accent           = Color::Hex(0x38BDF8FF)  // Sky-400
+    };
+}
+
 /// Color set for rendering a widget variant across its interaction states.
 struct VariantColors {
     Color bg;
@@ -190,8 +241,88 @@ struct VariantColors {
     float borderWidth{0.0f};
 };
 
-/// Resolves colors for a semantic variant.
-[[nodiscard]] constexpr VariantColors GetVariantColors(UiVariant variant) noexcept {
+/// Resolves colors for a semantic variant across light/dark themes.
+[[nodiscard]] constexpr VariantColors GetVariantColors(UiVariant variant, ThemeMode theme = ThemeMode::Dark) noexcept {
+    if (theme == ThemeMode::Light) {
+        switch (variant) {
+            case UiVariant::Primary:
+                return {
+                    Color::Hex(0x2563EBFF), // Blue-600
+                    Color::Hex(0x3B82F6FF), // Blue-500
+                    Color::Hex(0x1D4ED8FF), // Blue-700
+                    Color::Hex(0xFFFFFFFF),
+                    Color::Hex(0x00000000),
+                    0.0f
+                };
+            case UiVariant::Success:
+                return {
+                    Color::Hex(0x059669FF), // Emerald-600
+                    Color::Hex(0x10B981FF), // Emerald-500
+                    Color::Hex(0x047857FF), // Emerald-700
+                    Color::Hex(0xFFFFFFFF),
+                    Color::Hex(0x00000000),
+                    0.0f
+                };
+            case UiVariant::Warning:
+                return {
+                    Color::Hex(0xD97706FF), // Amber-600
+                    Color::Hex(0xF59E0BFF), // Amber-500
+                    Color::Hex(0xB45309FF), // Amber-700
+                    Color::Hex(0xFFFFFFFF),
+                    Color::Hex(0x00000000),
+                    0.0f
+                };
+            case UiVariant::Danger:
+                return {
+                    Color::Hex(0xDC2626FF), // Red-600
+                    Color::Hex(0xEF4444FF), // Red-500
+                    Color::Hex(0xB91C1CFF), // Red-700
+                    Color::Hex(0xFFFFFFFF),
+                    Color::Hex(0x00000000),
+                    0.0f
+                };
+            case UiVariant::Info:
+                return {
+                    Color::Hex(0x0891B2FF), // Cyan-600
+                    Color::Hex(0x06B6D4FF), // Cyan-500
+                    Color::Hex(0x0E7490FF), // Cyan-700
+                    Color::Hex(0xFFFFFFFF),
+                    Color::Hex(0x00000000),
+                    0.0f
+                };
+            case UiVariant::Ghost:
+                return {
+                    Color::Hex(0x00000000),
+                    Color::Hex(0x0F172A0D), // 5% black hover
+                    Color::Hex(0x0F172A1A), // 10% black active
+                    Color::Hex(0x334155FF), // Slate-700
+                    Color::Hex(0x00000000),
+                    0.0f
+                };
+            case UiVariant::Muted:
+                return {
+                    Color::Hex(0x00000000),
+                    Color::Hex(0x00000000),
+                    Color::Hex(0x00000000),
+                    Color::Hex(0x64748BFF), // Slate-500
+                    Color::Hex(0x00000000),
+                    0.0f
+                };
+            case UiVariant::Default:
+            case UiVariant::Secondary:
+            default:
+                return {
+                    Color::Hex(0xE2E8F0FF), // Slate-200
+                    Color::Hex(0xCBD5E1FF), // Slate-300
+                    Color::Hex(0x94A3B8FF), // Slate-400
+                    Color::Hex(0x0F172AFF), // Slate-900
+                    Color::Hex(0xCBD5E1FF), // Slate-300
+                    1.0f
+                };
+        }
+    }
+
+    // ThemeMode::Dark (default)
     switch (variant) {
         case UiVariant::Primary:
             return {

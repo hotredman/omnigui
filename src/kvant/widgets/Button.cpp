@@ -41,33 +41,44 @@ Vec2 Button::Measure(const ButtonOptions& opts, UiSize size, ICanvas* canvas) {
     const bool hasIcon = opts.icon.IsValid();
     const bool hasLabel = !opts.label.empty();
 
-    // Icon-only button defaults to square
-    if (hasIcon && !hasLabel) {
+    // Icon-only button with no label variants defaults to square
+    if (hasIcon && !hasLabel && opts.labelVariants.empty()) {
         return {m.defaultHeight, m.defaultHeight};
+    }
+
+    float maxTextW = 0.0f;
+    if (hasLabel) {
+        if (canvas) {
+            maxTextW = canvas->MeasureText(opts.label, m.fontSize).x;
+        } else {
+            maxTextW = static_cast<float>(opts.label.length()) * (m.fontSize * 0.62f);
+        }
+    }
+
+    // Evaluate all candidate label variants to ensure stable sizing across state changes
+    for (std::string_view var : opts.labelVariants) {
+        if (var.empty()) continue;
+        float varW = 0.0f;
+        if (canvas) {
+            varW = canvas->MeasureText(var, m.fontSize).x;
+        } else {
+            varW = static_cast<float>(var.length()) * (m.fontSize * 0.62f);
+        }
+        maxTextW = std::max(maxTextW, varW);
     }
 
     float contentW = 0.0f;
     float contentH = m.defaultHeight;
-    if (hasIcon && hasLabel) {
-        float textW = 0.0f;
-        if (canvas) {
-            textW = canvas->MeasureText(opts.label, m.fontSize).x;
-        } else {
-            textW = static_cast<float>(opts.label.length()) * (m.fontSize * 0.62f);
-        }
+    if (hasIcon && maxTextW > 0.0f) {
         if (opts.iconPlacement == Placement::Top || opts.iconPlacement == Placement::Bottom) {
-            contentW = std::max(m.iconSize, textW);
+            contentW = std::max(m.iconSize, maxTextW);
             contentH = std::max(m.defaultHeight, m.iconSize + 4.0f + m.fontSize + m.paddingY * 2.0f);
         } else {
             const float gap = 8.0f;
-            contentW = m.iconSize + gap + textW;
+            contentW = m.iconSize + gap + maxTextW;
         }
-    } else if (hasLabel) {
-        if (canvas) {
-            contentW = canvas->MeasureText(opts.label, m.fontSize).x;
-        } else {
-            contentW = static_cast<float>(opts.label.length()) * (m.fontSize * 0.62f);
-        }
+    } else if (maxTextW > 0.0f) {
+        contentW = maxTextW;
     }
 
     const float totalW = contentW + m.paddingX * 2.0f;
@@ -81,10 +92,11 @@ void Button::Render(
     UiSize size,
     bool hovered,
     bool pressed,
-    bool disabled
+    bool disabled,
+    ThemeMode theme
 ) {
     const ComponentMetrics m = GetComponentMetrics(size);
-    const VariantColors colors = GetVariantColors(opts.variant);
+    const VariantColors colors = GetVariantColors(opts.variant, theme);
 
     Color bg = colors.bg;
     Color textCol = colors.text;
@@ -97,6 +109,12 @@ void Button::Render(
         borderCol = borderCol.WithAlphaF(0.40f);
     } else if (pressed) {
         bg = colors.bgActive;
+    } else if (opts.active) {
+        bg = hovered ? colors.bgHover : colors.bgActive;
+        if (opts.variant == UiVariant::Ghost) {
+            borderCol = colors.text.WithAlphaF(0.35f);
+            borderW = std::max(borderW, 1.0f);
+        }
     } else if (hovered) {
         bg = colors.bgHover;
     }
@@ -143,7 +161,9 @@ void Button::Render(
             const float totalContentW = m.iconSize + gap + textW;
             const float centeredStartX = bounds.x + (bounds.w - totalContentW) * 0.5f;
             const float minStartX = bounds.x + m.paddingX;
-            const float startX = (bounds.w >= totalContentW + m.paddingX * 2.0f) ? centeredStartX : minStartX;
+            const float startX = (!opts.labelVariants.empty() || bounds.w < totalContentW + m.paddingX * 2.0f)
+                ? minStartX
+                : centeredStartX;
             const float iconY = bounds.y + (bounds.h - m.iconSize) * 0.5f;
             const Rect textRect(startX, bounds.y, textW, bounds.h);
             canvas.DrawTextBox(opts.label, textRect, m.fontSize, textCol, 0.0f, 0.5f);
@@ -154,7 +174,9 @@ void Button::Render(
             const float totalContentW = m.iconSize + gap + textW;
             const float centeredStartX = bounds.x + (bounds.w - totalContentW) * 0.5f;
             const float minStartX = bounds.x + m.paddingX;
-            const float startX = (bounds.w >= totalContentW + m.paddingX * 2.0f) ? centeredStartX : minStartX;
+            const float startX = (!opts.labelVariants.empty() || bounds.w < totalContentW + m.paddingX * 2.0f)
+                ? minStartX
+                : centeredStartX;
             const float iconY = bounds.y + (bounds.h - m.iconSize) * 0.5f;
             opts.icon.Draw(canvas, Rect(startX, iconY, m.iconSize, m.iconSize), textCol);
             const Rect textRect(startX + m.iconSize + gap, bounds.y, textW, bounds.h);

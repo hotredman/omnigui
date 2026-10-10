@@ -160,7 +160,8 @@ void Checkbox::Render(
     UiSize size,
     bool hovered,
     bool /*pressed*/,
-    bool disabled
+    bool disabled,
+    ThemeMode theme
 ) {
     if (bounds.w <= 0.0f || bounds.h <= 0.0f) {
         return;
@@ -263,6 +264,7 @@ void Checkbox::Render(
     }
 
     // Determine colors
+    const auto pal = GetThemePalette(theme);
     Color boxFill;
     Color boxStroke;
     float strokeWidth = 1.5f;
@@ -271,16 +273,16 @@ void Checkbox::Render(
     const bool isActive = checked || opts.indeterminate;
 
     if (isActive) {
-        const VariantColors v = GetVariantColors(opts.variant);
+        const VariantColors v = GetVariantColors(opts.variant, theme);
         boxFill = hovered && !disabled ? v.bgHover : v.bg;
         boxStroke = boxFill;
     } else {
-        boxFill = hovered && !disabled ? Color::Hex(0x334155FF) : Color::Hex(0x1E293BFF); // Slate-700 / Slate-800
-        boxStroke = hovered && !disabled ? Color::Hex(0x64748BFF) : Color::Hex(0x475569FF); // Slate-500 / Slate-600
+        boxFill = hovered && !disabled ? (theme == ThemeMode::Dark ? Color::Hex(0x334155FF) : Color::Hex(0xFFFFFFFF)) : (theme == ThemeMode::Dark ? Color::Hex(0x1E293BFF) : Color::Hex(0xF8FAFCFF));
+        boxStroke = hovered && !disabled ? (theme == ThemeMode::Dark ? Color::Hex(0x64748BFF) : Color::Hex(0x94A3B8FF)) : (theme == ThemeMode::Dark ? Color::Hex(0x475569FF) : Color::Hex(0xCBD5E1FF));
     }
 
-    Color textCol = Color::Hex(0xE2E8F0FF); // Slate-200
-    Color descCol = Color::Hex(0x94A3B8FF); // Slate-400
+    Color textCol = pal.textPrimary;
+    Color descCol = pal.textSecondary;
 
     if (disabled) {
         boxFill = boxFill.WithAlphaF(0.40f);

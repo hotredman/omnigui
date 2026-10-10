@@ -1861,6 +1861,8 @@ void TestToolbarWidgetWorkflow() {
 
     CHECK(!btnNew.clicked);
     CHECK(!btnSave.clicked);
+    CHECK(ui.GetPrevFrameBounds(btnNew.id).w > 0.0f);
+    CHECK(ui.GetPrevFrameBounds(btnNew.id).h > 0.0f);
 
     // Frame 2: Hover over "New" button (x ~ 25.0f, y ~ 20.0f)
     ui.OnMouseMove({25.0f, 20.0f});
@@ -1894,6 +1896,47 @@ void TestToolbarWidgetWorkflow() {
     ui.EndFrame(canvas);
 }
 
+void TestLabelVariantsStableSizing() {
+    using namespace kvant;
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    bool state = false;
+    Response btn;
+
+    auto render = [&]() {
+        if (auto row = ui.Row({.gap = 8.0f})) {
+            btn = ui.Button(state ? "VSync: ON" : "VSync: OFF", {
+                .labelVariants = {"VSync: ON", "VSync: OFF"}
+            });
+        }
+    };
+
+    // Frame 1: OFF state
+    state = false;
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+    const Rect boundsOff = ui.GetPrevFrameBounds(btn.id);
+
+    // Frame 2: ON state
+    state = true;
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    render();
+    ui.EndFrame(canvas);
+    const Rect boundsOn = ui.GetPrevFrameBounds(btn.id);
+
+    // Bounds must be identical across state transitions
+    CHECK(boundsOff.w > 0.0f);
+    CHECK(boundsOn.w > 0.0f);
+    CHECK_NEAR(boundsOff.w, boundsOn.w, 0.001f);
+    CHECK_NEAR(boundsOff.h, boundsOn.h, 0.001f);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -1920,6 +1963,7 @@ int main() {
     TestDirtyRectDamageTracking();
     TestTabBarWidgetWorkflow();
     TestToolbarWidgetWorkflow();
+    TestLabelVariantsStableSizing();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

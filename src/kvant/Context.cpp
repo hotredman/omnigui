@@ -63,6 +63,7 @@ void Context::BeginFrame(Vec2 viewportSize, float dpiScale) {
     m_root->heightMode = SizeMode::Stretch;
     m_root->id = Id{0xFFFF'FFFF'FFFF'FFFF};
     m_root->uiSize = UiSize::Md;
+    m_root->themeMode = m_themeMode;
     m_root->disabled = false;
 
     m_containerStack.push_back(m_root);
@@ -72,6 +73,7 @@ Node* Context::CreateNode(NodeType type, Id id) {
     Node* node = m_arena.Allocate<Node>();
     node->type = type;
     node->id = id;
+    node->themeMode = m_themeMode;
 
     if (!m_containerStack.empty()) {
         m_containerStack.back()->AddChild(node);
@@ -364,8 +366,9 @@ CardScope Context::Card(std::string_view title, CardOptions opts, std::source_lo
     outerNode->widthMode = opts.widthMode;
     outerNode->heightMode = opts.heightMode;
     outerNode->padding = opts.padding;
-    outerNode->backgroundColor = opts.backgroundColor;
-    outerNode->borderColor = opts.borderColor;
+    const auto pal = GetThemePalette();
+    outerNode->backgroundColor = (opts.backgroundColor.a > 0) ? opts.backgroundColor : pal.surface;
+    outerNode->borderColor = (opts.borderColor.a > 0) ? opts.borderColor : pal.border;
     outerNode->borderWidth = opts.borderWidth;
     outerNode->cornerRadius = opts.cornerRadius;
     outerNode->clipChildren = opts.clipChildren;
@@ -1318,7 +1321,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             node->text,
             node->textOpts,
             node->hovered,
-            node->disabled
+            node->disabled,
+            node->themeMode
         );
     } else if (node->type == NodeType::Button) {
         Button::Render(
@@ -1328,7 +1332,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             node->uiSize,
             node->hovered,
             node->pressed,
-            node->disabled
+            node->disabled,
+            node->themeMode
         );
     } else if (node->type == NodeType::Switch) {
         Switch::Render(
@@ -1340,7 +1345,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             node->uiSize,
             node->hovered,
             node->pressed,
-            node->disabled
+            node->disabled,
+            node->themeMode
         );
     } else if (node->type == NodeType::Checkbox) {
         Checkbox::Render(
@@ -1352,7 +1358,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             node->uiSize,
             node->hovered,
             node->pressed,
-            node->disabled
+            node->disabled,
+            node->themeMode
         );
     } else if (node->type == NodeType::InputField) {
         InputField::Render(
@@ -1367,7 +1374,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             node->cursor,
             node->disabled,
             node->cursorVisible,
-            node->cursorWidth
+            node->cursorWidth,
+            node->themeMode
         );
     } else if (node->type == NodeType::Select) {
         Select::Render(
@@ -1379,7 +1387,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             node->uiSize,
             node->hovered,
             node->focused,
-            node->disabled
+            node->disabled,
+            node->themeMode
         );
     } else if (node->type == NodeType::TabItem) {
         TabBar::RenderTab(
@@ -1391,13 +1400,15 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             node->tabActive,
             node->hovered,
             node->pressed,
-            node->disabled
+            node->disabled,
+            node->themeMode
         );
     } else if (node->type == NodeType::Separator) {
         Toolbar::RenderSeparator(
             canvas,
             node->computedRect,
-            node->borderColor.a > 0 ? node->borderColor : Color::Hex(0x334155FF)
+            node->borderColor,
+            node->themeMode
         );
     }
 
@@ -1449,6 +1460,15 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
 
             canvas.DrawRoundRect(thumbRect, m.cornerRadius, thumbCol);
         }
+    }
+}
+
+void Context::SetThemeMode(ThemeMode mode) noexcept {
+    if (m_themeMode != mode) {
+        m_themeMode = mode;
+        const auto pal = kvant::GetThemePalette(mode);
+        m_clearColor = pal.background;
+        InvalidateAll();
     }
 }
 

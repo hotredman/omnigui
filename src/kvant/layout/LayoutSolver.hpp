@@ -65,7 +65,10 @@ private:
                     break;
                 }
                 case NodeType::Separator: {
-                    node->intrinsicSize = {node->fixedWidth > 0.0f ? node->fixedWidth : 10.0f, 0.0f};
+                    node->intrinsicSize = {
+                        node->fixedWidth > 0.0f ? node->fixedWidth : 10.0f,
+                        node->fixedHeight > 0.0f ? node->fixedHeight : 20.0f
+                    };
                     break;
                 }
                 default: {

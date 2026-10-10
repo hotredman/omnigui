@@ -59,13 +59,14 @@ void Text::Render(
     std::string_view label,
     const TextOptions& opts,
     bool hovered,
-    bool disabled
+    bool disabled,
+    ThemeMode theme
 ) {
     if (label.empty() || bounds.w <= 0.0f || bounds.h <= 0.0f) {
         return;
     }
     const TypographyMetrics m = GetTypographyMetrics(opts.role);
-    Color color = GetVariantColors(opts.variant).text;
+    Color color = GetVariantColors(opts.variant, theme).text;
 
     if (disabled) {
         color = color.WithAlphaF(0.40f);

@@ -100,8 +100,8 @@ struct CardOptions {
     float gap{12.0f};           ///< Horizontal gap between cells in inner grid
     float runGap{12.0f};        ///< Vertical gap between wrapped cell rows in inner grid
     Padding padding{Padding::All(16.0f)};
-    Color backgroundColor{Color::Hex(0x1E293BFF)}; // Slate-800
-    Color borderColor{Color::Hex(0x334155FF)};     // Slate-700
+    Color backgroundColor{Color::Transparent()};
+    Color borderColor{Color::Transparent()};
     float borderWidth{1.0f};
     float cornerRadius{8.0f};
     bool clipChildren{true};    ///< Default true: clip children to prevent content from bleeding outside card

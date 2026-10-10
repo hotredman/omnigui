@@ -96,7 +96,8 @@ public:
         size_t cursor = 0,
         bool disabled = false,
         bool cursorVisible = true,
-        float cursorWidth = 1.5f
+        float cursorWidth = 1.5f,
+        ThemeMode theme = ThemeMode::Dark
     );
 };
 

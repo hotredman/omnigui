@@ -313,9 +313,10 @@ Response Select::Run(
     // Register overlay render callback if popup is open
     if (isOpen) {
         const Rect currentPopupRect = ctx.GetOpenPopupRect();
+        const ThemeMode theme = ctx.GetThemeMode();
         std::vector<std::string_view> itemsVec(items.begin(), items.end());
-        ctx.RegisterOverlay([currentPopupRect, itemsVec = std::move(itemsVec), currIndex, hoveredItem, opts, activeSize](ICanvas& canvas) {
-            Select::RenderPopup(canvas, currentPopupRect, itemsVec, currIndex, hoveredItem, opts, activeSize);
+        ctx.RegisterOverlay([currentPopupRect, itemsVec = std::move(itemsVec), currIndex, hoveredItem, opts, activeSize, theme](ICanvas& canvas) {
+            Select::RenderPopup(canvas, currentPopupRect, itemsVec, currIndex, hoveredItem, opts, activeSize, theme);
         });
     }
 
@@ -352,7 +353,8 @@ void Select::Render(
     UiSize size,
     bool hovered,
     bool open,
-    bool disabled
+    bool disabled,
+    ThemeMode theme
 ) {
     if (bounds.w <= 0.0f || bounds.h <= 0.0f) {
         return;
@@ -426,24 +428,27 @@ void Select::Render(
     }
 
     // Determine colors
-    Color boxBg = hovered && !disabled ? Color::Hex(0x1E293BFF) : Color::Hex(0x0F172AFF); // Slate-800 / Slate-900
+    const auto pal = GetThemePalette(theme);
+    Color boxBg = hovered && !disabled
+        ? (theme == ThemeMode::Dark ? Color::Hex(0x1E293BFF) : Color::Hex(0xFFFFFFFF))
+        : (theme == ThemeMode::Dark ? Color::Hex(0x0F172AFF) : Color::Hex(0xF8FAFCFF));
     Color boxBorder;
     float strokeW = m.strokeWidth;
 
     if (open && !disabled) {
-        boxBorder = (opts.variant == UiVariant::Default) ? Color::Hex(0x38BDF8FF) : GetVariantColors(opts.variant).bg;
+        boxBorder = (opts.variant == UiVariant::Default) ? pal.accent : GetVariantColors(opts.variant, theme).bg;
         strokeW += 0.5f;
     } else if (hovered && !disabled) {
-        boxBorder = Color::Hex(0x64748BFF); // Slate-500
+        boxBorder = theme == ThemeMode::Dark ? Color::Hex(0x64748BFF) : Color::Hex(0x94A3B8FF);
     } else {
-        boxBorder = (opts.variant == UiVariant::Default) ? Color::Hex(0x334155FF) : GetVariantColors(opts.variant).border; // Slate-700
+        boxBorder = (opts.variant == UiVariant::Default) ? pal.inputBorder : GetVariantColors(opts.variant, theme).border;
     }
 
-    Color textCol = Color::Hex(0xF1F5F9FF);        // Slate-100
-    Color placeholderCol = Color::Hex(0x64748BFF); // Slate-500
-    Color chevronCol = open ? Color::Hex(0x38BDF8FF) : Color::Hex(0x94A3B8FF); // Sky-400 / Slate-400
-    Color labelCol = Color::Hex(0xCBD5E1FF);       // Slate-300
-    Color descCol = Color::Hex(0x94A3B8FF);        // Slate-400
+    Color textCol = pal.textPrimary;
+    Color placeholderCol = pal.textSecondary;
+    Color chevronCol = open ? pal.accent : pal.textSecondary;
+    Color labelCol = pal.textPrimary;
+    Color descCol = pal.textSecondary;
 
     if (disabled) {
         boxBg = boxBg.WithAlphaF(0.40f);
@@ -502,18 +507,20 @@ void Select::RenderPopup(
     size_t selectedIndex,
     int hoveredIndex,
     const SelectOptions& opts,
-    UiSize size
+    UiSize size,
+    ThemeMode theme
 ) {
     if (popupRect.w <= 0.0f || popupRect.h <= 0.0f || items.empty()) {
         return;
     }
 
     const SelectMetrics m = GetSelectMetrics(size);
+    const auto pal = GetThemePalette(theme);
 
-    // Dropdown container styling: dark card with border and subtle shadow
-    const Color popupBg = Color::Hex(0x0F172AFF); // Slate-900
-    const Color popupBorder = Color::Hex(0x334155FF); // Slate-700
-    const Color shadowCol = Color::Hex(0x00000066);
+    // Dropdown container styling: card with border and subtle shadow
+    const Color popupBg = pal.surfaceElevated;
+    const Color popupBorder = pal.border;
+    const Color shadowCol = Color::Hex(0x00000033);
 
     // Outer subtle drop shadow
     canvas.DrawRoundRect(Rect(popupRect.x, popupRect.y + 2.0f, popupRect.w, popupRect.h), m.cornerRadius + 1.0f, shadowCol);
@@ -535,19 +542,23 @@ void Select::RenderPopup(
         const bool isHovered = (static_cast<int>(i) == hoveredIndex);
 
         if (isSelected) {
-            const Color itemBg = isHovered ? Color::Hex(0x075985CC) : Color::Hex(0x0C4A6ECC); // Sky-900 / Sky-950
+            const Color itemBg = theme == ThemeMode::Dark
+                ? (isHovered ? Color::Hex(0x075985CC) : Color::Hex(0x0C4A6ECC))
+                : (isHovered ? Color::Hex(0xBAE6FDFF) : Color::Hex(0xE0F2FEFF));
             canvas.DrawRoundRect(itemRect, 4.0f, itemBg);
         } else if (isHovered) {
-            const Color itemBg = Color::Hex(0x1E293BFF); // Slate-800
+            const Color itemBg = theme == ThemeMode::Dark ? Color::Hex(0x1E293BFF) : Color::Hex(0xF1F5F9FF);
             canvas.DrawRoundRect(itemRect, 4.0f, itemBg);
         }
 
         // Colors for item text and checkmark
-        Color itemTextCol = Color::Hex(0xCBD5E1FF); // Slate-300
+        Color itemTextCol = pal.textPrimary;
         if (isSelected) {
-            itemTextCol = isHovered ? Color::Hex(0xFFFFFFFF) : Color::Hex(0x38BDF8FF); // White / Sky-400
+            itemTextCol = theme == ThemeMode::Dark
+                ? (isHovered ? Color::Hex(0xFFFFFFFF) : Color::Hex(0x38BDF8FF))
+                : (isHovered ? Color::Hex(0x0284C7FF) : Color::Hex(0x0369A1FF));
         } else if (isHovered) {
-            itemTextCol = Color::Hex(0xFFFFFFFF); // White
+            itemTextCol = pal.textPrimary;
         }
 
         // Draw checkmark on right side if selected

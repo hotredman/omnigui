@@ -91,6 +91,7 @@ struct Node {
 
     // Ambient state and widget configuration
     UiSize uiSize{UiSize::Md};
+    ThemeMode themeMode{ThemeMode::Dark};
     bool disabled{false};
     bool hovered{false};
     bool pressed{false};

@@ -124,9 +124,11 @@ void TabBar::RenderTab(
     bool active,
     bool hovered,
     bool pressed,
-    bool disabled
+    bool disabled,
+    ThemeMode theme
 ) {
     const ComponentMetrics m = GetComponentMetrics(size);
+    const auto pal = GetThemePalette(theme);
 
     if (opts.style == TabBarStyle::Underline) {
         // Horizontal baseline separator spanning across tabs
@@ -134,7 +136,7 @@ void TabBar::RenderTab(
             canvas.DrawLine(
                 Vec2(bounds.x, bounds.Bottom() - 0.5f),
                 Vec2(bounds.Right(), bounds.Bottom() - 0.5f),
-                Color::Hex(0x33415580),
+                pal.borderSubtle,
                 1.0f
             );
         }
@@ -142,7 +144,7 @@ void TabBar::RenderTab(
         // Hover backdrop highlight
         if (hovered && !active && !disabled) {
             const Rect hoverR(bounds.x, bounds.y + 4.0f, bounds.w, bounds.h - 8.0f);
-            canvas.DrawRoundRect(hoverR, 4.0f, Color::Hex(0x33415540));
+            canvas.DrawRoundRect(hoverR, 4.0f, theme == ThemeMode::Dark ? Color::Hex(0x33415540) : Color::Hex(0xE2E8F080));
         }
 
         // Bottom active underline accent
@@ -151,7 +153,7 @@ void TabBar::RenderTab(
             const float linePad = 2.0f;
             const Color lineCol = (opts.activeColor.a > 0)
                 ? opts.activeColor
-                : (item.variant != UiVariant::Default ? GetVariantColors(item.variant).bg : Color::Hex(0x38BDF8FF));
+                : (item.variant != UiVariant::Default ? GetVariantColors(item.variant, theme).bg : pal.accent);
             const Rect lineR(bounds.x + linePad, bounds.Bottom() - lineH, std::max(0.0f, bounds.w - linePad * 2.0f), lineH);
             canvas.DrawRoundRect(lineR, 1.5f, lineCol);
         }
@@ -160,23 +162,23 @@ void TabBar::RenderTab(
         if (active) {
             const Color pillCol = (opts.activeColor.a > 0)
                 ? opts.activeColor
-                : (item.variant != UiVariant::Default ? GetVariantColors(item.variant).bgActive : Color::Hex(0x334155FF));
+                : (item.variant != UiVariant::Default ? GetVariantColors(item.variant, theme).bgActive : (theme == ThemeMode::Dark ? Color::Hex(0x334155FF) : Color::Hex(0xE2E8F0FF)));
             canvas.DrawRoundRect(bounds, 6.0f, pillCol);
         } else if (hovered && !disabled) {
-            canvas.DrawRoundRect(bounds, 6.0f, Color::Hex(0x1E293B80));
+            canvas.DrawRoundRect(bounds, 6.0f, theme == ThemeMode::Dark ? Color::Hex(0x1E293B80) : Color::Hex(0xF1F5F980));
         }
     }
 
     // Determine foreground colors for text and icon
     Color fgCol;
     if (disabled) {
-        fgCol = Color::Hex(0x64748B80);
+        fgCol = theme == ThemeMode::Dark ? Color::Hex(0x64748B80) : Color::Hex(0x94A3B880);
     } else if (active) {
-        fgCol = Color::Hex(0xF8FAFCFF);
+        fgCol = pal.textPrimary;
     } else if (hovered) {
-        fgCol = Color::Hex(0xE2E8F0FF);
+        fgCol = theme == ThemeMode::Dark ? Color::Hex(0xE2E8F0FF) : Color::Hex(0x334155FF);
     } else {
-        fgCol = Color::Hex(0x94A3B8FF);
+        fgCol = pal.textSecondary;
     }
 
     // Measure components to center content within tab bounds

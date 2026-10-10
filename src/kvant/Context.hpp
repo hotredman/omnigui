@@ -78,6 +78,18 @@ public:
     /// Returns whether dirty damage rect tracking is currently enabled.
     [[nodiscard]] bool IsDirtyRectEnabled() const noexcept { return m_dirtyRectEnabled; }
 
+    /// Sets the active color theme mode (Dark or Light) and adapts clear color & palette.
+    void SetThemeMode(ThemeMode mode) noexcept;
+
+    /// Returns the current theme mode.
+    [[nodiscard]] ThemeMode GetThemeMode() const noexcept { return m_themeMode; }
+
+    /// Returns true if dark mode is active.
+    [[nodiscard]] bool IsDarkMode() const noexcept { return m_themeMode == ThemeMode::Dark; }
+
+    /// Returns the active theme palette tokens.
+    [[nodiscard]] ThemePalette GetThemePalette() const noexcept { return kvant::GetThemePalette(m_themeMode); }
+
     /// Sets the clear color used by EndFrame when clearing dirty damage regions.
     void SetClearColor(Color color) noexcept { m_clearColor = color; }
 
@@ -681,6 +693,7 @@ private:
     std::unordered_map<Id, WidgetSnapshot> m_prevSnapshots;
     std::vector<Rect> m_explicitDamageRects;
     Rect m_dirtyRect{0.0f, 0.0f, 0.0f, 0.0f};
+    ThemeMode m_themeMode{ThemeMode::Dark};
     Color m_clearColor{11, 15, 25, 255}; // Tailwind Slate-950 #0B0F19
     bool m_hasDirtyDamage{true};
     bool m_isFullRepaint{true};

@@ -62,6 +62,13 @@ int main(int argc, char* argv[]) {
     std::string profileMode = "Standard Performance";
     size_t heartbeatIndex = 2; // Default: 500 ms (2 Hz)
     const std::vector<int> heartbeatMsValues = {-1, 250, 500, 1000, 2000};
+    const std::vector<std::string_view> heartbeatLabels = {
+        "Heartbeat: Off",
+        "Heartbeat: 4 Hz",
+        "Heartbeat: 2 Hz",
+        "Heartbeat: 1 Hz",
+        "Heartbeat: 0.5 Hz"
+    };
     bool enableSensors = true;
     float maxTravel = 150.0f;
     float maxVelocity = 25.0f;
@@ -76,9 +83,10 @@ int main(int argc, char* argv[]) {
     float dGain = 0.01f;
     bool diagLogging = true;
     kvant::TabBarStyle tabStyle = kvant::TabBarStyle::Underline;
-    bool toolPlay = false;
-    bool toolPause = false;
     kvant::FrameMetrics metrics;
+
+    ui.SetThemeMode(darkMode ? kvant::ThemeMode::Dark : kvant::ThemeMode::Light);
+    ui.SetIdleHeartbeatMs(heartbeatMsValues[heartbeatIndex]);
 
     auto handleEvent = [&](const SDL_Event& event) {
         switch (event.type) {
@@ -187,37 +195,80 @@ int main(int argc, char* argv[]) {
                     ui.Caption("C++20 Immediate + ThorVG");
                 }
 
-                // Toolbar
+                // Engine HUD Toolbar
                 if (auto tb = ui.Toolbar({.fixedHeight = 42.0f})) {
-                    if (tb.ToolButton("Start", {.icon = kvant::Icon::Play(), .variant = kvant::UiVariant::Success, .active = toolPlay})) {
-                        toolPlay = true;
-                        toolPause = false;
-                        enableSensors = true;
+                    // Theme Mode Toggle
+                    if (tb.ToolButton(darkMode ? "Theme: Dark" : "Theme: Light", {
+                        .icon = darkMode ? kvant::Icon::Eye() : kvant::Icon::EyeOff(),
+                        .labelVariants = {"Theme: Dark", "Theme: Light"},
+                        .active = darkMode
+                    })) {
+                        darkMode = !darkMode;
+                        ui.SetThemeMode(darkMode ? kvant::ThemeMode::Dark : kvant::ThemeMode::Light);
+                        ui.InvalidateAll();
                     }
-                    if (tb.ToolButton("Pause", {.icon = kvant::Icon::Pause(), .variant = kvant::UiVariant::Warning, .active = toolPause})) {
-                        toolPause = true;
-                        toolPlay = false;
-                    }
-                    if (tb.ToolButton("Stop", {.icon = kvant::Icon::Stop(), .variant = kvant::UiVariant::Danger})) {
-                        toolPlay = false;
-                        toolPause = false;
-                        enableSensors = false;
-                    }
+
                     tb.Separator();
-                    if (tb.ToolButton(tabStyle == kvant::TabBarStyle::Underline ? "Tabs: Underline" : "Tabs: Pill",
-                                      {.icon = kvant::Icon::Settings()})) {
+
+                    // VSync Toggle
+                    if (tb.ToolButton(vsyncEnabled ? "VSync: ON" : "VSync: OFF", {
+                        .icon = kvant::Icon::Refresh(),
+                        .variant = vsyncEnabled ? kvant::UiVariant::Success : kvant::UiVariant::Ghost,
+                        .labelVariants = {"VSync: ON", "VSync: OFF"},
+                        .active = vsyncEnabled
+                    })) {
+                        vsyncEnabled = !vsyncEnabled;
+                        SDL_SetRenderVSync(renderer, vsyncEnabled ? 1 : 0);
+                    }
+
+                    // Reactive Mode Toggle
+                    if (tb.ToolButton(reactiveMode ? "Reactive: ON" : "Reactive: OFF", {
+                        .icon = reactiveMode ? kvant::Icon::Play() : kvant::Icon::Pause(),
+                        .variant = reactiveMode ? kvant::UiVariant::Primary : kvant::UiVariant::Ghost,
+                        .labelVariants = {"Reactive: ON", "Reactive: OFF"},
+                        .active = reactiveMode
+                    })) {
+                        reactiveMode = !reactiveMode;
+                        if (!reactiveMode) {
+                            ui.InvalidateAll();
+                        }
+                    }
+
+                    // Dirty Rect Toggle
+                    const bool dirtyActive = ui.IsDirtyRectEnabled();
+                    if (tb.ToolButton(dirtyActive ? "Dirty: ON" : "Dirty: OFF", {
+                        .icon = kvant::Icon::Settings(),
+                        .variant = dirtyActive ? kvant::UiVariant::Info : kvant::UiVariant::Ghost,
+                        .labelVariants = {"Dirty: ON", "Dirty: OFF"},
+                        .active = dirtyActive
+                    })) {
+                        const bool nextDirty = !dirtyActive;
+                        ui.SetDirtyRectEnabled(nextDirty);
+                        if (!nextDirty) {
+                            ui.InvalidateAll();
+                        }
+                    }
+
+                    // Idle Heartbeat Presets Cycle
+                    if (tb.ToolButton(heartbeatLabels[heartbeatIndex], {
+                        .icon = kvant::Icon::Plus(),
+                        .labelVariants = heartbeatLabels,
+                        .disabled = !reactiveMode
+                    })) {
+                        heartbeatIndex = (heartbeatIndex + 1) % heartbeatLabels.size();
+                        ui.SetIdleHeartbeatMs(heartbeatMsValues[heartbeatIndex]);
+                    }
+
+                    tb.Spacer();
+
+                    // TabBar Style Toggle
+                    if (tb.ToolButton(tabStyle == kvant::TabBarStyle::Underline ? "Tabs: Underline" : "Tabs: Pill", {
+                        .icon = kvant::Icon::Folder(),
+                        .labelVariants = {"Tabs: Underline", "Tabs: Pill"}
+                    })) {
                         tabStyle = (tabStyle == kvant::TabBarStyle::Underline)
                             ? kvant::TabBarStyle::Pill
                             : kvant::TabBarStyle::Underline;
-                    }
-                    tb.Spacer();
-                    if (tb.ToolButton("Reset Defaults", {.icon = kvant::Icon::Refresh()})) {
-                        activeTabIndex = 0;
-                        enableSensors = true;
-                        toolPlay = false;
-                        toolPause = false;
-                        maxTravel = 150.0f;
-                        maxVelocity = 25.0f;
                     }
                 }
 
@@ -308,15 +359,7 @@ int main(int argc, char* argv[]) {
                     }
                 } else {
                     // Content Panel Card for Tabs 0 and 1
-                    if (auto card = ui.Box({
-                        .gap = 16.0f,
-                        .padding = kvant::Padding::All(20.0f),
-                        .backgroundColor = kvant::Color::Hex(0x1E293BFF), // Slate-800
-                        .borderColor = kvant::Color::Hex(0x334155FF),     // Slate-700
-                        .borderWidth = 1.0f,
-                        .cornerRadius = 8.0f,
-                        .clipChildren = true
-                    })) {
+                    if (auto card = ui.Card()) {
                         if (activeTabIndex == 0) {
                             // Overview Tab: Interactive Counter
                             ui.Headline("Interactive Reactive State");
@@ -338,32 +381,9 @@ int main(int argc, char* argv[]) {
                             }
 
                             if (auto togglesRow = ui.Wrap({.gap = 20.0f, .runGap = 16.0f, .align = kvant::Alignment::Center})) {
-                                if (ui.Switch("Dark Theme", &darkMode).changed) {
-                                    ui.InvalidateAll();
-                                }
-                                if (ui.Switch("VSync (60 FPS)", &vsyncEnabled, {
-                                    .description = "Locks rendering rate to display refresh to eliminate tearing",
-                                    .variant = kvant::UiVariant::Success
-                                }).changed) {
-                                    SDL_SetRenderVSync(renderer, vsyncEnabled ? 1 : 0);
-                                }
-                                ui.Switch("Reactive Mode", &reactiveMode, {
-                                    .description = "Zero-CPU idle: sleeps when inactive, wakes up on input events",
-                                    .variant = kvant::UiVariant::Primary
-                                });
-                                bool dirtyRectEnabled = ui.IsDirtyRectEnabled();
-                                if (ui.Switch("Dirty Rect", &dirtyRectEnabled, {
-                                    .description = "Redraw & upload only changed damage regions instead of full 1080p frame",
-                                    .variant = kvant::UiVariant::Success
-                                }).changed) {
-                                    ui.SetDirtyRectEnabled(dirtyRectEnabled);
-                                    if (!dirtyRectEnabled) {
-                                        ui.InvalidateAll();
-                                    }
-                                }
                                 ui.Checkbox("Show Telemetry", &showTelemetry, {.variant = kvant::UiVariant::Info});
                                 if (ui.Switch("Form Mode", &formMode, {
-                                    .description = "Stacked label & description layout",
+                                    .description = "Toggle stacked vs default label layout",
                                     .labelPlacement = kvant::Placement::Stacked
                                 }).changed) {
                                     ui.InvalidateAll();
@@ -371,46 +391,42 @@ int main(int argc, char* argv[]) {
                                 ui.Checkbox("Auto-Scale", true, {.disabled = true});
                             }
 
+                            if (showTelemetry) {
+                                if (auto teleRow = ui.Row({.gap = 16.0f, .align = kvant::Alignment::Center})) {
+                                    ui.Text("Telemetry Stream: ACTIVE", {.role = kvant::TextRole::LabelMedium, .variant = kvant::UiVariant::Success});
+                                    ui.Caption("1000 samples/sec | Jitter < 0.2ms | Hardware loop nominal", kvant::UiVariant::Muted);
+                                }
+                            }
+
+                            const kvant::Placement activePlacement = formMode ? kvant::Placement::Stacked : kvant::Placement::Leading;
+
                             if (auto fieldsRow = ui.Wrap({.gap = 24.0f, .runGap = 16.0f})) {
                                 if (auto f1 = ui.Box({.fixedWidth = 260.0f})) {
                                     ui.InputField("Speed Drop dF/dt", speedDrop, {
                                         .description = "Automatic stop of testing on load drop",
                                         .suffix = "%",
-                                        .format = "%.0f"
+                                        .format = "%.0f",
+                                        .labelPlacement = activePlacement
                                     });
                                 }
                                 if (auto f2 = ui.Box({.fixedWidth = 260.0f})) {
                                     ui.InputField("Sample Identifier", sampleId, {
                                         .description = "Unique test specimen code",
-                                        .placeholder = "Enter sample code..."
+                                        .placeholder = "Enter sample code...",
+                                        .labelPlacement = activePlacement
                                     });
                                 }
                                 if (auto f3 = ui.Box({.fixedWidth = 260.0f})) {
                                     ui.Select("Baud Rate", baudIndex, {"9600 bps", "19200 bps", "38400 bps", "115200 bps"}, {
                                         .description = "Serial communication bus rate",
-                                        .labelPlacement = kvant::Placement::Stacked
+                                        .labelPlacement = activePlacement
                                     });
                                 }
                                 if (auto f4 = ui.Box({.fixedWidth = 260.0f})) {
                                     ui.Select("Operation Profile", profileMode, {"Eco Saver", "Standard Performance", "Industrial High-Speed", "Extreme Calibration"}, {
                                         .description = "Active runtime sensor & compute profile",
-                                        .labelPlacement = kvant::Placement::Stacked
+                                        .labelPlacement = activePlacement
                                     });
-                                }
-                                if (auto fHeartbeat = ui.Box({.fixedWidth = 260.0f})) {
-                                    if (ui.Select("Idle Heartbeat", heartbeatIndex, {
-                                        "Off (Deep Sleep)",
-                                        "250 ms (4 Hz)",
-                                        "500 ms (2 Hz - Default)",
-                                        "1000 ms (1 Hz)",
-                                        "2000 ms (0.5 Hz)"
-                                    }, {
-                                        .description = "Telemetry refresh rate in idle mode",
-                                        .labelPlacement = kvant::Placement::Stacked,
-                                        .disabled = !reactiveMode
-                                    }).changed) {
-                                        ui.SetIdleHeartbeatMs(heartbeatMsValues[heartbeatIndex]);
-                                    }
                                 }
                             }
                         } else {

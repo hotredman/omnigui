@@ -160,7 +160,8 @@ void Switch::Render(
     UiSize size,
     bool hovered,
     bool /*pressed*/,
-    bool disabled
+    bool disabled,
+    ThemeMode theme
 ) {
     if (bounds.w <= 0.0f || bounds.h <= 0.0f) {
         return;
@@ -263,24 +264,25 @@ void Switch::Render(
     }
 
     // Determine colors
+    const auto pal = GetThemePalette(theme);
     Color trackFill;
     Color trackStroke{0, 0, 0, 0};
     float strokeWidth = 0.0f;
     Color knobFill;
 
     if (checked) {
-        const VariantColors v = GetVariantColors(opts.variant);
+        const VariantColors v = GetVariantColors(opts.variant, theme);
         trackFill = hovered && !disabled ? v.bgHover : v.bg;
         knobFill = Color::Hex(0xFFFFFFFF);
     } else {
-        trackFill = hovered && !disabled ? Color::Hex(0x334155FF) : Color::Hex(0x1E293BFF); // Slate-700 / Slate-800
-        trackStroke = hovered && !disabled ? Color::Hex(0x64748BFF) : Color::Hex(0x475569FF); // Slate-500 / Slate-600
+        trackFill = hovered && !disabled ? (theme == ThemeMode::Dark ? Color::Hex(0x334155FF) : Color::Hex(0xCBD5E1FF)) : (theme == ThemeMode::Dark ? Color::Hex(0x1E293BFF) : Color::Hex(0xE2E8F0FF));
+        trackStroke = hovered && !disabled ? (theme == ThemeMode::Dark ? Color::Hex(0x64748BFF) : Color::Hex(0x94A3B8FF)) : (theme == ThemeMode::Dark ? Color::Hex(0x475569FF) : Color::Hex(0xCBD5E1FF));
         strokeWidth = 1.0f;
-        knobFill = hovered && !disabled ? Color::Hex(0xE2E8F0FF) : Color::Hex(0x94A3B8FF); // Slate-200 / Slate-400
+        knobFill = theme == ThemeMode::Dark ? (hovered && !disabled ? Color::Hex(0xE2E8F0FF) : Color::Hex(0x94A3B8FF)) : (hovered && !disabled ? Color::Hex(0xFFFFFFFF) : Color::Hex(0xF8FAFCFF));
     }
 
-    Color textCol = Color::Hex(0xE2E8F0FF); // Slate-200
-    Color descCol = Color::Hex(0x94A3B8FF); // Slate-400
+    Color textCol = pal.textPrimary;
+    Color descCol = pal.textSecondary;
 
     if (disabled) {
         trackFill = trackFill.WithAlphaF(0.40f);

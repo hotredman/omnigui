@@ -45,7 +45,9 @@ void ToolbarScope::Separator(float heightRatio, std::source_location loc) {
     Node* sep = m_ctx->CreateNode(NodeType::Separator, id);
     sep->widthMode = SizeMode::Fixed;
     sep->fixedWidth = 10.0f; // 10px slot with centered 1px line
-    sep->heightMode = SizeMode::Stretch;
+    sep->heightMode = SizeMode::Fixed;
+    const float parentH = (m_node->fixedHeight > 0.0f) ? m_node->fixedHeight : 32.0f;
+    sep->fixedHeight = parentH * std::clamp(heightRatio, 0.1f, 1.0f);
     sep->borderColor = m_node->borderColor.a > 0 ? m_node->borderColor : Color::Hex(0x334155FF);
 }
 
@@ -86,8 +88,9 @@ ToolbarScope Toolbar::Open(
     node->widthMode = SizeMode::Stretch;
     node->heightMode = SizeMode::Fixed;
     node->fixedHeight = barH;
-    node->backgroundColor = opts.backgroundColor;
-    node->borderColor = opts.borderColor;
+    const auto pal = ctx.GetThemePalette();
+    node->backgroundColor = opts.backgroundColor.a > 0 ? opts.backgroundColor : pal.surface;
+    node->borderColor = opts.borderColor.a > 0 ? opts.borderColor : pal.border;
     node->borderWidth = opts.borderWidth;
     node->cornerRadius = opts.cornerRadius;
     node->uiSize = activeSize;
@@ -123,9 +126,11 @@ Response Toolbar::ToolButton(
     ButtonOptions bOpts;
     bOpts.label = node->text;
     bOpts.icon = opts.icon;
-    bOpts.variant = opts.active ? UiVariant::Primary : opts.variant;
+    bOpts.variant = opts.variant;
     bOpts.iconPlacement = opts.iconPlacement;
+    bOpts.labelVariants = opts.labelVariants;
     bOpts.disabled = effectiveDisabled;
+    bOpts.active = opts.active;
 
     node->buttonOpts = bOpts;
     node->uiSize = activeSize;
@@ -143,14 +148,16 @@ Response Toolbar::ToolButton(
 void Toolbar::RenderSeparator(
     ICanvas& canvas,
     Rect bounds,
-    Color color
+    Color color,
+    ThemeMode theme
 ) {
+    const Color stroke = color.a > 0 ? color : GetThemePalette(theme).borderSubtle;
     const float midX = bounds.x + bounds.w * 0.5f;
     const float padY = std::max(2.0f, bounds.h * 0.20f);
     canvas.DrawLine(
         Vec2(midX, bounds.y + padY),
         Vec2(midX, bounds.Bottom() - padY),
-        color,
+        stroke,
         1.0f
     );
 }

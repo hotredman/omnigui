@@ -99,7 +99,8 @@ public:
         UiSize size,
         bool hovered = false,
         bool open = false,
-        bool disabled = false
+        bool disabled = false,
+        ThemeMode theme = ThemeMode::Dark
     );
 
     /// Renders the floating popup menu containing dropdown items.
@@ -110,7 +111,8 @@ public:
         size_t selectedIndex,
         int hoveredIndex,
         const SelectOptions& opts,
-        UiSize size
+        UiSize size,
+        ThemeMode theme = ThemeMode::Dark
     );
 };
 

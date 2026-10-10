@@ -20,6 +20,7 @@ struct ToolButtonOptions {
     Icon icon{};
     UiVariant variant{UiVariant::Ghost};
     Placement iconPlacement{Placement::Leading};
+    LabelVariants labelVariants{};
     bool disabled{false};
     bool active{false};         ///< Toggle active/selected highlight state
 };
@@ -30,8 +31,8 @@ struct ToolbarOptions {
     float fixedHeight{0.0f};
     Padding padding{Padding::Symmetric(12.0f, 6.0f)};
     float gap{8.0f};
-    Color backgroundColor{Color::Hex(0x1E293BFF)}; // Slate-800
-    Color borderColor{Color::Hex(0x334155FF)};     // Slate-700
+    Color backgroundColor{Color::Transparent()};
+    Color borderColor{Color::Transparent()};
     float borderWidth{1.0f};
     float cornerRadius{6.0f};
     bool disabled{false};
@@ -112,7 +113,8 @@ public:
     static void RenderSeparator(
         ICanvas& canvas,
         Rect bounds,
-        Color color
+        Color color = Color::Transparent(),
+        ThemeMode theme = ThemeMode::Dark
     );
 };
 

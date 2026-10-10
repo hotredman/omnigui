@@ -70,7 +70,8 @@ public:
         bool active,
         bool hovered,
         bool pressed,
-        bool disabled
+        bool disabled,
+        ThemeMode theme = ThemeMode::Dark
     );
 };
 
