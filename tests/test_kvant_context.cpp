@@ -1743,6 +1743,157 @@ void TestDirtyRectDamageTracking() {
     ui.SetDirtyRectEnabled(true);
 }
 
+void TestTabBarWidgetWorkflow() {
+    using namespace kvant;
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    int activeTab = 0;
+    const std::vector<TabItem> tabs = {
+        {.label = "Overview", .icon = Icon::Eye()},
+        {.label = "Telemetry", .icon = Icon::Play(), .badge = "Live"},
+        {.label = "Disabled", .disabled = true},
+        {.label = "Settings", .icon = Icon::Settings()}
+    };
+
+    Response tabRes;
+    auto renderUI = [&]() {
+        if (auto col = ui.Column({.gap = 10.0f, .padding = Padding::All(20.0f)})) {
+            tabRes = ui.TabBar(activeTab, tabs, {.style = TabBarStyle::Underline});
+        }
+    };
+
+    // Frame 1: Initial layout establishment
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(activeTab == 0);
+    CHECK(!tabRes.changed);
+
+    // Frame 2: Layout is established
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    // Tab 0 is approx x=20..130, Tab 1 is approx x=136..260.
+    // Move mouse over Tab 1 ("Telemetry") and click
+    ui.OnMouseMove({180.0f, 36.0f});
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(activeTab == 1);
+    CHECK(tabRes.changed);
+
+    // Frame: Next frame without click should have changed == false
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+    CHECK(!tabRes.changed);
+    CHECK(activeTab == 1);
+
+    // Frame: Clicking on Tab 2 (disabled, approx x=270..350) should NOT change active index
+    ui.OnMouseMove({300.0f, 36.0f});
+    ui.OnMouseDown(1);
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderUI();
+    ui.EndFrame(canvas);
+
+    CHECK(activeTab == 1);
+    CHECK(!tabRes.changed);
+
+    // Frame: Test Pill style and string_view initializer_list overload
+    int pillIdx = 0;
+    auto renderPill = [&]() {
+        if (auto col = ui.Column({.gap = 10.0f, .padding = Padding::All(10.0f)})) {
+            ui.TabBar(pillIdx, {"Alpha", "Beta", "Gamma"}, {.style = TabBarStyle::Pill});
+        }
+    };
+
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderPill();
+    ui.EndFrame(canvas);
+
+    CHECK(pillIdx == 0);
+}
+
+void TestToolbarWidgetWorkflow() {
+    using namespace kvant;
+    Context ui;
+    ThorCanvas canvas;
+    const uint32_t width = 800;
+    const uint32_t height = 600;
+    std::vector<uint32_t> pixels(width * height, 0);
+    canvas.SetTarget(pixels.data(), width, height, width);
+
+    Response btnNew;
+    Response btnSave;
+    Response btnSettings;
+    bool toolSettingsActive = false;
+
+    auto renderToolbar = [&]() {
+        if (auto tb = ui.Toolbar({.fixedHeight = 44.0f, .padding = Padding::Symmetric(12.0f, 4.0f)})) {
+            btnNew = tb.ToolButton("New", {.icon = Icon::Plus()});
+            btnSave = tb.ToolButton("Save", {.icon = Icon::Check(), .disabled = true});
+            tb.Separator();
+            btnSettings = tb.ToolButton("", {.icon = Icon::Settings(), .active = toolSettingsActive});
+            tb.Spacer();
+            tb.ToolButton("Status", {.icon = Icon::Eye()});
+        }
+    };
+
+    // Frame 1: Establish layout
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderToolbar();
+    ui.EndFrame(canvas);
+
+    CHECK(!btnNew.clicked);
+    CHECK(!btnSave.clicked);
+
+    // Frame 2: Hover over "New" button (x ~ 25.0f, y ~ 20.0f)
+    ui.OnMouseMove({25.0f, 20.0f});
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderToolbar();
+    CHECK(btnNew.hovered);
+    ui.EndFrame(canvas);
+
+    // Frame 3: Mouse down & up to click "New" button
+    ui.OnMouseDown(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderToolbar();
+    CHECK(btnNew.pressed);
+    ui.EndFrame(canvas);
+
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderToolbar();
+    CHECK(btnNew.clicked);
+    ui.EndFrame(canvas);
+
+    // Frame 4: Disabled button cannot be clicked
+    // btnSave is at x ~ 90..130
+    ui.OnMouseMove({90.0f, 20.0f});
+    ui.OnMouseDown(1);
+    ui.OnMouseUp(1);
+    ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)});
+    renderToolbar();
+    CHECK(!btnSave.clicked);
+    CHECK(!btnSave.hovered);
+    ui.EndFrame(canvas);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
 
@@ -1767,6 +1918,8 @@ int main() {
     TestScrollAreaImmediateMode();
     TestReactiveEventLoop();
     TestDirtyRectDamageTracking();
+    TestTabBarWidgetWorkflow();
+    TestToolbarWidgetWorkflow();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

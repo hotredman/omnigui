@@ -60,6 +60,14 @@ private:
                     node->intrinsicSize = {0.0f, 0.0f};
                     break;
                 }
+                case NodeType::TabItem: {
+                    node->intrinsicSize = TabBar::MeasureTab(node->tabItemOpts, node->tabBarOpts, node->uiSize, canvas);
+                    break;
+                }
+                case NodeType::Separator: {
+                    node->intrinsicSize = {node->fixedWidth > 0.0f ? node->fixedWidth : 10.0f, 0.0f};
+                    break;
+                }
                 default: {
                     if (node->widthMode == SizeMode::Fixed || node->heightMode == SizeMode::Fixed) {
                         node->intrinsicSize = {node->fixedWidth, node->fixedHeight};

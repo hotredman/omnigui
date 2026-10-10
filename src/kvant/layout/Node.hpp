@@ -11,7 +11,9 @@
 #include "kvant/widgets/InputField.hpp"
 #include "kvant/widgets/Select.hpp"
 #include "kvant/widgets/Switch.hpp"
+#include "kvant/widgets/TabBar.hpp"
 #include "kvant/widgets/Text.hpp"
+#include "kvant/widgets/Toolbar.hpp"
 
 namespace kvant {
 
@@ -26,7 +28,9 @@ enum class NodeType : uint8_t {
     InputField, ///< Text or numeric editable field
     Select,     ///< Dropdown combo box widget
     Spacer,     ///< Elastic spacer expanding to fill remaining room
-    Custom      ///< User or custom renderer node
+    Custom,     ///< User or custom renderer node
+    TabItem,    ///< Individual tab item in a TabBar
+    Separator   ///< Divider line separator (Toolbar/menu divider)
 };
 
 /// Lightweight, intrusive node in the per-frame layout graph allocated from BumpAllocator.
@@ -96,9 +100,13 @@ struct Node {
     CheckboxOptions checkboxOpts{};
     InputFieldOptions inputOpts{};
     SelectOptions selectOpts{};
+    TabBarOptions tabBarOpts{};
+    TabItem tabItemOpts{};
+    ToolButtonOptions toolButtonOpts{};
     std::string_view displayText{};
     bool checked{false};
     bool focused{false};
+    bool tabActive{false};
     bool cursorVisible{true};
     float cursorWidth{1.5f};
     size_t cursor{0};

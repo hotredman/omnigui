@@ -186,6 +186,10 @@ struct Color {
         return {r, g, b, a};
     }
 
+    [[nodiscard]] static constexpr Color Transparent() noexcept {
+        return {0, 0, 0, 0};
+    }
+
     [[nodiscard]] constexpr Color WithAlpha(uint8_t newAlpha) const noexcept {
         return {r, g, b, newAlpha};
     }

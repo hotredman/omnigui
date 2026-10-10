@@ -25,7 +25,9 @@
 #include "kvant/widgets/InputField.hpp"
 #include "kvant/widgets/Select.hpp"
 #include "kvant/widgets/Switch.hpp"
+#include "kvant/widgets/TabBar.hpp"
 #include "kvant/widgets/Text.hpp"
+#include "kvant/widgets/Toolbar.hpp"
 
 namespace kvant {
 
@@ -494,6 +496,93 @@ public:
     ) {
         return Select(selectedValue, std::span<const std::string_view>(items.begin(), items.size()), opts, loc);
     }
+
+    // --- TabBar Component ---
+    Response TabBar(
+        int& activeIndex,
+        std::span<const TabItem> tabs,
+        TabBarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response TabBar(
+        int& activeIndex,
+        std::initializer_list<TabItem> tabs,
+        TabBarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return TabBar(activeIndex, std::span<const TabItem>(tabs.begin(), tabs.size()), opts, loc);
+    }
+
+    Response TabBar(
+        int& activeIndex,
+        std::span<const std::string_view> tabs,
+        TabBarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response TabBar(
+        int& activeIndex,
+        std::initializer_list<std::string_view> tabs,
+        TabBarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return TabBar(activeIndex, std::span<const std::string_view>(tabs.begin(), tabs.size()), opts, loc);
+    }
+
+    Response TabBar(
+        size_t& activeIndex,
+        std::span<const TabItem> tabs,
+        TabBarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        int idx = static_cast<int>(activeIndex);
+        Response r = TabBar(idx, tabs, opts, loc);
+        if (r.changed && idx >= 0) activeIndex = static_cast<size_t>(idx);
+        return r;
+    }
+
+    Response TabBar(
+        size_t& activeIndex,
+        std::initializer_list<TabItem> tabs,
+        TabBarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return TabBar(activeIndex, std::span<const TabItem>(tabs.begin(), tabs.size()), opts, loc);
+    }
+
+    Response TabBar(
+        size_t& activeIndex,
+        std::span<const std::string_view> tabs,
+        TabBarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        int idx = static_cast<int>(activeIndex);
+        Response r = TabBar(idx, tabs, opts, loc);
+        if (r.changed && idx >= 0) activeIndex = static_cast<size_t>(idx);
+        return r;
+    }
+
+    Response TabBar(
+        size_t& activeIndex,
+        std::initializer_list<std::string_view> tabs,
+        TabBarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    ) {
+        return TabBar(activeIndex, std::span<const std::string_view>(tabs.begin(), tabs.size()), opts, loc);
+    }
+
+    // --- Toolbar Component ---
+    ToolbarScope Toolbar(
+        ToolbarOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
+
+    Response ToolButton(
+        std::string_view label = {},
+        ToolButtonOptions opts = {},
+        std::source_location loc = std::source_location::current()
+    );
 
     // --- String & Formatting Services ---
     [[nodiscard]] UiString String(std::string_view text);

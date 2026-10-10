@@ -647,6 +647,44 @@ Response Context::Select(std::string_view& selectedValue, std::span<const std::s
     return Select::Run(*this, {}, nullptr, nullptr, nullptr, &selectedValue, items, opts, loc);
 }
 
+Response Context::TabBar(
+    int& activeIndex,
+    std::span<const TabItem> tabs,
+    TabBarOptions opts,
+    std::source_location loc
+) {
+    return TabBar::Run(*this, activeIndex, tabs, opts, loc);
+}
+
+Response Context::TabBar(
+    int& activeIndex,
+    std::span<const std::string_view> tabs,
+    TabBarOptions opts,
+    std::source_location loc
+) {
+    std::vector<TabItem> items;
+    items.reserve(tabs.size());
+    for (const auto& label : tabs) {
+        items.push_back(TabItem{.label = label});
+    }
+    return TabBar::Run(*this, activeIndex, items, opts, loc);
+}
+
+ToolbarScope Context::Toolbar(
+    ToolbarOptions opts,
+    std::source_location loc
+) {
+    return Toolbar::Open(*this, opts, loc);
+}
+
+Response Context::ToolButton(
+    std::string_view label,
+    ToolButtonOptions opts,
+    std::source_location loc
+) {
+    return Toolbar::ToolButton(*this, label, opts, loc);
+}
+
 void Context::RequestFocus(Id id) {
     m_focusedId = id;
     ResetCursorBlink();
@@ -1116,7 +1154,8 @@ void Context::EndFrame(ICanvas& canvas) {
             snap.flags = (n->hovered ? 1u : 0u) |
                          (n->pressed ? 2u : 0u) |
                          (n->disabled ? 4u : 0u) |
-                         (n->checked ? 8u : 0u);
+                         (n->checked ? 8u : 0u) |
+                         (n->tabActive ? 64u : 0u);
             snap.bgColor = n->backgroundColor.ToUint32();
             snap.borderColor = n->borderColor.ToUint32();
 
@@ -1254,7 +1293,8 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
     // Render background / border if present (skip for self-rendering widgets)
     if (node->type != NodeType::Button && node->type != NodeType::Text &&
         node->type != NodeType::Switch && node->type != NodeType::Checkbox &&
-        node->type != NodeType::InputField && node->type != NodeType::Select) {
+        node->type != NodeType::InputField && node->type != NodeType::Select &&
+        node->type != NodeType::TabItem && node->type != NodeType::Separator) {
         if (node->backgroundColor.a > 0 || (node->borderColor.a > 0 && node->borderWidth > 0.0f)) {
             if (node->cornerRadius > 0.0f) {
                 canvas.DrawRoundRect(
@@ -1340,6 +1380,24 @@ void Context::RenderNodeRecursive(Node* node, ICanvas& canvas, const Rect& dirty
             node->hovered,
             node->focused,
             node->disabled
+        );
+    } else if (node->type == NodeType::TabItem) {
+        TabBar::RenderTab(
+            canvas,
+            node->computedRect,
+            node->tabItemOpts,
+            node->tabBarOpts,
+            node->uiSize,
+            node->tabActive,
+            node->hovered,
+            node->pressed,
+            node->disabled
+        );
+    } else if (node->type == NodeType::Separator) {
+        Toolbar::RenderSeparator(
+            canvas,
+            node->computedRect,
+            node->borderColor.a > 0 ? node->borderColor : Color::Hex(0x334155FF)
         );
     }
 

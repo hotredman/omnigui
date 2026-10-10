@@ -75,6 +75,9 @@ int main(int argc, char* argv[]) {
     float iGain = 0.05f;
     float dGain = 0.01f;
     bool diagLogging = true;
+    kvant::TabBarStyle tabStyle = kvant::TabBarStyle::Underline;
+    bool toolPlay = false;
+    bool toolPause = false;
     kvant::FrameMetrics metrics;
 
     auto handleEvent = [&](const SDL_Event& event) {
@@ -184,32 +187,47 @@ int main(int argc, char* argv[]) {
                     ui.Caption("C++20 Immediate + ThorVG");
                 }
 
-                // Navigation Tabs
-                if (auto navRow = ui.Row({.gap = 8.0f})) {
-                    if (ui.Button("Overview", {
-                        .icon = kvant::Icon::Eye(),
-                        .variant = (activeTabIndex == 0) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
-                    })) {
+                // Toolbar
+                if (auto tb = ui.Toolbar({.fixedHeight = 42.0f})) {
+                    if (tb.ToolButton("Start", {.icon = kvant::Icon::Play(), .variant = kvant::UiVariant::Success, .active = toolPlay})) {
+                        toolPlay = true;
+                        toolPause = false;
+                        enableSensors = true;
+                    }
+                    if (tb.ToolButton("Pause", {.icon = kvant::Icon::Pause(), .variant = kvant::UiVariant::Warning, .active = toolPause})) {
+                        toolPause = true;
+                        toolPlay = false;
+                    }
+                    if (tb.ToolButton("Stop", {.icon = kvant::Icon::Stop(), .variant = kvant::UiVariant::Danger})) {
+                        toolPlay = false;
+                        toolPause = false;
+                        enableSensors = false;
+                    }
+                    tb.Separator();
+                    if (tb.ToolButton(tabStyle == kvant::TabBarStyle::Underline ? "Tabs: Underline" : "Tabs: Pill",
+                                      {.icon = kvant::Icon::Settings()})) {
+                        tabStyle = (tabStyle == kvant::TabBarStyle::Underline)
+                            ? kvant::TabBarStyle::Pill
+                            : kvant::TabBarStyle::Underline;
+                    }
+                    tb.Spacer();
+                    if (tb.ToolButton("Reset Defaults", {.icon = kvant::Icon::Refresh()})) {
                         activeTabIndex = 0;
-                        ui.InvalidateAll();
-                    }
-
-                    if (ui.Button("Flexbox Demo", {
-                        .icon = kvant::Icon::Settings(),
-                        .variant = (activeTabIndex == 1) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
-                    })) {
-                        activeTabIndex = 1;
-                        ui.InvalidateAll();
-                    }
-
-                    if (ui.Button("Industrial Dashboard", {
-                        .icon = kvant::Icon::Stop(),
-                        .variant = (activeTabIndex == 2) ? kvant::UiVariant::Primary : kvant::UiVariant::Secondary
-                    })) {
-                        activeTabIndex = 2;
-                        ui.InvalidateAll();
+                        enableSensors = true;
+                        toolPlay = false;
+                        toolPause = false;
+                        maxTravel = 150.0f;
+                        maxVelocity = 25.0f;
                     }
                 }
+
+                // First-class Vector TabBar
+                const std::vector<kvant::TabItem> navTabs = {
+                    {.label = "Overview", .icon = kvant::Icon::Eye()},
+                    {.label = "Flexbox Demo", .icon = kvant::Icon::Settings()},
+                    {.label = "Industrial Dashboard", .icon = kvant::Icon::Folder(), .badge = "Live"}
+                };
+                ui.TabBar(activeTabIndex, navTabs, {.style = tabStyle});
 
                 if (activeTabIndex == 2) {
                     // Industrial Dashboard: responsive 2-column layout inside a dedicated ScrollArea

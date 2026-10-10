@@ -158,7 +158,9 @@ set(KVANT_SOURCES
     src/kvant/widgets/InputField.cpp
     src/kvant/widgets/Select.cpp
     src/kvant/widgets/Switch.cpp
+    src/kvant/widgets/TabBar.cpp
     src/kvant/widgets/Text.cpp
+    src/kvant/widgets/Toolbar.cpp
 )
 add_library(kvant STATIC ${KVANT_SOURCES})
 target_compile_features(kvant PUBLIC cxx_std_20)
