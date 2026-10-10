@@ -1,6 +1,7 @@
 #include <iostream>
 #include <unordered_set>
 #include "kvant/core/BumpAllocator.hpp"
+#include "kvant/core/FrameMetrics.hpp"
 #include "kvant/core/Id.hpp"
 #include "kvant/core/Response.hpp"
 #include "kvant/core/Types.hpp"
@@ -135,6 +136,42 @@ void TestWidgetResponse() {
     CHECK(bool(res)); // implicit bool operator true when clicked
 }
 
+void TestFrameMetrics() {
+    using namespace kvant;
+
+    FrameMetrics metrics;
+    // Initial status string
+    CHECK(!metrics.GetStatusString().empty());
+
+    // Simulate 5 frames
+    for (int i = 0; i < 5; ++i) {
+        metrics.BeginFrame();
+        // Simulate small CPU work
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        metrics.MarkCpuDone();
+
+        // Simulate small GPU work
+        metrics.MarkGpuStart();
+        std::this_thread::sleep_for(std::chrono::microseconds(500));
+        metrics.MarkGpuDone();
+
+        metrics.EndFrame(60.0f);
+    }
+
+    CHECK(metrics.GetFps() >= 0.0f);
+    CHECK(metrics.GetCpuPercent() >= 0.0f && metrics.GetCpuPercent() <= 100.0f);
+    CHECK(metrics.GetCpuTimeMs() >= 0.0f);
+    CHECK(metrics.GetGpuTimeMs() >= 0.0f);
+    CHECK(metrics.GetGpuBudgetPercent() >= 0.0f && metrics.GetGpuBudgetPercent() <= 100.0f);
+
+    std::string_view status = metrics.GetStatusString();
+    CHECK(!status.empty());
+    CHECK(status.find("FPS") != std::string_view::npos);
+    CHECK(status.find("CPU:") != std::string_view::npos);
+    CHECK(status.find("GPU:") != std::string_view::npos);
+    CHECK(status.find("budget") != std::string_view::npos);
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Core Foundation...\n";
 
@@ -142,6 +179,7 @@ int main() {
     TestIdGeneration();
     TestBumpAllocator();
     TestWidgetResponse();
+    TestFrameMetrics();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Core tests passed successfully!\n";

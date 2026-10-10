@@ -4,6 +4,7 @@
 #include <vector>
 #include "kvant/Context.hpp"
 #include "kvant/backend/ThorCanvas.hpp"
+#include "kvant/core/FrameMetrics.hpp"
 
 int main(int argc, char* argv[]) {
     (void)argc;
@@ -71,8 +72,11 @@ int main(int argc, char* argv[]) {
     float iGain = 0.05f;
     float dGain = 0.01f;
     bool diagLogging = true;
+    kvant::FrameMetrics metrics;
 
     while (running) {
+        metrics.BeginFrame();
+
         SDL_Event event;
         // Wait up to 16ms for an event to maintain 60 FPS while conserving CPU at idle
         while (SDL_PollEvent(&event)) {
@@ -287,10 +291,12 @@ int main(int argc, char* argv[]) {
 
                             if (auto togglesRow = ui.Wrap({.gap = 20.0f, .runGap = 16.0f, .align = kvant::Alignment::Center})) {
                                 ui.Switch("Dark Theme", &darkMode);
-                                ui.Switch("VSync (60 FPS)", &vsyncEnabled, {
+                                if (ui.Switch("VSync (60 FPS)", &vsyncEnabled, {
                                     .description = "Locks rendering rate to display refresh to eliminate tearing",
                                     .variant = kvant::UiVariant::Success
-                                });
+                                }).changed) {
+                                    SDL_SetRenderVSync(renderer, vsyncEnabled ? 1 : 0);
+                                }
                                 ui.Checkbox("Show Telemetry", &showTelemetry, {.variant = kvant::UiVariant::Info});
                                 ui.Switch("Form Mode", &formMode, {
                                     .description = "Stacked label & description layout",
@@ -354,9 +360,9 @@ int main(int argc, char* argv[]) {
 
                 // Sticky Footer Bar
                 if (auto footer = ui.Row({.gap = 12.0f, .align = kvant::Alignment::Center})) {
-                    ui.Caption("Zero heap allocations per frame | 0% idle CPU");
+                    ui.Caption(metrics.GetStatusString(), kvant::UiVariant::Muted);
                     ui.Spacer();
-                    if (auto exitBox = ui.Box({.fixedWidth = 90.0f})) {
+                    if (auto exitBox = ui.Box({.fixedWidth = 80.0f})) {
                         if (ui.Button("Exit", {.icon = kvant::Icon::Close(), .variant = kvant::UiVariant::Ghost})) {
                             running = false;
                         }
@@ -365,15 +371,25 @@ int main(int argc, char* argv[]) {
             }
         }
         ui.EndFrame(canvas);
+        metrics.MarkCpuDone();
 
+        metrics.MarkGpuStart();
         // Blit pixel buffer to SDL3 streaming texture
         SDL_UpdateTexture(screenTexture, nullptr, pixelBuffer.data(), winWidth * sizeof(uint32_t));
         SDL_RenderClear(renderer);
         SDL_RenderTexture(renderer, screenTexture, nullptr, nullptr);
+        metrics.MarkGpuDone();
+
         SDL_RenderPresent(renderer);
 
         // Yield CPU slightly to cap frame rate when no events are pending
-        SDL_Delay(8);
+        if (!vsyncEnabled) {
+            SDL_Delay(8);
+        } else {
+            SDL_Delay(1);
+        }
+
+        metrics.EndFrame(60.0f);
     }
 
     if (screenTexture) {
