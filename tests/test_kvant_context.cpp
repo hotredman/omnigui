@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "kvant/Context.hpp"
+#include "kvant/backend/SdlCanvas.hpp"
 #include "kvant/backend/ThorCanvas.hpp"
 #include "thorvg.h"
 
@@ -2381,8 +2382,264 @@ void TestHeadingWidgetWorkflow() {
     CHECK(ui.GetDirtyRect().Intersects(r1));
 }
 
+void TestDpiScalingAndBackendMetadata() {
+    using namespace kvant;
+
+    Context ui;
+    ThorCanvas canvas;
+
+    const uint32_t winWidth = 1200;
+    const uint32_t winHeight = 900;
+    std::vector<uint32_t> pixels(winWidth * winHeight, 0);
+    canvas.SetTarget(pixels.data(), winWidth, winHeight, winWidth);
+
+    // Backend metadata check
+    CHECK(canvas.GetBackendName() == "ThorVG (Vector Software)");
+
+    // Frame 1: 100% scale
+    ui.BeginFrame({static_cast<float>(winWidth), static_cast<float>(winHeight)}, 1.0f);
+    CHECK_NEAR(ui.GetLogicalViewport().x, 1200.0f, 0.01f);
+    CHECK_NEAR(ui.GetLogicalViewport().y, 900.0f, 0.01f);
+    CHECK_NEAR(ui.GetDpiScale(), 1.0f, 0.01f);
+    ui.Button("TestBtn");
+    ui.EndFrame(canvas);
+    CHECK_NEAR(canvas.GetScale(), 1.0f, 0.01f);
+
+    // Frame 2: 150% scale (DPI scale = 1.5)
+    ui.BeginFrame({static_cast<float>(winWidth), static_cast<float>(winHeight)}, 1.5f);
+    CHECK_NEAR(ui.GetLogicalViewport().x, 800.0f, 0.01f);
+    CHECK_NEAR(ui.GetLogicalViewport().y, 600.0f, 0.01f);
+    CHECK_NEAR(ui.GetDpiScale(), 1.5f, 0.01f);
+
+    // Mouse movement in physical window pixels: x=150, y=30
+    // Under 1.5x scale, logical mouse coordinates should be x=100, y=20
+    ui.OnMouseMove({150.0f, 30.0f});
+    CHECK_NEAR(ui.GetMousePos().x, 100.0f, 0.01f);
+    CHECK_NEAR(ui.GetMousePos().y, 20.0f, 0.01f);
+
+    // Render button and test layout
+    ui.Button("TestBtn");
+    ui.EndFrame(canvas);
+
+    // Canvas should receive 1.5x scale
+    CHECK_NEAR(canvas.GetScale(), 1.5f, 0.01f);
+
+    // Physical dirty rect should be scaled by 1.5x
+    const Rect logicalDirty = ui.GetDirtyRect();
+    const Rect physicalDirty = ui.GetPhysicalDirtyRect();
+    CHECK(physicalDirty.w >= logicalDirty.w * 1.5f - 0.5f);
+    CHECK(physicalDirty.h >= logicalDirty.h * 1.5f - 0.5f);
+}
+
+void TestSdlCanvasBackendInterface() {
+    using namespace kvant;
+
+    // SdlCanvas without active renderer (headless / stub test)
+    SdlCanvas canvas(nullptr);
+    CHECK(canvas.GetRenderer() == nullptr);
+    CHECK(canvas.GetBackendName() == "SDL3 (Direct GPU)");
+
+    canvas.Begin(800, 600, 1.25f);
+    CHECK_NEAR(canvas.GetScale(), 1.25f, 0.01f);
+
+    canvas.SetScale(2.0f);
+    CHECK_NEAR(canvas.GetScale(), 2.0f, 0.01f);
+
+    // Test text measurement works headlessly
+    const Vec2 dims = canvas.MeasureText("Hello Kvant", 16.0f);
+    CHECK(dims.x > 0.0f);
+    CHECK(dims.y > 0.0f);
+
+    // Drawing calls with nullptr renderer are safe and do not crash
+    canvas.Clear(Color(0, 0, 0));
+    canvas.PushClip(Rect(0, 0, 100, 100));
+    canvas.DrawRect(Rect(10, 10, 50, 50), Color(255, 255, 255));
+    canvas.DrawRoundRect(Rect(10, 10, 50, 50), 4.0f, Color(255, 255, 255));
+    canvas.DrawLine(Vec2(0, 0), Vec2(100, 100), Color(255, 255, 255), 1.0f);
+    canvas.DrawText("Hello", Vec2(10, 10), 14.0f, Color(255, 255, 255));
+    canvas.DrawTextBox("Hello Box", Rect(0, 0, 100, 40), 14.0f, Color(255, 255, 255));
+    canvas.PopClip();
+    canvas.End();
+
+    // Verify Context renders into SdlCanvas via ICanvas polymorphism
+    Context ui;
+    ui.BeginFrame({800.0f, 600.0f}, 1.25f);
+    ui.Button("GPU Button");
+    ui.EndFrame(canvas);
+}
+
+void TestIndustrialDashboardNoBlackLines() {
+    using namespace kvant;
+
+    const std::vector<float> testScales = {1.0f, 1.25f, 1.5f, 1.75f, 2.0f};
+
+    for (float testScale : testScales) {
+        Context ui;
+        ThorCanvas canvas;
+        const uint32_t width = 1000;
+        const uint32_t height = 750;
+        std::vector<uint32_t> pixels(width * height, 0);
+        canvas.SetTarget(pixels.data(), width, height, width);
+
+        bool enableSensors = true;
+        float maxTravel = 150.0f;
+        float maxVelocity = 25.0f;
+        size_t sensorChannel = 0;
+        size_t activeTabIndex = 2; // Industrial Dashboard
+        bool hwEstop = false;
+        size_t interlockMode = 0;
+        float rampDown = 250.0f;
+
+        Id cardId = Id::Null();
+
+        auto renderUI = [&]() {
+            if (auto mainCol = ui.Column()) {
+                if (auto header = ui.Row({.align = Alignment::Center})) {
+                    ui.Title("KVANT GUI", UiVariant::Info);
+                    ui.Caption("| Autonomous Vector GUI Engine");
+                    ui.Spacer();
+                    ui.Caption("C++20 Immediate + ThorVG");
+                }
+
+                if (auto tb = ui.Toolbar({.fixedHeight = 42.0f})) {
+                    tb.ToolButton("Density: Standard");
+                    tb.Separator();
+                    tb.ToolButton("Scale: 100%");
+                    tb.Separator();
+                    tb.ToolButton("Theme: Dark");
+                }
+
+                const std::vector<TabItem> navTabs = {
+                    {.label = "Overview", .icon = Icon::Eye()},
+                    {.label = "Flexbox Demo", .icon = Icon::Settings()},
+                    {.label = "Industrial Dashboard", .icon = Icon::Folder(), .badge = "Live"}
+                };
+                ui.TabBar(activeTabIndex, navTabs);
+
+                if (activeTabIndex == 2) {
+                    if (auto scroll = ui.ScrollArea()) {
+                        if (auto dashboardGrid = ui.CellGrid()) {
+                            if (auto colLeft = dashboardGrid.Cell6()) {
+                                if (auto card1 = ui.Card()) {
+                                    cardId = card1.GetNode()->id;
+                                    ui.Heading({.title = "Primary Stop Conditions", .subtitle = "Sensory tripwire thresholds & limits"});
+                                    if (auto grid1 = ui.CellGrid()) {
+                                        if (auto c = grid1.Cell12()) {
+                                            ui.Switch("Enable Sensor Drop Limits", &enableSensors, {
+                                                .description = "Immediate stop on threshold breach"
+                                            });
+                                        }
+                                        if (auto c = grid1.Cell6()) {
+                                            ui.InputNumber("Max Travel", maxTravel, "mm", {.format = "%.1f"});
+                                        }
+                                        if (auto c = grid1.Cell6()) {
+                                            ui.InputNumber("Max Velocity", maxVelocity, "mm/s", {.format = "%.1f"});
+                                        }
+                                        if (auto c = grid1.Cell12()) {
+                                            ui.Select("Primary Sensor Channel", sensorChannel, {
+                                                "Channel A (Load Cell 50kN)",
+                                                "Channel B (Optical Extensometer)",
+                                                "Channel C (Laser Interferometer)"
+                                            }, {
+                                                .description = "Active physical transducer bus",
+                                                .labelPlacement = Placement::Stacked
+                                            });
+                                        }
+                                    }
+                                }
+
+                                if (auto card2 = ui.Card()) {
+                                    ui.Heading({.title = "Emergency Interlocks", .subtitle = "Hardware line supervision & failsafes", .variant = UiVariant::Danger});
+                                    if (auto grid2 = ui.CellGrid()) {
+                                        if (auto c = grid2.Cell12()) {
+                                            ui.Switch("Hardware E-Stop Line", &hwEstop, {
+                                                .description = "Continuous 24V loop monitoring",
+                                                .variant = UiVariant::Danger
+                                            });
+                                        }
+                                        if (auto c = grid2.Cell6()) {
+                                            ui.Select("Interlock Action", interlockMode, {
+                                                "Immediate Cutoff",
+                                                "Controlled Ramp-down",
+                                                "Hold Position"
+                                            });
+                                        }
+                                        if (auto c = grid2.Cell6()) {
+                                            ui.InputNumber("Ramp Duration", rampDown, "ms", {.format = "%.0f"});
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        // Frame 1: Full initial frame
+        ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)}, testScale);
+        renderUI();
+        ui.EndFrame(canvas);
+
+        Rect cardRect = ui.GetPrevFrameBounds(cardId);
+
+        // Helper to check for horizontal clearColor seams in card interior
+        auto checkCardSeams = [&](int frameNum) {
+            const float s = testScale;
+            // Physical pixel bounds of card interior
+            const uint32_t startY = static_cast<uint32_t>(std::max(0.0f, (cardRect.y + 15.0f) * s));
+            const uint32_t endY = static_cast<uint32_t>(std::min(static_cast<float>(height), (cardRect.Bottom() - 15.0f) * s));
+            const uint32_t startX = static_cast<uint32_t>(std::max(0.0f, (cardRect.x + 15.0f) * s));
+            const uint32_t endX = static_cast<uint32_t>(std::min(static_cast<float>(width), (cardRect.Right() - 15.0f) * s));
+
+            for (uint32_t y = startY; y < endY; ++y) {
+                int clearCount = 0;
+                for (uint32_t x = startX; x < endX; ++x) {
+                    uint32_t p = pixels[y * width + x];
+                    uint8_t r = p & 0xFF;
+                    uint8_t g = (p >> 8) & 0xFF;
+                    uint8_t b = (p >> 16) & 0xFF;
+                    if (std::abs(r - 11) <= 2 && std::abs(g - 15) <= 2 && std::abs(b - 25) <= 2) {
+                        ++clearCount;
+                    }
+                }
+                if (clearCount > 50) {
+                    std::cerr << "[SCALE " << testScale << " FRAME " << frameNum << " DEFECT] Row y=" << y << " has " << clearCount << " clearColor pixels inside card!\n";
+                    CHECK(clearCount <= 50);
+                }
+            }
+        };
+
+        checkCardSeams(1);
+
+        // Frame 2: Mouse move across widgets (hovering)
+        // Switch position
+        ui.OnMouseMove({(cardRect.x + 30.0f) * testScale, (cardRect.y + 70.0f) * testScale});
+        ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)}, testScale);
+        renderUI();
+        ui.EndFrame(canvas);
+        checkCardSeams(2);
+
+        // Frame 3: Move to InputField
+        ui.OnMouseMove({(cardRect.x + 30.0f) * testScale, (cardRect.y + 130.0f) * testScale});
+        ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)}, testScale);
+        renderUI();
+        ui.EndFrame(canvas);
+        checkCardSeams(3);
+
+        // Frame 4: Move to Select
+        ui.OnMouseMove({(cardRect.x + 30.0f) * testScale, (cardRect.y + 190.0f) * testScale});
+        ui.BeginFrame({static_cast<float>(width), static_cast<float>(height)}, testScale);
+        renderUI();
+        ui.EndFrame(canvas);
+        checkCardSeams(4);
+    }
+}
+
 int main() {
     std::cout << "[RUN] Testing Kvant Context & Immediate Mode API...\n";
+
+    TestIndustrialDashboardNoBlackLines();
 
     TestImmediateApiWorkflow();
     TestThorCanvasTextRendering();
@@ -2412,6 +2669,8 @@ int main() {
     TestUiStyleAndDensityScaling();
     TestLeafWidgetSizeOverrides();
     TestHeadingWidgetWorkflow();
+    TestDpiScalingAndBackendMetadata();
+    TestSdlCanvasBackendInterface();
 
     if (g_failures == 0) {
         std::cout << "[PASS] All Kvant Context tests passed successfully!\n";

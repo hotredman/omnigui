@@ -31,8 +31,11 @@ public:
     bool LoadFontFile(const std::string& path);
 
     // ICanvas implementation
-    void Begin(uint32_t width, uint32_t height) override;
+    void Begin(uint32_t width, uint32_t height, float scale = 1.0f) override;
     void End() override;
+    [[nodiscard]] float GetScale() const noexcept override { return m_scale; }
+    void SetScale(float scale) override { m_scale = (scale > 0.0f) ? scale : 1.0f; }
+    [[nodiscard]] std::string_view GetBackendName() const noexcept override { return "ThorVG (Vector Software)"; }
     void Clear(Color color, std::optional<Rect> rect = std::nullopt) override;
 
     void PushClip(Rect clipRect) override;
@@ -68,6 +71,7 @@ private:
     uint32_t m_width{0};
     uint32_t m_height{0};
     uint32_t m_stride{0};
+    float m_scale{1.0f};
 
     std::vector<Rect> m_clipStack;
     std::string m_defaultFontPath;

@@ -12,11 +12,12 @@ Context::Context() {
 }
 
 void Context::BeginFrame(Vec2 viewportSize, float dpiScale) {
-    if (m_viewportSize != viewportSize || m_dpiScale != dpiScale) {
+    const float effScale = (dpiScale > 0.0f) ? dpiScale : 1.0f;
+    if (m_viewportSize != viewportSize || m_dpiScale != effScale) {
         InvalidateAll();
     }
     m_viewportSize = viewportSize;
-    m_dpiScale = dpiScale;
+    m_dpiScale = effScale;
 
     if (!m_manualTime) {
         const auto now = std::chrono::steady_clock::now();
@@ -55,12 +56,14 @@ void Context::BeginFrame(Vec2 viewportSize, float dpiScale) {
     m_sizeStack.push_back(UiSize::Md);
     m_disabledStack.push_back(false);
 
-    // Create root container spanning the entire viewport
+    // Create root container spanning the entire logical viewport
+    const Vec2 logicalSize = m_viewportSize / m_dpiScale;
     m_root = m_arena.Allocate<Node>();
     m_root->type = NodeType::Container;
     m_root->direction = FlexDirection::Column;
     m_root->widthMode = SizeMode::Stretch;
     m_root->heightMode = SizeMode::Stretch;
+    m_root->computedRect = Rect(0.0f, 0.0f, logicalSize.x, logicalSize.y);
     m_root->id = Id{0xFFFF'FFFF'FFFF'FFFF};
     m_root->uiSize = UiSize::Md;
     m_root->themeMode = m_themeMode;
@@ -643,7 +646,8 @@ int Context::GetRecommendedSleepTimeoutMs() const noexcept {
 }
 
 void Context::OnMouseMove(Vec2 pos) {
-    m_mousePos = pos;
+    const float scale = (m_dpiScale > 0.0f) ? m_dpiScale : 1.0f;
+    m_mousePos = pos / scale;
     RequestRepaint(3);
 }
 
@@ -1046,15 +1050,17 @@ void Context::EndFrame(ICanvas& canvas) {
         m_containerStack.pop_back();
     }
 
+    const Vec2 logicalSize = m_viewportSize / ((m_dpiScale > 0.0f) ? m_dpiScale : 1.0f);
+
     // Resolve geometry using canvas font metrics
     LayoutSolver::Measure(m_root, &canvas);
-    LayoutSolver::Arrange(m_root, Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y));
+    LayoutSolver::Arrange(m_root, Rect(0.0f, 0.0f, logicalSize.x, logicalSize.y));
 
     // Update interactive scroll areas
     UpdateScrollAreasRecursive(m_root);
 
     // Cache computed bounds for instantaneous interaction feedback next frame
-    CollectBoundsRecursive(m_root, m_currFrameBounds, Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y));
+    CollectBoundsRecursive(m_root, m_currFrameBounds, Rect(0.0f, 0.0f, logicalSize.x, logicalSize.y));
     m_prevFrameBounds = std::move(m_currFrameBounds);
 
     // Reset single-frame mouse impulse states
@@ -1215,11 +1221,11 @@ void Context::EndFrame(ICanvas& canvas) {
     }
 
     // Determine whether full repaint or partial dirty rect is required
-    const float totalViewportArea = m_viewportSize.x * m_viewportSize.y;
+    const float totalViewportArea = logicalSize.x * logicalSize.y;
     if (!m_dirtyRectEnabled || m_forceFullRepaint || m_prevSnapshots.empty() || m_openPopupId.IsValid()) {
         m_isFullRepaint = true;
         m_hasDirtyDamage = true;
-        m_dirtyRect = Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y);
+        m_dirtyRect = Rect(0.0f, 0.0f, logicalSize.x, logicalSize.y);
     } else if (damageRects.empty()) {
         m_isFullRepaint = false;
         m_hasDirtyDamage = false;
@@ -1229,17 +1235,17 @@ void Context::EndFrame(ICanvas& canvas) {
         for (size_t i = 1; i < damageRects.size(); ++i) {
             unionRect = unionRect.Union(damageRects[i]);
         }
-        // Expand by 2.0px margin to cover anti-aliasing edges and clamp to viewport
+        // Expand by 2.0px margin to cover anti-aliasing edges and clamp to logical viewport
         const float pad = 2.0f;
         const float x1 = std::max(0.0f, std::floor(unionRect.x - pad));
         const float y1 = std::max(0.0f, std::floor(unionRect.y - pad));
-        const float x2 = std::min(m_viewportSize.x, std::ceil(unionRect.Right() + pad));
-        const float y2 = std::min(m_viewportSize.y, std::ceil(unionRect.Bottom() + pad));
+        const float x2 = std::min(logicalSize.x, std::ceil(unionRect.Right() + pad));
+        const float y2 = std::min(logicalSize.y, std::ceil(unionRect.Bottom() + pad));
         unionRect = Rect(x1, y1, std::max(0.0f, x2 - x1), std::max(0.0f, y2 - y1));
 
         if (unionRect.Area() >= 0.5f * totalViewportArea) {
             m_isFullRepaint = true;
-            m_dirtyRect = Rect(0.0f, 0.0f, m_viewportSize.x, m_viewportSize.y);
+            m_dirtyRect = Rect(0.0f, 0.0f, logicalSize.x, logicalSize.y);
         } else {
             m_isFullRepaint = false;
             m_dirtyRect = unionRect;
@@ -1252,7 +1258,7 @@ void Context::EndFrame(ICanvas& canvas) {
 
     // If damage exists, clear target buffer and rasterize scene graph
     if (m_hasDirtyDamage) {
-        canvas.Begin(static_cast<uint32_t>(m_viewportSize.x), static_cast<uint32_t>(m_viewportSize.y));
+        canvas.Begin(static_cast<uint32_t>(m_viewportSize.x), static_cast<uint32_t>(m_viewportSize.y), m_dpiScale);
         canvas.PushClip(m_dirtyRect);
 
         if (m_isFullRepaint) {

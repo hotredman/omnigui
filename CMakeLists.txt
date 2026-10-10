@@ -152,6 +152,7 @@ endif()
 set(KVANT_SOURCES
     src/kvant/Context.cpp
     src/kvant/backend/ThorCanvas.cpp
+    src/kvant/backend/SdlCanvas.cpp
     src/kvant/graphics/Icon.cpp
     src/kvant/widgets/Button.cpp
     src/kvant/widgets/Checkbox.cpp
@@ -166,7 +167,7 @@ set(KVANT_SOURCES
 add_library(kvant STATIC ${KVANT_SOURCES})
 target_compile_features(kvant PUBLIC cxx_std_20)
 target_include_directories(kvant PUBLIC src)
-target_link_libraries(kvant PUBLIC thorvg)
+target_link_libraries(kvant PUBLIC thorvg SDL3::SDL3-static)
 if (NOT EMSCRIPTEN)
     target_link_libraries(kvant PUBLIC Threads::Threads)
 endif()

@@ -69,6 +69,15 @@ int main(int argc, char* argv[]) {
         "Heartbeat: 1 Hz",
         "Heartbeat: 0.5 Hz"
     };
+    size_t scaleIndex = 0; // Default: 100%
+    const std::vector<float> scaleValues = {1.0f, 1.25f, 1.5f, 1.75f, 2.0f};
+    const std::vector<std::string_view> scaleLabels = {
+        "100%",
+        "125%",
+        "150%",
+        "175%",
+        "200%"
+    };
     bool enableSensors = true;
     float maxTravel = 150.0f;
     float maxVelocity = 25.0f;
@@ -184,7 +193,7 @@ int main(int argc, char* argv[]) {
         metrics.BeginFrame();
 
         // --- Begin Immediate Mode Kvant Frame ---
-        ui.BeginFrame({static_cast<float>(winWidth), static_cast<float>(winHeight)});
+        ui.BeginFrame({static_cast<float>(winWidth), static_cast<float>(winHeight)}, scaleValues[scaleIndex]);
         {
             if (auto mainCol = ui.Column()) {
                 // Header Bar
@@ -211,6 +220,15 @@ int main(int argc, char* argv[]) {
                             ui.SetDensity(kvant::Density::Touch);
                         } else {
                             ui.SetDensity(kvant::Density::Standard);
+                        }
+                    }
+
+                    tb.Separator();
+
+                    // Scale Preset Combo
+                    if (auto scaleBox = ui.Box({.fixedWidth = 92.0f})) {
+                        if (ui.Select(scaleIndex, scaleLabels, {.size = kvant::UiSize::Sm}).changed) {
+                            ui.InvalidateAll();
                         }
                     }
 
@@ -496,7 +514,7 @@ int main(int argc, char* argv[]) {
                 if (ui.IsFullRepaint()) {
                     SDL_UpdateTexture(screenTexture, nullptr, pixelBuffer.data(), winWidth * sizeof(uint32_t));
                 } else {
-                    const kvant::Rect r = ui.GetDirtyRect();
+                    const kvant::Rect r = ui.GetPhysicalDirtyRect();
                     const SDL_Rect sdlR = {
                         static_cast<int>(r.x),
                         static_cast<int>(r.y),

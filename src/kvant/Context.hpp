@@ -118,8 +118,25 @@ public:
     /// Returns true if the entire frame required a full repaint (e.g. window resize or tab switch).
     [[nodiscard]] bool IsFullRepaint() const noexcept { return m_isFullRepaint; }
 
-    /// Returns the active bounding rectangle of the dirty damage region for this frame.
+    /// Returns the active bounding rectangle of the dirty damage region for this frame (in logical points).
     [[nodiscard]] Rect GetDirtyRect() const noexcept { return m_dirtyRect; }
+
+    /// Returns the active bounding rectangle of the dirty damage region in physical pixels for GPU blitting.
+    [[nodiscard]] Rect GetPhysicalDirtyRect() const noexcept {
+        const float x1 = std::floor(m_dirtyRect.x * m_dpiScale);
+        const float y1 = std::floor(m_dirtyRect.y * m_dpiScale);
+        const float x2 = std::ceil(m_dirtyRect.Right() * m_dpiScale);
+        const float y2 = std::ceil(m_dirtyRect.Bottom() * m_dpiScale);
+        return Rect(x1, y1, std::max(0.0f, x2 - x1), std::max(0.0f, y2 - y1));
+    }
+
+    /// Returns the active DPI / UI scale factor.
+    [[nodiscard]] float GetDpiScale() const noexcept { return m_dpiScale; }
+
+    /// Returns the current logical viewport size used for layout.
+    [[nodiscard]] Vec2 GetLogicalViewport() const noexcept {
+        return m_viewportSize / (m_dpiScale > 0.0f ? m_dpiScale : 1.0f);
+    }
 
     /// Explicitly forces the next frame to perform a full screen redraw.
     void InvalidateAll() noexcept;
